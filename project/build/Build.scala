@@ -5,6 +5,7 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
 
     /* Repositories */
     val akkaRepo = "Akka Repo" at "http://akka.io/repository"
+    val scalaToolsSnapshots = "Scala Tools Snapshots" at "http://scala-tools.org/repo-snapshots/"
 
     /* Subprojects */
     lazy val bson = project("bson", "beaucatcher-bson", new BeaucatcherBSONProject(_))
@@ -14,11 +15,11 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
     lazy val hammersmith = project("hammersmith", "beaucatcher-hammersmith", new BeaucatcherHammersmithProject(_), akka)
 
     class BeaucatcherBSONProject(info: ProjectInfo) extends DefaultProject(info) {
-        val scalajCollection = "org.scalaj" % "scalaj-collection_2.8.0" % "1.0"
-        val liftJson = "net.liftweb" %% "lift-json" % "2.3"
-        val scalap = "org.scala-lang" % "scalap" % "2.8.1"
+        val scalajCollection = "org.scalaj" %% "scalaj-collection" % "1.1"
+        val liftJson = "net.liftweb" %% "lift-json" % "2.4-SNAPSHOT"
+        val scalap = "org.scala-lang" % "scalap" % "2.9.0-1"
         val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
-        val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.2"
+        val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
 
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test->default"
     }
@@ -27,7 +28,7 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
     }
 
     class BeaucatcherAkkaProject(info: ProjectInfo) extends DefaultProject(info) {
-        val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.0"
+        val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
     }
 
     class BeaucatcherCasbahProject(info: ProjectInfo) extends DefaultProject(info) {
