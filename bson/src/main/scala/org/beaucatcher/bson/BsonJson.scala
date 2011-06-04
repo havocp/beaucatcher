@@ -1,7 +1,7 @@
-package com.ometer.bson
+package org.beaucatcher.bson
 
-import com.ometer.ClassAnalysis
 import BsonAST._
+import BsonEnums._
 import java.io.Reader
 import net.liftweb.{ json => lift }
 
@@ -54,12 +54,12 @@ private[bson] object BsonJson {
         }
     }
 
-    def toJson(value : BValue, flavor : JsonFlavor = JsonFlavor.CLEAN) : String = {
+    def toJson(value : BValue, flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String = {
         require(value != null)
         lift.Printer.compact(lift.render(toLift(value.toJValue(flavor))))
     }
 
-    def toPrettyJson(value : BValue, flavor : JsonFlavor = JsonFlavor.CLEAN) : String = {
+    def toPrettyJson(value : BValue, flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String = {
         require(value != null)
         lift.Printer.pretty(lift.render(toLift(value.toJValue(flavor))))
     }

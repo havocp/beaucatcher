@@ -1,7 +1,7 @@
-package com.ometer.bson
+package org.beaucatcher.bson
 
 import BsonAST._
-import com.ometer.ClassAnalysis
+import BsonEnums._
 import org.apache.commons.codec.binary.Base64
 import org.bson.types._
 import org.joda.time.{ DateTime, DateTimeZone }
@@ -20,7 +20,7 @@ private[bson] object BsonValidation {
     private def bStringToBinary(fieldName : String, s : BString) : Binary = {
         try {
             val decoded = Base64.decodeBase64(s.value)
-            new Binary(BsonSubtype.GENERAL.code, decoded)
+            new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), decoded)
         } catch {
             case e : Exception =>
                 throw new BadValueException(fieldName, "Binary", s)
@@ -168,7 +168,7 @@ private[bson] object BsonValidation {
 
     private def validateObjectAgainstCaseClass[C <: Product](analysis : ClassAnalysis[C],
         rootObject : JObject,
-        flavor : JsonFlavor) : BObject = {
+        flavor : JsonFlavor.Value) : BObject = {
         // this should be sure all fields in case class were found, and only
         // whitelist in those fields, so any "extra" fields just get dropped
         var validated = BObject.empty
@@ -233,7 +233,7 @@ private[bson] object BsonValidation {
 
     def validateAgainstCaseClass[C <: Product](analysis : ClassAnalysis[C],
         value : JValue,
-        flavor : JsonFlavor = JsonFlavor.CLEAN) : BValue = {
+        flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : BValue = {
         require(flavor == JsonFlavor.CLEAN) // other flavors not supported for now
         value match {
             case jobject : JObject =>

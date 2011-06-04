@@ -1,4 +1,4 @@
-package com.ometer.bson
+package org.beaucatcher.bson
 
 import BsonAST._
 import java.util.Date

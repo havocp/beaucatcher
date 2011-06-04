@@ -1,11 +1,9 @@
-import com.ometer.bson.Implicits._
-import com.ometer.bson._
-import com.ometer.ClassAnalysis
+import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.bson._
 import org.bson.types.{ BSONTimestamp, ObjectId, Binary }
 import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
 import org.junit._
-import play.test._
 
 package bar {
     case class LotsOfTypes(anInt : Int,
@@ -28,7 +26,7 @@ package bar {
         anOptionalMap : Option[Map[String, Int]])
 }
 
-class ValidationTest extends UnitTest {
+class ValidationTest {
     import bar._
 
     @org.junit.Before
@@ -46,7 +44,7 @@ class ValidationTest extends UnitTest {
             "aDateTime" -> someDateTime,
             "aTimestamp" -> new BSONTimestamp((someDateTime.getMillis / 1000).toInt, 1),
             "anObjectId" -> new ObjectId("4dbf8ea93364e3bd9745723c"),
-            "aBinary" -> new Binary(BsonSubtype.GENERAL.code, new Array[Byte](10)),
+            "aBinary" -> new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)),
             "aMap" -> Map[String, Int]("a" -> 20, "b" -> 21),
             "aSeq" -> List(1, 2, 3, 4))
     }

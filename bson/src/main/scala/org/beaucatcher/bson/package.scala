@@ -1,6 +1,13 @@
-package com.ometer
+package org.beaucatcher
 
 package object bson {
+    // Enumeration vals must be first so they
+    // are initialized before BsonAST tries to use
+    // them
+    val BsonSubtype = BsonEnums.BsonSubtype
+    val BsonType = BsonEnums.BsonType
+    val JsonFlavor = BsonEnums.JsonFlavor
+
     type BArray = BsonAST.BArray
     val BArray = BsonAST.BArray
 
@@ -47,13 +54,4 @@ package object bson {
 
     type JValue = BsonAST.JValue
     val JValue = BsonAST.JValue
-
-    type BsonSubtype = BsonEnums.BsonSubtype
-    val BsonSubtype = BsonEnums.BsonSubtype
-
-    type BsonType = BsonEnums.BsonType
-    val BsonType = BsonEnums.BsonType
-
-    type JsonFlavor = BsonEnums.JsonFlavor
-    val JsonFlavor = BsonEnums.JsonFlavor
 }

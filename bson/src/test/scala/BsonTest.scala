@@ -1,6 +1,6 @@
 import java.text.SimpleDateFormat
-import com.ometer.bson._
-import com.ometer.bson.Implicits._
+import org.beaucatcher.bson._
+import org.beaucatcher.bson.Implicits._
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.Binary
 import org.bson.types.ObjectId
@@ -9,9 +9,8 @@ import java.util.Date
 import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
 import org.junit._
-import play.test._
 
-class BsonTest extends UnitTest {
+class BsonTest {
 
     @org.junit.Before
     def setup() {
@@ -34,7 +33,7 @@ class BsonTest extends UnitTest {
             "datetime" -> someDateTime,
             "timestamp" -> new BSONTimestamp((someJavaDate.getTime / 1000).toInt, 1),
             "objectid" -> new ObjectId("4dbf8ea93364e3bd9745723c"),
-            "binary" -> new Binary(BsonSubtype.GENERAL.code, new Array[Byte](10)),
+            "binary" -> new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)),
             "bsonobj" -> MongoDBObject("a" -> 30, "b" -> "foo"),
             "map_int" -> Map[String, Int]("a" -> 20, "b" -> 21),
             "map_date" -> Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
@@ -61,7 +60,7 @@ class BsonTest extends UnitTest {
             someDateTime,
             new BSONTimestamp((someJavaDate.getTime / 1000).toInt, 1),
             new ObjectId("4dbf8ea93364e3bd9745723c"),
-            new Binary(BsonSubtype.GENERAL.code, new Array[Byte](10)),
+            new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)),
             MongoDBObject("a" -> 30, "b" -> "foo"),
             Map[String, Int]("a" -> 20, "b" -> 21),
             Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),

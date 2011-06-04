@@ -1,8 +1,7 @@
 import scala.tools.scalap.scalax.rules.scalasig.TypeRefType
-import com.ometer.ClassAnalysis
+import org.beaucatcher.bson.ClassAnalysis
 import org.junit.Assert._
 import org.junit._
-import play.test._
 
 case class IntAndString(foo : Int, bar : String)
 
@@ -14,7 +13,7 @@ object IntAndString {
 
 case class IntAndOptionalString(foo : Int, bar : Option[String])
 
-class ClassAnalysisTest extends UnitTest {
+class ClassAnalysisTest {
 
     @org.junit.Before
     def setup() {
@@ -30,15 +29,14 @@ class ClassAnalysisTest extends UnitTest {
         assertEquals(List(("foo", 31), ("bar", "woot")), fieldNamesAndValues)
 
         val fieldTypes = analysis.fieldTypesIterator
-        val typePaths = for (t <- fieldTypes)
-            yield {
-                t match {
-                    case TypeRefType(prefix, symbol, typeArgs) =>
-                        symbol.path
-                    case _ =>
-                        assertTrue("non-ref type field", false)
-                }
+        val typePaths = for (t <- fieldTypes) yield {
+            t match {
+                case TypeRefType(prefix, symbol, typeArgs) =>
+                    symbol.path
+                case _ =>
+                    assertTrue("non-ref type field", false)
             }
+        }
 
         assertEquals(List("scala.Int", "scala.Predef.String"), typePaths.toList)
     }

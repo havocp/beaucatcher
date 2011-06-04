@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-package com.ometer.bson
+package org.beaucatcher.bson
 
-import com.ometer.ClassAnalysis
 import BsonEnums._
 import java.io.Reader
 import scala.math.ScalaNumber
@@ -44,25 +43,25 @@ import scalaj.collection.Implicits._
  *  such as ObjectId, ISODate, except for numbers which are done a little more
  *  clearly than JavaScript does it.
  */
-object BsonAST {
+private[bson] object BsonAST {
 
     sealed abstract trait BValue {
         type WrappedType
         def unwrapped : WrappedType
 
-        val bsonType : BsonType
+        val bsonType : BsonType.Value
 
         def unwrappedAsJava : AnyRef = {
             // this default implementation works for say String where Java and Scala are the same
             unwrapped.asInstanceOf[AnyRef]
         }
 
-        def toJValue(flavor : JsonFlavor = JsonFlavor.CLEAN) : JValue
+        def toJValue(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : JValue
 
-        def toJson(flavor : JsonFlavor = JsonFlavor.CLEAN) : String =
+        def toJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
             BsonJson.toJson(this, flavor)
 
-        def toPrettyJson(flavor : JsonFlavor = JsonFlavor.CLEAN) : String =
+        def toPrettyJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
             BsonJson.toPrettyJson(this, flavor)
     }
 
@@ -73,10 +72,10 @@ object BsonAST {
     sealed abstract trait JValue extends BValue {
 
         // default implementation
-        override def toJValue(flavor : JsonFlavor = JsonFlavor.CLEAN) : JValue = this
+        override def toJValue(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : JValue = this
     }
 
-    private[bson] sealed abstract class BSingleValue[T](override val bsonType : BsonType, val value : T) extends BValue {
+    private[bson] sealed abstract class BSingleValue[T](override val bsonType : BsonType.Value, val value : T) extends BValue {
         type WrappedType = T
         override def unwrapped = value
     }
@@ -90,7 +89,7 @@ object BsonAST {
     case class BString(override val value : String) extends BSingleValue(BsonType.STRING, value) with JValue {
     }
 
-    private[bson] sealed abstract class BNumericValue[T](override val bsonType : BsonType, val value : T)
+    private[bson] sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, val value : T)
         extends ScalaNumber
         with ScalaNumericConversions with JValue {
         type WrappedType = T
@@ -191,7 +190,7 @@ object BsonAST {
         extends ArrayBase[BValue]
         with LinearSeqLike[BValue, BArray] {
 
-        override def toJValue(flavor : JsonFlavor) : JValue = JArray(value.map(_.toJValue(flavor)))
+        override def toJValue(flavor : JsonFlavor.Value) : JValue = JArray(value.map(_.toJValue(flavor)))
 
         override def newBuilder = BArray.newBuilder
     }
@@ -273,18 +272,18 @@ object BsonAST {
         }
     }
 
-    case class BBinData(val value : Array[Byte], val subtype : BsonSubtype) extends BValue {
+    case class BBinData(val value : Array[Byte], val subtype : BsonSubtype.Value) extends BValue {
         type WrappedType = Binary
-        override lazy val unwrapped = new Binary(subtype.code, value)
+        override lazy val unwrapped = new Binary(BsonSubtype.toByte(subtype), value)
         override val bsonType = BsonType.BINARY
 
-        override def toJValue(flavor : JsonFlavor) = {
+        override def toJValue(flavor : JsonFlavor.Value) = {
             flavor match {
                 case JsonFlavor.CLEAN =>
                     BString(Base64.encodeBase64String(value))
                 case JsonFlavor.STRICT =>
                     JObject(List(("$binary", BString(Base64.encodeBase64String(value))),
-                        ("$type", BString("%02x".format("%02x", (subtype.code : Int) & 0xff)))))
+                        ("$type", BString("%02x".format("%02x", (BsonSubtype.toByte(subtype) : Int) & 0xff)))))
                 case _ =>
                     throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
             }
@@ -339,7 +338,7 @@ object BsonAST {
     }
 
     case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonType.OID, value) {
-        override def toJValue(flavor : JsonFlavor) = {
+        override def toJValue(flavor : JsonFlavor.Value) = {
             flavor match {
                 case JsonFlavor.CLEAN =>
                     BString(value.toString())
@@ -355,7 +354,7 @@ object BsonAST {
     }
 
     case class BISODate(override val value : DateTime) extends BSingleValue(BsonType.DATE, value) {
-        override def toJValue(flavor : JsonFlavor) = {
+        override def toJValue(flavor : JsonFlavor.Value) = {
             flavor match {
                 case JsonFlavor.CLEAN =>
                     BInt64(value.getMillis())
@@ -368,7 +367,7 @@ object BsonAST {
     }
 
     case class BTimestamp(override val value : BSONTimestamp) extends BSingleValue(BsonType.TIMESTAMP, value) {
-        override def toJValue(flavor : JsonFlavor) = {
+        override def toJValue(flavor : JsonFlavor.Value) = {
             flavor match {
                 case JsonFlavor.CLEAN =>
                     // convert to milliseconds and treat the "increment" as milliseconds after
@@ -456,7 +455,7 @@ object BsonAST {
     case class BObject(override val value : List[BField]) extends ObjectBase[BValue, BObject]
         with immutable.MapLike[String, BValue, BObject] {
 
-        override def toJValue(flavor : JsonFlavor) = JObject(value.map(field => (field._1, field._2.toJValue(flavor))))
+        override def toJValue(flavor : JsonFlavor.Value) = JObject(value.map(field => (field._1, field._2.toJValue(flavor))))
 
         // lift-json fixes JObject equals() to ignore ordering; which makes
         // sense for JSON, but in BSON sometimes order matters.
@@ -656,16 +655,16 @@ object BsonAST {
             }
         }
 
-        def parseJson(json : String, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor = JsonFlavor.CLEAN) : BValue =
+        def parseJson(json : String, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : BValue =
             BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), flavor)
 
         def parseJson(json : Reader, schema : ClassAnalysis[_ <: Product]) : BValue =
             BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), JsonFlavor.CLEAN)
 
-        def parseJson(json : Reader, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor) : BValue =
+        def parseJson(json : Reader, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value) : BValue =
             BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), flavor)
 
-        def fromJValue(jvalue : JValue, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor = JsonFlavor.CLEAN) : BValue =
+        def fromJValue(jvalue : JValue, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : BValue =
             BsonValidation.validateAgainstCaseClass(schema, jvalue, flavor)
     }
 

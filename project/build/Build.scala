@@ -18,11 +18,12 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
         val liftJson = "net.liftweb" %% "lift-json" % "2.3"
         val scalap = "org.scala-lang" % "scalap" % "2.8.1"
         val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
+        val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.2"
+
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test->default"
     }
 
     class BeaucatcherMongoProject(info: ProjectInfo) extends DefaultProject(info) {
-        val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.2"
     }
 
     class BeaucatcherAkkaProject(info: ProjectInfo) extends DefaultProject(info) {
