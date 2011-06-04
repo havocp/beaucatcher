@@ -1,8 +1,8 @@
-package com.ometer.casbah
+package org.beaucatcher.casbah
 
-import com.ometer.mongo._
-import com.ometer.ClassAnalysis
-import com.ometer.bson.BsonAST.BObject
+import org.beaucatcher.mongo._
+import org.beaucatcher.bson.ClassAnalysis
+import org.beaucatcher.bson.BObject
 import com.mongodb.DBObject
 import com.mongodb.casbah.MongoCollection
 import org.bson.types.ObjectId

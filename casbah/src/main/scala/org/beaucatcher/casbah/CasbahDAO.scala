@@ -1,7 +1,8 @@
-package com.ometer.casbah
+package org.beaucatcher.casbah
 
-import com.ometer.bson.BsonAST._
-import com.ometer.mongo._
+import org.beaucatcher.bson._
+import org.beaucatcher.mongo._
+import org.bson.BSONObject
 import com.mongodb.WriteResult
 import com.mongodb.casbah.MongoCollection
 import com.mongodb.CommandResult
@@ -47,6 +48,64 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
     }
 }
 
+/* Mutable BSONObject/DBObject implementation used to save to MongoDB API */
+private[casbah] class BObjectBSONObject extends BSONObject {
+    import scalaj.collection.Implicits._
+
+    private[this] var bvalue : BObject = BObject.empty
+
+    def this(b : BObject) = {
+        this()
+        bvalue = b
+    }
+
+    /* BSONObject interface */
+    override def containsField(s : String) : Boolean = {
+        bvalue.contains(s)
+    }
+    override def containsKey(s : String) : Boolean = containsField(s)
+
+    override def get(key : String) : AnyRef = {
+        bvalue.get(key) match {
+            case Some(bvalue) =>
+                bvalue.unwrappedAsJava
+            case None =>
+                null
+        }
+    }
+
+    override def keySet() : java.util.Set[String] = {
+        bvalue.keySet.asJava
+    }
+
+    // returns previous value
+    override def put(key : String, v : AnyRef) : AnyRef = {
+        val previous = get(key)
+        bvalue = bvalue + (key, BValue.wrap(v))
+        previous
+    }
+
+    override def putAll(bsonObj : BSONObject) : Unit = {
+        for { key <- bsonObj.keySet() }
+            put(key, BValue.wrap(bsonObj.get(key)))
+    }
+
+    override def putAll(m : java.util.Map[_, _]) : Unit = {
+        for { key <- m.keySet() }
+            put(key.asInstanceOf[String], BValue.wrap(m.get(key)))
+    }
+
+    override def removeField(key : String) : AnyRef = {
+        val previous = get(key)
+        bvalue = bvalue - key
+        previous
+    }
+
+    override def toMap() : java.util.Map[_, _] = {
+        bvalue.unwrappedAsJava
+    }
+}
+
 /**
  * adds DBObject extensions to BSONObject.
  * This is an internal implementation class not exported by the library.
@@ -66,13 +125,17 @@ private[casbah] class BObjectDBObject(b : BObject) extends BObjectBSONObject(b) 
 }
 
 private[casbah] class BObjectCasbahQueryComposer extends QueryComposer[BObject, DBObject] {
+    import org.beaucatcher.casbah.Implicits._
+
     override def queryIn(q : BObject) : DBObject = new BObjectDBObject(q)
-    override def queryOut(q : DBObject) : BObject = BObject(q)
+    override def queryOut(q : DBObject) : BObject = q
 }
 
 private[casbah] class BObjectCasbahEntityComposer extends EntityComposer[BObject, DBObject] {
+    import org.beaucatcher.casbah.Implicits._
+
     override def entityIn(o : BObject) : DBObject = new BObjectDBObject(o)
-    override def entityOut(o : DBObject) : BObject = BObject(o)
+    override def entityOut(o : DBObject) : BObject = o
 }
 
 /**

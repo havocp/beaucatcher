@@ -1,10 +1,10 @@
-package com.ometer.hammersmith
+package org.beaucatcher.hammersmith
 
 import akka.dispatch.Future
 import akka.dispatch.DefaultCompletableFuture
-import com.ometer.bson.BsonAST._
-import com.ometer.mongo.akka._
-import com.ometer.mongo.{ akka => _, _ }
+import org.beaucatcher.bson.BsonAST._
+import org.beaucatcher.mongo.akka._
+import org.beaucatcher.mongo.{ akka => _, _ }
 import com.mongodb.WriteResult
 import com.mongodb.CommandResult
 import com.mongodb.async.Collection

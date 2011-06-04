@@ -1,7 +1,7 @@
-package com.ometer.mongo
+package org.beaucatcher.mongo
 
-import com.ometer.ClassAnalysis
-import com.ometer.bson.BsonAST.BObject
+import org.beaucatcher.bson.ClassAnalysis
+import org.beaucatcher.bson.BObject
 import com.mongodb.DBObject
 import org.bson.types.ObjectId
 

@@ -1,4 +1,4 @@
-package com.ometer.mongo
+package org.beaucatcher.mongo
 
 import com.mongodb.WriteResult
 
@@ -6,7 +6,7 @@ import com.mongodb.WriteResult
  * A DAO that backends to another DAO. The two may have different query, entity, and ID types.
  * This is an internal implementation class not exported from the library.
  */
-private[ometer] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityType, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType]
+private[beaucatcher] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityType, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType]
     extends SyncDAO[OuterQueryType, OuterEntityType, OuterIdType] {
 
     protected val backend : SyncDAO[InnerQueryType, InnerEntityType, InnerIdType]

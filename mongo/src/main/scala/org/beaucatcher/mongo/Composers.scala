@@ -1,4 +1,4 @@
-package com.ometer.mongo
+package org.beaucatcher.mongo
 
 /**
  * Object which converts queries as they go from a DAO into or out of an "underlying" DAO.

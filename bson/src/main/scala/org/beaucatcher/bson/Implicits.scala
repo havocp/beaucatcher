@@ -29,7 +29,6 @@ trait Implicits {
     implicit def timestamp2bvalue(x : BSONTimestamp) = BTimestamp(x)
     implicit def objectid2bvalue(x : ObjectId) = BObjectId(x)
     implicit def binary2bvalue(x : Binary) = BBinData(x)
-    implicit def bsonobj2bvalue(x : BSONObject) = BObject(x)
     implicit def map2bvalue[K <: String, V <% BValue](x : Map[K, V]) = BObject(x)
     implicit def seq2bvalue[V <% BValue](x : Seq[V]) : BArray = BArray(x)
 }

@@ -1,14 +1,14 @@
-import com.ometer.mongo.SyncDAO
-import com.ometer.bson._
-import com.ometer.bson.Implicits._
-import com.ometer.mongo.CaseClassSyncDAO
-import com.ometer.mongo.BObjectSyncDAO
-import com.ometer.casbah._
+import org.beaucatcher.mongo.SyncDAO
+import org.beaucatcher.bson._
+import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.mongo.CaseClassSyncDAO
+import org.beaucatcher.mongo.BObjectSyncDAO
+import org.beaucatcher.casbah._
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.conversions.scala._
 import org.joda.time.DateTime
 
-object MongoUtil {
+object CasbahUtil {
     private lazy val dbname = "mongoscalathingy"
     private lazy val connection_ = {
         val host = "localhost"

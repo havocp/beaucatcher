@@ -1,7 +1,7 @@
-package com.ometer.mongo.akka
+package org.beaucatcher.mongo.akka
 
 import com.mongodb.WriteResult
-import com.ometer.bson.BsonAST._
+import org.beaucatcher.bson._
 import akka.dispatch.Future
 
 object AsyncDAO {

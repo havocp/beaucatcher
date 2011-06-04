@@ -1,8 +1,8 @@
-package com.ometer.mongo
+package org.beaucatcher.mongo
 
-import com.ometer.bson.Implicits._
-import com.ometer.bson._
-import com.ometer.ClassAnalysis
+import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.bson._
+import org.beaucatcher.bson.ClassAnalysis
 import org.bson.types._
 
 /**
@@ -39,7 +39,7 @@ trait JsonMethods[SchemaType <: Product] {
     /** Since we're a trait, we don't have a manifest and you have to provide this */
     protected def jsonAnalysis : ClassAnalysis[SchemaType]
     /** If you want to override the JSON flavor, do so here */
-    protected val jsonFlavor : JsonFlavor = JsonFlavor.CLEAN
+    protected val jsonFlavor : JsonFlavor.Value = JsonFlavor.CLEAN
 
     /**
      * This method creates the query that will be used to

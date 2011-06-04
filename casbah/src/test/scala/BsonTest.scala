@@ -1,6 +1,7 @@
 import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.casbah.Implicits._
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.Binary
 import org.bson.types.ObjectId

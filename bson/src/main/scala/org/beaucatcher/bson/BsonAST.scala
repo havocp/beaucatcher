@@ -34,7 +34,6 @@ import scala.collection.immutable
 import java.util.Date
 import org.apache.commons.codec.binary.Base64
 import org.bson.types._
-import org.bson.BSONObject
 import org.joda.time._
 import scalaj.collection.Implicits._
 
@@ -486,13 +485,6 @@ private[bson] object BsonAST {
     object BObject {
         val empty = new BObject(List())
 
-        def apply(bsonObj : BSONObject) : BObject = {
-            val keys = bsonObj.keySet().iterator().asScala
-            val fields = for { key <- keys }
-                yield (key, BValue.wrap(bsonObj.get(key)))
-            BObject(fields.toList)
-        }
-
         def apply[K <: String, V <% BValue](m : Map[K, V]) : BObject = {
             val fields = for { (k, v) <- m }
                 yield Pair[String, BValue](k, if (v == null) BNull else v)
@@ -639,8 +631,6 @@ private[bson] object BsonAST {
                     BInt32(i)
                 case i : BigInt =>
                     if (i.isValidInt) BInt32(i.intValue) else BInt64(i.longValue)
-                case bsonObj : BSONObject =>
-                    BObject(bsonObj)
                 case m : Map[_, _] =>
                     BObject(m.iterator.map(kv => (kv._1.asInstanceOf[String], BValue.wrap(kv._2))).toList)
                 case seq : Seq[_] =>
@@ -666,62 +656,6 @@ private[bson] object BsonAST {
 
         def fromJValue(jvalue : JValue, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : BValue =
             BsonValidation.validateAgainstCaseClass(schema, jvalue, flavor)
-    }
-
-    /* Mutable BSONObject/DBObject implementation used to save to MongoDB API */
-    class BObjectBSONObject extends BSONObject {
-        private[this] var bvalue : BObject = BObject.empty
-
-        def this(b : BObject) = {
-            this()
-            bvalue = b
-        }
-
-        /* BSONObject interface */
-        override def containsField(s : String) : Boolean = {
-            bvalue.contains(s)
-        }
-        override def containsKey(s : String) : Boolean = containsField(s)
-
-        override def get(key : String) : AnyRef = {
-            bvalue.get(key) match {
-                case Some(bvalue) =>
-                    bvalue.unwrappedAsJava
-                case None =>
-                    null
-            }
-        }
-
-        override def keySet() : java.util.Set[String] = {
-            bvalue.keySet.asJava
-        }
-
-        // returns previous value
-        override def put(key : String, v : AnyRef) : AnyRef = {
-            val previous = get(key)
-            bvalue = bvalue + (key, BValue.wrap(v))
-            previous
-        }
-
-        override def putAll(bsonObj : BSONObject) : Unit = {
-            for { key <- bsonObj.keySet() }
-                put(key, BValue.wrap(bsonObj.get(key)))
-        }
-
-        override def putAll(m : java.util.Map[_, _]) : Unit = {
-            for { key <- m.keySet() }
-                put(key.asInstanceOf[String], BValue.wrap(m.get(key)))
-        }
-
-        override def removeField(key : String) : AnyRef = {
-            val previous = get(key)
-            bvalue = bvalue - key
-            previous
-        }
-
-        override def toMap() : java.util.Map[_, _] = {
-            bvalue.unwrappedAsJava
-        }
     }
 
     object JValue {

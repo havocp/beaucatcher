@@ -1,7 +1,7 @@
-package com.ometer.mongo
+package org.beaucatcher.mongo
 
 import com.mongodb.WriteResult
-import com.ometer.bson.BsonAST._
+import org.beaucatcher.bson._
 
 /* This is really oversimplified for now; there are a ton of options
  * for each request and of course we want async sometime. Keeping

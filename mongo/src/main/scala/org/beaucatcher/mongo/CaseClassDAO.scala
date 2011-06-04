@@ -1,7 +1,7 @@
-package com.ometer.mongo
+package org.beaucatcher.mongo
 
-import com.ometer.ClassAnalysis
-import com.ometer.bson.BsonAST._
+import org.beaucatcher.bson.ClassAnalysis
+import org.beaucatcher.bson._
 import com.mongodb.WriteResult
 
 /**
@@ -16,12 +16,12 @@ abstract trait CaseClassSyncDAO[OuterQueryType, EntityType <: Product, IdType]
  * The general type of a case class DAO that backends to another DAO.
  * This is an internal implementation class not exported from the library.
  */
-private[ometer] abstract trait CaseClassComposedSyncDAO[OuterQueryType, EntityType <: Product, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType]
+private[beaucatcher] abstract trait CaseClassComposedSyncDAO[OuterQueryType, EntityType <: Product, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType]
     extends CaseClassSyncDAO[OuterQueryType, EntityType, OuterIdType]
     with ComposedSyncDAO[OuterQueryType, EntityType, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType] {
 }
 
-private[ometer] class CaseClassBObjectEntityComposer[EntityType <: Product : Manifest]
+private[beaucatcher] class CaseClassBObjectEntityComposer[EntityType <: Product : Manifest]
     extends EntityComposer[EntityType, BObject] {
 
     private lazy val analysis : ClassAnalysis[EntityType] = {
@@ -43,7 +43,7 @@ private[ometer] class CaseClassBObjectEntityComposer[EntityType <: Product : Man
  * Subclass would provide the backend and could override the in/out type converters.
  * This is an internal implementation class not exported from the library.
  */
-private[ometer] abstract trait CaseClassBObjectSyncDAO[EntityType <: Product, OuterIdType, InnerIdType]
+private[beaucatcher] abstract trait CaseClassBObjectSyncDAO[EntityType <: Product, OuterIdType, InnerIdType]
     extends CaseClassComposedSyncDAO[BObject, EntityType, OuterIdType, BObject, BObject, InnerIdType] {
     override protected val backend : BObjectSyncDAO[InnerIdType]
 

@@ -1,19 +1,18 @@
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.MongoCollection
-import com.ometer.bson.Implicits._
-import com.ometer.bson._
-import com.ometer.casbah._
+import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.bson._
+import org.beaucatcher.casbah._
 import org.bson.types._
 import org.junit.Assert._
 import org.junit._
-import play.test._
 
 package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String)
 
     object Foo extends CasbahCollectionOperationsWithObjectId[Foo] {
         override protected lazy val collection : MongoCollection = {
-            MongoUtil.collection("foo")
+            CasbahUtil.collection("foo")
         }
 
         def customQuery[E : Manifest]() = {
@@ -25,7 +24,7 @@ package foo {
 
     object FooWithIntId extends CasbahCollectionOperations[FooWithIntId, Int] {
         override protected lazy val collection : MongoCollection = {
-            MongoUtil.collection("fooWithIntId")
+            CasbahUtil.collection("fooWithIntId")
         }
 
         def customQuery[E : Manifest]() = {
@@ -34,13 +33,13 @@ package foo {
     }
 }
 
-class DAOTest extends UnitTest {
+class DAOTest {
     import foo._
 
     @org.junit.Before
     def setup() {
-        MongoUtil.collection("foo").remove(MongoDBObject())
-        MongoUtil.collection("fooWithIntId").remove(MongoDBObject())
+        CasbahUtil.collection("foo").remove(MongoDBObject())
+        CasbahUtil.collection("fooWithIntId").remove(MongoDBObject())
     }
 
     @Test
