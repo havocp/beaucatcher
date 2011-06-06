@@ -10,9 +10,9 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
     /* Subprojects */
     lazy val bson = project("bson", "beaucatcher-bson", new BeaucatcherBSONProject(_))
     lazy val mongo = project("mongo", "beaucatcher-mongo", new BeaucatcherMongoProject(_), bson)
-    lazy val akka = project("akka", "beaucatcher-akka", new BeaucatcherAkkaProject(_), mongo)
+    lazy val async = project("async", "beaucatcher-async", new BeaucatcherAsyncProject(_), mongo)
     lazy val casbah = project("casbah", "beaucatcher-casbah", new BeaucatcherCasbahProject(_), mongo)
-    lazy val hammersmith = project("hammersmith", "beaucatcher-hammersmith", new BeaucatcherHammersmithProject(_), akka)
+    lazy val hammersmith = project("hammersmith", "beaucatcher-hammersmith", new BeaucatcherHammersmithProject(_), async)
 
     class BeaucatcherBSONProject(info: ProjectInfo) extends DefaultProject(info) {
         val scalajCollection = "org.scalaj" %% "scalaj-collection" % "1.1"
@@ -27,7 +27,7 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
     class BeaucatcherMongoProject(info: ProjectInfo) extends DefaultProject(info) {
     }
 
-    class BeaucatcherAkkaProject(info: ProjectInfo) extends DefaultProject(info) {
+    class BeaucatcherAsyncProject(info: ProjectInfo) extends DefaultProject(info) {
         val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
     }
 

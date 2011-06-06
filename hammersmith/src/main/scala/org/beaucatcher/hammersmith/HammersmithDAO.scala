@@ -3,7 +3,7 @@ package org.beaucatcher.hammersmith
 import akka.dispatch.Future
 import akka.dispatch.DefaultCompletableFuture
 import org.beaucatcher.bson._
-import org.beaucatcher.akka._
+import org.beaucatcher.async._
 import org.beaucatcher.mongo._
 import com.mongodb.WriteResult
 import com.mongodb.CommandResult
