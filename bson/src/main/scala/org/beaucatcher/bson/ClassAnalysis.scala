@@ -238,11 +238,17 @@ class ClassAnalysis[X <: ClassAnalysis.CaseClass](val clazz : Class[X]) {
     }
 
     private def typeRefType(ms : MethodSymbol) : TypeRefType = ms.infoType match {
-        case PolyType(tr @ TypeRefType(_, _, _), _) => tr
+        // it looks like 2.8.1 used PolyType and 2.9.0 uses NullaryMethodType
+        //case PolyType(tr @ TypeRefType(_, _, _), _) => tr
+        case NullaryMethodType(tr @ TypeRefType(_, _, _)) => tr
+        case _ => {
+            throw new UnexpectedMethodSig(ms)
+        }
     }
 }
 
 object ClassAnalysis {
+    class UnexpectedMethodSig(ms : MethodSymbol) extends Exception("Failed to interpret method %s infoType %s".format(ms, ms.infoType))
     class MissingPickledSig(clazz : Class[_]) extends Exception("Failed to parse pickled Scala signature from: %s".format(clazz))
     class MissingExpectedType(clazz : Class[_]) extends Exception("Parsed pickled Scala signature, but no expected type found: %s"
         .format(clazz))
