@@ -2,9 +2,9 @@ package org.beaucatcher.hammersmith
 
 import akka.dispatch.Future
 import akka.dispatch.DefaultCompletableFuture
-import org.beaucatcher.bson.BsonAST._
-import org.beaucatcher.mongo.akka._
-import org.beaucatcher.mongo.{ akka => _, _ }
+import org.beaucatcher.bson._
+import org.beaucatcher.akka._
+import org.beaucatcher.mongo._
 import com.mongodb.WriteResult
 import com.mongodb.CommandResult
 import com.mongodb.async.Collection
@@ -13,6 +13,7 @@ import org.bson.collection.BSONDocument
 import com.mongodb.async.Cursor
 import akka.actor.Actor
 import akka.actor.ActorRef
+import org.bson.DefaultBSONSerializer
 
 private object CursorActor {
     // requests
@@ -167,7 +168,7 @@ abstract trait HammersmithSyncDAO[IdType <: AnyRef] extends SyncDAO[BSONDocument
 
     private class ConcreteAsyncDAO(override val collection : Collection) extends HammersmithAsyncDAO[IdType]
 
-    private val async = new ConcreteAsyncDAO(collection)
+    private lazy val async = new ConcreteAsyncDAO(collection)
 
     override def find[A <% BSONDocument](ref : A) : Iterator[BSONDocument] = {
         val futuresIterator = async.find(ref).await.resultOrException.get
@@ -209,25 +210,27 @@ abstract trait HammersmithSyncDAO[IdType <: AnyRef] extends SyncDAO[BSONDocument
 }
 
 private[hammersmith] class BObjectBSONDocument(bobject : BObject) extends BSONDocument {
-    private val underlying = bobject
-
+    // we have to make a mutable map to make hammersmith happy, which pretty much blows
+    override val self = scala.collection.mutable.HashMap.empty ++ bobject.unwrapped
+    override def asMap = self
+    override val serializer = new DefaultBSONSerializer
 }
 
 private[hammersmith] class BObjectHammersmithQueryComposer extends QueryComposer[BObject, BSONDocument] {
     override def queryIn(q : BObject) : BSONDocument = new BObjectBSONDocument(q)
-    override def queryOut(q : BSONDocument) : BObject = BObject(q.asMap)
+    override def queryOut(q : BSONDocument) : BObject = BObject(q.toList map { kv => (kv._1, BValue.wrap(kv._2)) })
 }
 
 private[hammersmith] class BObjectHammersmithEntityComposer extends EntityComposer[BObject, BSONDocument] {
     override def entityIn(o : BObject) : BSONDocument = new BObjectBSONDocument(o)
-    override def entityOut(o : BSONDocument) : BObject = BObject(o.asMap)
+    override def entityOut(o : BSONDocument) : BObject = BObject(o.toList map { kv => (kv._1, BValue.wrap(kv._2)) })
 }
 
 /**
  * A BObject DAO that specifically backends to a Hammersmith DAO.
  * Subclass would provide the backend and could override the in/out type converters.
  */
-private[hammersmith] abstract trait BObjectHammersmithSyncDAO[OuterIdType, InnerIdType]
+private[hammersmith] abstract trait BObjectHammersmithSyncDAO[OuterIdType, InnerIdType <: AnyRef]
     extends BObjectComposedSyncDAO[OuterIdType, BSONDocument, BSONDocument, InnerIdType] {
     override protected val backend : HammersmithSyncDAO[InnerIdType]
 

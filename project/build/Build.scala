@@ -35,5 +35,15 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
     }
 
     class BeaucatcherHammersmithProject(info: ProjectInfo) extends DefaultProject(info) {
+        val casbah = "com.mongodb.casbah" %% "casbah-util" % "2.2.0-SNAPSHOT"
+        val commonsPool = "commons-pool" % "commons-pool" % "1.5.5"
+        val netty = "org.jboss.netty" % "netty" % "3.2.4.Final"
+        val twitterUtilCore = "com.twitter" % "util-core" % "1.8.13"
+        val slf4j = "org.slf4j" % "slf4j-api" % "1.6.1"
+        val logback = "ch.qos.logback" % "logback-classic" % "0.9.28"
+
+        /* Repositories */
+        val jbossRepo = "JBoss Public Repo" at "https://repository.jboss.org/nexus/content/groups/public-jboss/"
+        val twttrRepo = "Twitter Public Repo" at "http://maven.twttr.com"
     }
 }

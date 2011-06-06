@@ -1,4 +1,4 @@
-package org.beaucatcher.mongo.akka
+package org.beaucatcher.akka
 
 import com.mongodb.WriteResult
 import org.beaucatcher.bson._
