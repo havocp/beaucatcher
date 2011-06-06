@@ -1,4 +1,5 @@
 import sbt._
+import reaktor.scct.ScctProject
 
 class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
     override def parallelExecution = true
@@ -14,7 +15,7 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
     lazy val casbah = project("casbah", "beaucatcher-casbah", new BeaucatcherCasbahProject(_), mongo)
     lazy val hammersmith = project("hammersmith", "beaucatcher-hammersmith", new BeaucatcherHammersmithProject(_), async)
 
-    class BeaucatcherBSONProject(info: ProjectInfo) extends DefaultProject(info) {
+    class BeaucatcherBSONProject(info: ProjectInfo) extends DefaultProject(info) with ScctProject {
         val scalajCollection = "org.scalaj" %% "scalaj-collection" % "1.1"
         val liftJson = "net.liftweb" %% "lift-json" % "2.4-SNAPSHOT"
         val scalap = "org.scala-lang" % "scalap" % "2.9.0-1"
@@ -24,17 +25,17 @@ class BeaucatcherProject(info: ProjectInfo) extends ParentProject(info) {
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test->default"
     }
 
-    class BeaucatcherMongoProject(info: ProjectInfo) extends DefaultProject(info) {
+    class BeaucatcherMongoProject(info: ProjectInfo) extends DefaultProject(info) with ScctProject {
     }
 
-    class BeaucatcherAsyncProject(info: ProjectInfo) extends DefaultProject(info) {
+    class BeaucatcherAsyncProject(info: ProjectInfo) extends DefaultProject(info) with ScctProject {
         val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
     }
 
-    class BeaucatcherCasbahProject(info: ProjectInfo) extends DefaultProject(info) {
+    class BeaucatcherCasbahProject(info: ProjectInfo) extends DefaultProject(info) with ScctProject {
     }
 
-    class BeaucatcherHammersmithProject(info: ProjectInfo) extends DefaultProject(info) {
+    class BeaucatcherHammersmithProject(info: ProjectInfo) extends DefaultProject(info) with ScctProject {
         val casbah = "com.mongodb.casbah" %% "casbah-util" % "2.2.0-SNAPSHOT"
         val commonsPool = "commons-pool" % "commons-pool" % "1.5.5"
         val netty = "org.jboss.netty" % "netty" % "3.2.4.Final"
