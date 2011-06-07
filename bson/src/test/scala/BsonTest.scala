@@ -1,8 +1,6 @@
 import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
-import org.beaucatcher.casbah.Implicits._
-import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.Binary
 import org.bson.types.ObjectId
 import org.bson.types.BSONTimestamp
@@ -35,7 +33,6 @@ class BsonTest {
             "timestamp" -> new BSONTimestamp((someJavaDate.getTime / 1000).toInt, 1),
             "objectid" -> new ObjectId("4dbf8ea93364e3bd9745723c"),
             "binary" -> new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)),
-            "bsonobj" -> MongoDBObject("a" -> 30, "b" -> "foo"),
             "map_int" -> Map[String, Int]("a" -> 20, "b" -> 21),
             "map_date" -> Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
             "seq_string" -> List("a", "b", "c", "d"),
@@ -62,7 +59,6 @@ class BsonTest {
             new BSONTimestamp((someJavaDate.getTime / 1000).toInt, 1),
             new ObjectId("4dbf8ea93364e3bd9745723c"),
             new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)),
-            MongoDBObject("a" -> 30, "b" -> "foo"),
             Map[String, Int]("a" -> 20, "b" -> 21),
             Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
             List("a", "b", "c", "d"),
@@ -234,7 +230,7 @@ class BsonTest {
         val expected = "{\"null\":null,\"int\":42,\"long\":37,\"bigint\":42,\"double\":3.14159," +
             "\"float\":3.141590118408203,\"bigdecimal\":23.49,\"boolean\":true,\"string\":\"quick brown fox\"," +
             "\"date\":837017400000,\"datetime\":837017400000,\"timestamp\":837017400001,\"objectid\":\"4dbf8ea93364e3bd9745723c\"," +
-            "\"binary\":\"AAAAAAAAAAAAAA==\\r\\n\",\"bsonobj\":{\"a\":30,\"b\":\"foo\"},\"map_int\":{\"a\":20,\"b\":21}," +
+            "\"binary\":\"AAAAAAAAAAAAAA==\\r\\n\",\"map_int\":{\"a\":20,\"b\":21}," +
             "\"map_date\":{\"a\":837017400000,\"b\":837017400000},\"seq_string\":[\"a\",\"b\",\"c\",\"d\"]," +
             "\"seq_int\":[1,2,3,4],\"bobj\":{\"foo\":6789,\"bar\":4321}}"
         assertEquals(expected, jsonString)
@@ -265,7 +261,7 @@ class BsonTest {
     def barrayToJson() = {
         val barray = makeArrayManyTypes()
         val jsonString = barray.toJson(JsonFlavor.CLEAN)
-        val expected = "[null,42,37,42,3.14159,3.141590118408203,23.49,true,\"quick brown fox\",837017400000,837017400000,837017400001,\"4dbf8ea93364e3bd9745723c\",\"AAAAAAAAAAAAAA==\\r\\n\",{\"a\":30,\"b\":\"foo\"},{\"a\":20,\"b\":21},{\"a\":837017400000,\"b\":837017400000},[\"a\",\"b\",\"c\",\"d\"],[1,2,3,4],{\"foo\":6789,\"bar\":4321}]"
+        val expected = "[null,42,37,42,3.14159,3.141590118408203,23.49,true,\"quick brown fox\",837017400000,837017400000,837017400001,\"4dbf8ea93364e3bd9745723c\",\"AAAAAAAAAAAAAA==\\r\\n\",{\"a\":20,\"b\":21},{\"a\":837017400000,\"b\":837017400000},[\"a\",\"b\",\"c\",\"d\"],[1,2,3,4],{\"foo\":6789,\"bar\":4321}]"
         assertEquals(expected, jsonString)
 
         // FIXME test pretty string, test other json flavors
