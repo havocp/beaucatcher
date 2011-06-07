@@ -1,7 +1,5 @@
 package org.beaucatcher.bson
 
-import BsonAST._
-import BsonEnums._
 import org.apache.commons.codec.binary.Base64
 import org.bson.types._
 import org.joda.time.{ DateTime, DateTimeZone }

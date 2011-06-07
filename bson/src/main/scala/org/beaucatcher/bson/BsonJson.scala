@@ -1,7 +1,5 @@
 package org.beaucatcher.bson
 
-import BsonAST._
-import BsonEnums._
 import java.io.Reader
 import net.liftweb.{ json => lift }
 

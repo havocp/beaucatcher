@@ -1,6 +1,5 @@
 package org.beaucatcher.bson
 
-import BsonAST._
 import java.util.Date
 import org.bson.types._
 import org.bson.BSONObject
