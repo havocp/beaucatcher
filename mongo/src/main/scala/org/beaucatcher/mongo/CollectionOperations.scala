@@ -12,6 +12,8 @@ import org.bson.types.ObjectId
  * (Hammersmith, Casbah, etc.)
  */
 abstract trait CollectionOperations[EntityType <: Product, IdType] {
+    import CollectionOperations._
+
     /**
      * This method performs any one-time-on-startup setup for the collection, such as ensuring an index.
      * The app will need to somehow arrange to call this for each collection to use this feature.
@@ -25,24 +27,36 @@ abstract trait CollectionOperations[EntityType <: Product, IdType] {
     val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, IdType]
 
     /**
-     * You have to override this from a class, because traits can't
-     * put the ": Manifest" annotation on their type parameters.
+     * The type of a DAO chooser that will select the proper DAO for result type E on this
+     * CollectionOperations object. Used as implicit argument to syncDAO method.
      */
-    protected val manifestOfEntityType : Manifest[EntityType]
+    type SyncDAOChooser[E] = GenericSyncDAOChooser[E, IdType, CollectionOperations[EntityType, IdType]]
 
     /**
      * This lets you write a function that generically works for either the case class or
      * BObject results. So for example you can implement query logic that supports
      * both kinds of result.
      */
-    def syncDAO[E : Manifest] : SyncDAO[BObject, E, IdType] = {
-        manifest[E] match {
-            case m if m == manifest[BObject] =>
-                bobjectSyncDAO.asInstanceOf[SyncDAO[BObject, E, IdType]]
-            case m if m == manifestOfEntityType =>
-                caseClassSyncDAO.asInstanceOf[SyncDAO[BObject, E, IdType]]
-            case _ =>
-                throw new IllegalArgumentException("Missing type param on syncDAO[T]? add the [T]? No DAO returns type: " + manifest[E])
+    def syncDAO[E](implicit chooser : SyncDAOChooser[E]) : SyncDAO[BObject, E, IdType] = {
+        chooser.choose(this)
+    }
+}
+
+object CollectionOperations {
+    // used as an implicit parameter to select the correct DAO based on requested query result type
+    trait GenericSyncDAOChooser[E, I, -CO] {
+        def choose(ops : CO) : SyncDAO[BObject, E, I]
+    }
+
+    implicit def createDAOChooserForBObject[I] : GenericSyncDAOChooser[BObject, I, CollectionOperations[_, I]] = {
+        new GenericSyncDAOChooser[BObject, I, CollectionOperations[_, I]] {
+            def choose(ops : CollectionOperations[_, I]) = ops.bobjectSyncDAO
+        }
+    }
+
+    implicit def createDAOChooserForCaseClass[E <: Product, I] : GenericSyncDAOChooser[E, I, CollectionOperations[E, I]] = {
+        new GenericSyncDAOChooser[E, I, CollectionOperations[E, I]] {
+            def choose(ops : CollectionOperations[E, I]) = ops.caseClassSyncDAO
         }
     }
 }

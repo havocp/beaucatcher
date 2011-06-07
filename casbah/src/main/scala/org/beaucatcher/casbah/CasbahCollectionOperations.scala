@@ -39,8 +39,6 @@ abstract class CasbahCollectionOperations[EntityType <: Product : Manifest, IdTy
             caseClassBObjectEntityComposer,
             new IdentityIdComposer[IdType])
 
-    final override protected val manifestOfEntityType = manifest[EntityType]
-
     final override lazy val bobjectSyncDAO = daoGroup.bobjectSyncDAO
     final override lazy val caseClassSyncDAO = daoGroup.caseClassSyncDAO
 }

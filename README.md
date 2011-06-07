@@ -225,7 +225,7 @@ class DAO. You might use it like this:
                 MongoUtil.collection("foo")
             }
 
-            def customQuery[E : Manifest]() = {
+            def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
                 syncDAO[E].find(BObject("intField" -> 23))
             }
         }

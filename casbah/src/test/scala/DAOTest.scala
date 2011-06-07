@@ -15,7 +15,7 @@ package foo {
             CasbahUtil.collection("foo")
         }
 
-        def customQuery[E : Manifest]() = {
+        def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
     }
@@ -27,7 +27,7 @@ package foo {
             CasbahUtil.collection("fooWithIntId")
         }
 
-        def customQuery[E : Manifest]() = {
+        def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
     }
@@ -78,7 +78,7 @@ class DAOTest {
     }
 
     @Test
-    def testFindByID() {
+    def testFindByIDAllResultTypes() {
         val foo = Foo(new ObjectId(), 23, "woohoo")
         Foo.caseClassSyncDAO.save(foo)
 
@@ -89,6 +89,9 @@ class DAOTest {
         val f = Foo.syncDAO[Foo].findOneByID(foo._id).get
         assertEquals(23, f.intField)
         assertEquals("woohoo", f.stringField)
+
+        // should not compile because FooWithIntId is wrong type
+        //val n = Foo.syncDAO[FooWithIntId].findOneByID(foo._id).get
     }
 
     @Test
@@ -109,7 +112,7 @@ class DAOTest {
     }
 
     @Test
-    def testFindByIDWithIntId() {
+    def testFindByIDAllResultTypesWithIntId() {
         val foo = FooWithIntId(101, 23, "woohoo")
         FooWithIntId.caseClassSyncDAO.save(foo)
 
