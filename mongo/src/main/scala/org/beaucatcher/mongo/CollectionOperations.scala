@@ -11,7 +11,7 @@ import org.bson.types.ObjectId
  * Here, the trait doesn't have knowledge of a specific MongoDB implementation
  * (Hammersmith, Casbah, etc.)
  */
-abstract trait CollectionOperations[EntityType <: Product, CaseClassIdType, BObjectIdType] {
+abstract trait CollectionOperations[EntityType <: Product, IdType] {
     /**
      * This method performs any one-time-on-startup setup for the collection, such as ensuring an index.
      * The app will need to somehow arrange to call this for each collection to use this feature.
@@ -19,10 +19,10 @@ abstract trait CollectionOperations[EntityType <: Product, CaseClassIdType, BObj
     def migrate() : Unit = {}
 
     /** Synchronous DAO returning BObject values from the collection */
-    val bobjectSyncDAO : BObjectSyncDAO[BObjectIdType]
+    val bobjectSyncDAO : BObjectSyncDAO[IdType]
 
     /** Synchronous DAO returning case class entity values from the collection */
-    val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, CaseClassIdType]
+    val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, IdType]
 
     /**
      * You have to override this from a class, because traits can't
@@ -35,12 +35,12 @@ abstract trait CollectionOperations[EntityType <: Product, CaseClassIdType, BObj
      * BObject results. So for example you can implement query logic that supports
      * both kinds of result.
      */
-    def syncDAO[E : Manifest] : SyncDAO[BObject, E, ObjectId] = {
+    def syncDAO[E : Manifest] : SyncDAO[BObject, E, IdType] = {
         manifest[E] match {
             case m if m == manifest[BObject] =>
-                bobjectSyncDAO.asInstanceOf[SyncDAO[BObject, E, ObjectId]]
+                bobjectSyncDAO.asInstanceOf[SyncDAO[BObject, E, IdType]]
             case m if m == manifestOfEntityType =>
-                caseClassSyncDAO.asInstanceOf[SyncDAO[BObject, E, ObjectId]]
+                caseClassSyncDAO.asInstanceOf[SyncDAO[BObject, E, IdType]]
             case _ =>
                 throw new IllegalArgumentException("Missing type param on syncDAO[T]? add the [T]? No DAO returns type: " + manifest[E])
         }

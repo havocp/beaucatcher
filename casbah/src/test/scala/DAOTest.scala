@@ -76,4 +76,49 @@ class DAOTest {
         assertEquals(23, f.intField)
         assertEquals("woohoo", f.stringField)
     }
+
+    @Test
+    def testFindByID() {
+        val foo = Foo(new ObjectId(), 23, "woohoo")
+        Foo.caseClassSyncDAO.save(foo)
+
+        val o = Foo.syncDAO[BObject].findOneByID(foo._id).get
+        assertEquals(BInt32(23), o.get("intField").get)
+        assertEquals(BString("woohoo"), o.get("stringField").get)
+
+        val f = Foo.syncDAO[Foo].findOneByID(foo._id).get
+        assertEquals(23, f.intField)
+        assertEquals("woohoo", f.stringField)
+    }
+
+    @Test
+    def testCustomQueryReturnsVariousEntityTypesWithIntId() {
+        val foo = FooWithIntId(100, 23, "woohoo")
+        FooWithIntId.caseClassSyncDAO.save(foo)
+
+        val objects = FooWithIntId.customQuery[BObject].toIndexedSeq
+        assertEquals(1, objects.size)
+        assertEquals(BInt32(23), objects(0).get("intField").get)
+        assertEquals(BString("woohoo"), objects(0).get("stringField").get)
+
+        val caseClasses = FooWithIntId.customQuery[FooWithIntId].toIndexedSeq
+        assertEquals(1, caseClasses.size)
+        val f = caseClasses(0)
+        assertEquals(23, f.intField)
+        assertEquals("woohoo", f.stringField)
+    }
+
+    @Test
+    def testFindByIDWithIntId() {
+        val foo = FooWithIntId(101, 23, "woohoo")
+        FooWithIntId.caseClassSyncDAO.save(foo)
+
+        val o = FooWithIntId.syncDAO[BObject].findOneByID(foo._id).get
+        assertEquals(BInt32(23), o.get("intField").get)
+        assertEquals(BString("woohoo"), o.get("stringField").get)
+
+        val f = FooWithIntId.syncDAO[FooWithIntId].findOneByID(foo._id).get
+        assertEquals(23, f.intField)
+        assertEquals("woohoo", f.stringField)
+    }
 }
