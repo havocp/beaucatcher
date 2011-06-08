@@ -36,31 +36,93 @@ import org.joda.time._
 import scalaj.collection.Implicits._
 
 /**
- *  The names of the case classes mostly match the names in the MongoDB shell
- *  such as ObjectId, ISODate, except for numbers which are done a little more
- *  clearly than JavaScript does it.
+ *  `BValue` is the base trait for all BSON value types.
+ *
+ *  The names of the subclasses implementing `BValue` mostly match the names in the MongoDB shell
+ *  such as ObjectId, ISODate, except for numbers (because there are separate types for [[org.beaucatcher.bson.BInt32]],
+ *  [[org.beaucatcher.bson.BInt64]], and [[org.beaucatcher.bson.BDouble]], while JavaScript has
+ *  a single number type).
+ *
+ *  Most uses of `BValue` will start with the container [[org.beaucatcher.bson.BObject]], which implements the standard
+ *  [[scala.collection.immutable.Map]] trait. There's also [[org.beaucatcher.bson.BArray]] which
+ *  implements [[scala.collection.immutable.LinearSeq]].
+ *
+ *  A subset of `BValue` subtypes also implement the [[org.beaucatcher.bson.JValue]] trait, indicating that these types
+ *  can appear in a JSON document, as well as in a BSON document.
+ *
+ *  [[org.beaucatcher.bson.JObject]] and [[org.beaucatcher.bson.JArray]] are separate types from [[org.beaucatcher.bson.BObject]]
+ *  and [[org.beaucatcher.bson.BArray]] because they are guaranteed to contain only [[org.beaucatcher.bson.JValue]]
+ *  elements, with no BSON-only values.
+ *
+ *  Import everything from [[org.beaucatcher.bson.Implicits]] if you want to auto-convert plain Scala types into
+ *  BSON wrapper types. This lets you type nice BSON literals along these lines:
+ *  {{{
+ *    BObject("a" -> 42, "b" -> "hello world", "c" -> new ObjectId())
+ *  }}}
+ *
+ *  Because the `BValue` subtypes are case classes, you can use pattern matching to unwrap them.
  */
 sealed abstract trait BValue {
+    /** The type you get if you unwrap the value */
     type WrappedType
+
+    /**
+     * The unwrapped version of the `BValue` (that is, a plain Scala type such as [[scala.Int]],
+     * rather than a BSON type such as [[org.beaucatcher.bson.BInt32]]).
+     * @return the unwrapped value
+     */
     def unwrapped : WrappedType
 
+    /**
+     * The type "code" for this value's BSON type in the BSON/MongoDB wire protocol
+     */
     val bsonType : BsonType.Value
 
+    /**
+     * The unwrapped version of the `BValue` as a plain Java type. For example,
+     * while the `unwrapped` method on a `BObject` returns a Scala `Map`, the
+     * `unwrappedAsJava` method returns a Java `Map`. This is useful for interoperating
+     * with Java APIs.
+     * @return the unwrapped value as a Java type
+     */
     def unwrappedAsJava : AnyRef = {
         // this default implementation works for say String where Java and Scala are the same
         unwrapped.asInstanceOf[AnyRef]
     }
 
+    /**
+     * The value converted to a [[org.beaucatcher.bson.JValue]]. For many primitive types,
+     * this method simply returns the same object. But types that exist in BSON but
+     * not in JSON, such as [[org.beaucatcher.bson.BObjectId]], have to be mapped into
+     * JSON's smaller set of types. The mapping is determined by the [[org.beaucatcher.bson.JsonFlavor]]
+     * enumeration.
+     *
+     * @param flavor the style of mapping BSON to JSON
+     * @return a JSON-only version of this value
+     */
     def toJValue(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : JValue
 
+    /**
+     * The value converted to a compact JSON string.
+     *
+     * @param flavor the style of mapping BSON to JSON
+     * @return a JSON string representation of this value
+     */
     def toJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
         BsonJson.toJson(this, flavor)
 
+    /**
+     * The value converted to a JSON string with nice formatting (i.e. with whitespace).
+     *
+     * @param flavor the style of mapping BSON to JSON
+     * @return a nicely-formatted JSON string representation of this value
+     */
     def toPrettyJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
         BsonJson.toPrettyJson(this, flavor)
 }
 
 /**
+ *  This trait marks those `BValue` which are also valid in JSON.
  *  A subset of BSON values (BValue) are also JSON values (JValue) because
  *  they don't use extended BSON types.
  */
@@ -75,12 +137,18 @@ private[bson] sealed abstract class BSingleValue[T](override val bsonType : Bson
     override def unwrapped = value
 }
 
+/**
+ * The value `null` in BSON and JSON.
+ */
 case object BNull extends JValue {
     type WrappedType = Null
     override val unwrapped = null
     override val bsonType = BsonType.NULL
 }
 
+/**
+ * A BSON or JSON string value.
+ */
 case class BString(override val value : String) extends BSingleValue(BsonType.STRING, value) with JValue {
 }
 
