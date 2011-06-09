@@ -270,6 +270,63 @@ sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
 }
 
 /**
+ * Trait implementing companion object functionality for [[org.beaucatcher.bson.ArrayBase]] subtypes.
+ */
+sealed trait ArrayBaseCompanion[ElementType <: BValue, Repr <: ArrayBase[ElementType]] {
+    protected[bson] def construct(seq : Seq[ElementType]) : Repr
+    protected[bson] def nullValue : ElementType
+
+    /** An empty [[org.beaucatcher.bson.BArray]] or [[org.beaucatcher.bson.JArray]] */
+    val empty : Repr = construct(List())
+
+    /** Constructs an empty [[org.beaucatcher.bson.BArray]] or [[org.beaucatcher.bson.JArray]] */
+    def apply() : Repr = {
+        empty
+    }
+
+    /**
+     * Constructs an array of length one containing the provided value.
+     * @param v a value that can be wrapped in [[org.beaucatcher.bson.BValue]] for [[org.beaucatcher.bson.BArray]], [[org.beaucatcher.bson.JValue]] for [[org.beaucatcher.bson.JArray]]
+     * @tparam V the type of the value
+     */
+    def apply[V <% ElementType](v : V) : Repr = {
+        construct(List[ElementType](if (v == null) nullValue else v))
+    }
+
+    /**
+     * Constructs a [[org.beaucatcher.bson.BArray]] or [[org.beaucatcher.bson.JArray]] containing the values in the sequence,
+     * each wrapped in a [[org.beaucatcher.bson.BValue]] or [[org.beaucatcher.bson.JValue]].
+     * @param seq a sequence of values convertible to [[org.beaucatcher.bson.BValue]] or [[org.beaucatcher.bson.JValue]]
+     * @tparam V type of elements in the sequence
+     */
+    def apply[V <% ElementType](seq : Seq[V]) : Repr = {
+        val bvalues = for { v <- seq }
+            yield if (v == null) nullValue else v : ElementType
+        construct(bvalues.toSeq)
+    }
+
+    /**
+     * Constructs a [[org.beaucatcher.bson.BArray]] or [[org.beaucatcher.bson.JArray]] containing the listed
+     * values as elements.
+     *
+     * @param v1 a first value
+     * @param v2 a second value
+     * @param vs optional additional value
+     */
+    def apply(v1 : ElementType, v2 : ElementType, vs : ElementType*) : Repr = {
+        construct((if (v1 == null) nullValue else v1) ::
+            (if (v2 == null) nullValue else v2) ::
+            vs.map({ v => if (v == null) nullValue else v }).toList)
+    }
+
+    /**
+     * Creates a builder object used to efficiently build a new [[org.beaucatcher.bson.Repr]]
+     * @return a new builder for [[org.beaucatcher.bson.Repr]]
+     */
+    def newBuilder : Builder[ElementType, Repr]
+}
+
+/**
  * A BSON array of values. Implements [[scala.collection.LinearSeqLike]] so you can
  * use it like a regular Scala sequence of [[org.beaucatcher.bson.BValue]].
  */
@@ -285,55 +342,10 @@ case class BArray(override val value : List[BValue])
 /**
  * Companion object for [[org.beaucatcher.bson.BArray]]
  */
-object BArray {
-    /** An empty [[org.beaucatcher.bson.BArray]] */
-    val empty : BArray = BArray(List())
-
-    /** Constructs an empty array */
-    def apply() : BArray = {
-        empty
-    }
-
-    /**
-     * Constructs a [[org.beaucatcher.bson.BArray]] of length one containing the provided value.
-     * @param v a value that can be wrapped in a [[org.beaucatcher.bson.BValue]]
-     * @tparam V the type of the value
-     */
-    def apply[V <% BValue](v : V) : BArray = {
-        BArray(List[BValue](if (v == null) BNull else v))
-    }
-
-    /**
-     * Constructs a [[org.beaucatcher.bson.BArray]] containing the values in the sequence,
-     * each wrapped in a [[org.beaucatcher.bson.BValue]].
-     * @param seq a sequence of values convertible to [[org.beaucatcher.bson.BValue]]
-     * @tparam V type of elements in the sequence
-     */
-    def apply[V <% BValue](seq : Seq[V]) : BArray = {
-        val bvalues = for { v <- seq }
-            yield if (v == null) BNull else v : BValue
-        BArray(bvalues.toList)
-    }
-
-    /**
-     * Constructs a [[org.beaucatcher.bson.BArray]] containing the listed
-     * values.
-     *
-     * @param v1 a first [[org.beaucatcher.bson.BValue]]
-     * @param v2 a second [[org.beaucatcher.bson.BValue]]
-     * @param vs optional additional [[org.beaucatcher.bson.BValue]]
-     */
-    def apply(v1 : BValue, v2 : BValue, vs : BValue*) : BArray = {
-        BArray((if (v1 == null) BNull else v1) ::
-            (if (v2 == null) BNull else v2) ::
-            vs.map({ v => if (v == null) BNull else v }).toList)
-    }
-
-    /**
-     * Creates a builder object used to efficiently build a new [[org.beaucatcher.bson.BArray]]
-     * @return a new builder for [[org.beaucatcher.bson.BArray]]
-     */
-    def newBuilder : Builder[BValue, BArray] = newArrayBuilder(list => BArray(list))
+object BArray extends ArrayBaseCompanion[BValue, BArray] {
+    override def construct(elements : Seq[BValue]) : BArray = new BArray(elements.toList)
+    override def nullValue : BValue = BNull
+    override def newBuilder : Builder[BValue, BArray] = newArrayBuilder(list => BArray(list))
 
     implicit def canBuildFrom : CanBuildFrom[BArray, BValue, BArray] = {
         new CanBuildFrom[BArray, BValue, BArray] {
@@ -356,42 +368,6 @@ case class JArray(override val value : List[JValue])
     // I don't understand that so am not copying it for now.
 
     override def newBuilder = JArray.newBuilder
-}
-
-/**
- * Companion object to [[org.beaucatcher.bson.JArray]]. See the documentation
- * for [[org.beaucatcher.bson.BArray]]'s companion object.
- */
-object JArray {
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
-    val empty : JArray = JArray(List())
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
-    def apply() : JArray = {
-        empty
-    }
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
-    def apply[V <% JValue](v : V) : JArray = {
-        JArray(List[JValue](if (v == null) BNull else v))
-    }
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
-    def apply[V <% JValue](seq : Seq[V]) : JArray = {
-        val jvalues = for { v <- seq }
-            yield if (v == null) BNull else v : JValue
-        JArray(jvalues.toList)
-    }
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
-    def apply(v1 : JValue, v2 : JValue, vs : JValue*) : JArray = {
-        JArray((if (v1 == null) BNull else v1) ::
-            (if (v2 == null) BNull else v2) ::
-            vs.map({ v => if (v == null) BNull else v }).toList)
-    }
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
-    def newBuilder : Builder[JValue, JArray] = newArrayBuilder(list => JArray(list))
 
     implicit def canBuildFrom : CanBuildFrom[JArray, JValue, JArray] = {
         new CanBuildFrom[JArray, JValue, JArray] {
@@ -399,6 +375,15 @@ object JArray {
             def apply(from : JArray) : Builder[JValue, JArray] = newBuilder
         }
     }
+}
+
+/**
+ * Companion object for [[org.beaucatcher.bson.JArray]]
+ */
+object JArray extends ArrayBaseCompanion[JValue, JArray] {
+    override def construct(elements : Seq[JValue]) : JArray = new JArray(elements.toList)
+    override def nullValue : JValue = BNull
+    override def newBuilder : Builder[JValue, JArray] = newArrayBuilder(list => JArray(list))
 }
 
 /**
