@@ -204,14 +204,14 @@ class BsonTest {
         assertEquals(1, JArray(JArray(1, 2, 3) : JValue).size)
 
         // with nulls (the various constructors special-case null)
-        assertEquals(BArray(null : BValue), BArray(BNull))
-        assertEquals(BArray(null, null), BArray(BNull, BNull))
-        assertEquals(BArray(null, null, null), BArray(BNull, BNull, BNull))
-        assertEquals(BArray(Seq(null, null, null)), BArray(BNull, BNull, BNull))
-        assertEquals(JArray(null : JValue), JArray(BNull))
-        assertEquals(JArray(null, null), JArray(BNull, BNull))
-        assertEquals(JArray(null, null, null), JArray(BNull, BNull, BNull))
-        assertEquals(JArray(Seq(null, null, null)), JArray(BNull, BNull, BNull))
+        assertEquals(BArray(BNull), BArray(null : BValue))
+        assertEquals(BArray(BNull, BNull), BArray(null, null))
+        assertEquals(BArray(BNull, BNull, BNull), BArray(null, null, null))
+        assertEquals(BArray(BNull, BNull, BNull), BArray(Seq(null, null, null)))
+        assertEquals(JArray(BNull), JArray(null : JValue))
+        assertEquals(JArray(BNull, BNull), JArray(null, null))
+        assertEquals(JArray(BNull, BNull, BNull), JArray(null, null, null))
+        assertEquals(JArray(BNull, BNull, BNull), JArray(Seq(null, null, null)))
 
         // array indexing
         val a = BArray(0, 1, 2, 3, 4, 5)
