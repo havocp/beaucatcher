@@ -5,14 +5,20 @@ import org.bson.types._
 import org.bson.BSONObject
 import org.joda.time._
 
-/*
- * Basic implicit conversions from primitive types into BValue.
- * Example:<pre>
- * import Implicits._
- * BObject(BField("name", "joe") :: Nil) == BObject(BField("name", BString("joe")) :: Nil)
- * </pre>
+/**
+ * Object containing implicit conversions from primitive types into [[org.beaucatcher.bson.BValue]].
+ * This saves a lot of explicit wrapping in [[org.beaucatcher.bson.BValue]], as in:
+ * {{{
+ *     import Implicits._
+ *     BObject("name" -> "joe") == BObject("name" -> BString("joe"))
+ * }}}
  */
 object Implicits extends Implicits
+
+/**
+ * Trait containing implicit conversions from primitive types into [[org.beaucatcher.bson.BValue]].
+ * You can derive from this trait or import `org.beaucatcher.bson.Implicits._`, whichever you prefer.
+ */
 trait Implicits {
     implicit def null2bvalue(x : Null) = BNull // this never works I guess because null is-a BValue anyway
     implicit def int2bvalue(x : Int) = BInt32(x)

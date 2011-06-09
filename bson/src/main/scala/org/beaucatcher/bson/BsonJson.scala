@@ -3,8 +3,11 @@ package org.beaucatcher.bson
 import java.io.Reader
 import net.liftweb.{ json => lift }
 
+/** An exception related to JSON parsing or generation. */
 abstract class JsonException(message : String, cause : Throwable = null) extends Exception(message, cause)
+/** An exception indicating that a JSON string was not well-formed or something went wrong while parsing. */
 class JsonParseException(message : String, cause : Throwable = null) extends JsonException(message, cause)
+/** An exception indicating that a JSON string was invalid (didn't conform to a schema, for example). */
 class JsonValidationException(message : String, cause : Throwable = null) extends JsonException(message, cause)
 
 private[bson] object BsonJson {

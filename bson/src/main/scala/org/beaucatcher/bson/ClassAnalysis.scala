@@ -17,18 +17,20 @@
  */
 package org.beaucatcher.bson
 
-import java.lang.reflect.AnnotatedElement
 import java.lang.annotation.Annotation
+import java.lang.reflect.{InvocationTargetException, Constructor, Method, AnnotatedElement}
 import scala.annotation.target.getter
-import scala.tools.scalap.scalax.rules.scalasig._
 import scala.reflect.generic.ByteCodecs
 import scala.reflect.ScalaSignature
-import java.lang.reflect.{ InvocationTargetException, Constructor, Method }
-import java.math.{ RoundingMode, MathContext }
-import scala.collection.mutable.{ Map => MMap, HashMap }
-import java.lang.reflect.Modifier
+import scala.tools.scalap.scalax.rules.scalasig._
 
-class ClassAnalysis[X <: ClassAnalysis.CaseClass](val clazz : Class[X]) {
+/**
+ * An analysis (using reflection) of the fields in a case class.
+ *
+ * You can then iterate over field names and values, and convert the
+ * case class to and from a [[scala.collection.Map]].
+ */
+class ClassAnalysis[X <: ClassAnalysis.CaseClass](private val clazz : Class[X]) {
     import ClassAnalysis._
 
     /**

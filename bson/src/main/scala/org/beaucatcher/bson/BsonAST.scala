@@ -36,18 +36,21 @@ import org.joda.time._
 import scalaj.collection.Implicits._
 
 /**
- *  `BValue` is the base trait for all BSON value types.
+ *  [[org.beaucatcher.bson.BValue]] is the base trait for all BSON value types. All [[org.beaucatcher.bson.BValue]]
+ *  are immutable and the concrete subtypes of [[org.beaucatcher.bson.BValue]] are case classes.
  *
- *  The names of the subclasses implementing `BValue` mostly match the names in the MongoDB shell
+ *  See [[http://bsonspec.org/]] for more information about BSON.
+ *
+ *  The names of the subclasses implementing [[org.beaucatcher.bson.BValue]] mostly match the names in the MongoDB shell
  *  such as ObjectId, ISODate, except for numbers (because there are separate types for [[org.beaucatcher.bson.BInt32]],
  *  [[org.beaucatcher.bson.BInt64]], and [[org.beaucatcher.bson.BDouble]], while JavaScript has
  *  a single number type).
  *
- *  Most uses of `BValue` will start with the container [[org.beaucatcher.bson.BObject]], which implements the standard
+ *  Most uses of [[org.beaucatcher.bson.BValue]] will start with the container [[org.beaucatcher.bson.BObject]], which implements the standard
  *  [[scala.collection.immutable.Map]] trait. There's also [[org.beaucatcher.bson.BArray]] which
  *  implements [[scala.collection.immutable.LinearSeq]].
  *
- *  A subset of `BValue` subtypes also implement the [[org.beaucatcher.bson.JValue]] trait, indicating that these types
+ *  A subset of [[org.beaucatcher.bson.BValue]] subtypes also implement the [[org.beaucatcher.bson.JValue]] trait, indicating that these types
  *  can appear in a JSON document, as well as in a BSON document.
  *
  *  [[org.beaucatcher.bson.JObject]] and [[org.beaucatcher.bson.JArray]] are separate types from [[org.beaucatcher.bson.BObject]]
@@ -60,14 +63,14 @@ import scalaj.collection.Implicits._
  *    BObject("a" -> 42, "b" -> "hello world", "c" -> new ObjectId())
  *  }}}
  *
- *  Because the `BValue` subtypes are case classes, you can use pattern matching to unwrap them.
+ *  Because the [[org.beaucatcher.bson.BValue]] subtypes are case classes, you can use pattern matching to unwrap them.
  */
 sealed abstract trait BValue {
     /** The type you get if you unwrap the value */
     type WrappedType
 
     /**
-     * The unwrapped version of the `BValue` (that is, a plain Scala type such as [[scala.Int]],
+     * The unwrapped version of the [[org.beaucatcher.bson.BValue]] (that is, a plain Scala type such as [[scala.Int]],
      * rather than a BSON type such as [[org.beaucatcher.bson.BInt32]]).
      * @return the unwrapped value
      */
@@ -79,7 +82,7 @@ sealed abstract trait BValue {
     val bsonType : BsonType.Value
 
     /**
-     * The unwrapped version of the `BValue` as a plain Java type. For example,
+     * The unwrapped version of the [[org.beaucatcher.bson.BValue]] as a plain Java type. For example,
      * while the `unwrapped` method on a `BObject` returns a Scala `Map`, the
      * `unwrappedAsJava` method returns a Java `Map`. This is useful for interoperating
      * with Java APIs.
@@ -97,7 +100,7 @@ sealed abstract trait BValue {
      * JSON's smaller set of types. The mapping is determined by the [[org.beaucatcher.bson.JsonFlavor]]
      * enumeration.
      *
-     * @param flavor the style of mapping BSON to JSON
+     * @param flavor the style of mapping BSON to JSON see [[org.beaucatcher.bson.JsonFlavor]]
      * @return a JSON-only version of this value
      */
     def toJValue(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : JValue
@@ -105,7 +108,7 @@ sealed abstract trait BValue {
     /**
      * The value converted to a compact JSON string.
      *
-     * @param flavor the style of mapping BSON to JSON
+     * @param flavor the style of mapping BSON to JSON see [[org.beaucatcher.bson.JsonFlavor]]
      * @return a JSON string representation of this value
      */
     def toJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
@@ -114,7 +117,7 @@ sealed abstract trait BValue {
     /**
      * The value converted to a JSON string with nice formatting (i.e. with whitespace).
      *
-     * @param flavor the style of mapping BSON to JSON
+     * @param flavor the style of mapping BSON to JSON see [[org.beaucatcher.bson.JsonFlavor]]
      * @return a nicely-formatted JSON string representation of this value
      */
     def toPrettyJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
@@ -122,8 +125,8 @@ sealed abstract trait BValue {
 }
 
 /**
- *  This trait marks those `BValue` which are also valid in JSON.
- *  A subset of BSON values (BValue) are also JSON values (JValue) because
+ *  This trait marks those [[org.beaucatcher.bson.BValue]] which are also valid in JSON.
+ *  A subset of BSON values are also JSON values because
  *  they don't use extended BSON types.
  */
 sealed abstract trait JValue extends BValue {
@@ -152,7 +155,14 @@ case object BNull extends JValue {
 case class BString(override val value : String) extends BSingleValue(BsonType.STRING, value) with JValue {
 }
 
-private[bson] sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, val value : T)
+/**
+ * Base class for numeric values. Implements [[scala.math.ScalaNumericConversions]] in order
+ * to support conversion and comparison to numeric primitives.
+ *
+ *  @tparam T the underlying primitive type wrapped by this BSON node
+ *  @param value the underlying primitive value
+ */
+sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, val value : T)
     extends ScalaNumber
     with ScalaNumericConversions with JValue {
     type WrappedType = T
@@ -194,6 +204,9 @@ private[bson] sealed abstract class BNumericValue[T](override val bsonType : Bso
     }
 }
 
+/**
+ * A BSON or JSON floating-point value.
+ */
 case class BDouble(override val value : Double) extends BNumericValue(BsonType.NUMBER, value) {
     override def isWhole = (value % 1) == 0
     override def doubleValue = value
@@ -202,6 +215,9 @@ case class BDouble(override val value : Double) extends BNumericValue(BsonType.N
     override def equals(that : Any) : Boolean = unifiedBNumericEquals(that)
 }
 
+/**
+ * A BSON or JSON 32-bit signed integer value.
+ */
 case class BInt32(override val value : Int) extends BNumericValue(BsonType.NUMBER_INT, value) {
     override def isWhole = true
     override def intValue = value
@@ -210,6 +226,9 @@ case class BInt32(override val value : Int) extends BNumericValue(BsonType.NUMBE
     override def equals(that : Any) : Boolean = unifiedBNumericEquals(that)
 }
 
+/**
+ * A BSON or JSON 64-bit signed integer value.
+ */
 case class BInt64(override val value : Long) extends BNumericValue(BsonType.NUMBER_LONG, value) {
     override def isWhole = true
     override def longValue = value
@@ -218,9 +237,22 @@ case class BInt64(override val value : Long) extends BNumericValue(BsonType.NUMB
     override def equals(that : Any) : Boolean = unifiedBNumericEquals(that)
 }
 
+/**
+ * Common base class of [[org.beaucatcher.bson.BArray]] and [[org.beaucatcher.bson.JArray]], where
+ * [[org.beaucatcher.bson.BArray]] holds any [[org.beaucatcher.bson.BValue]] and [[org.beaucatcher.bson.JArray]]
+ * holds only [[org.beaucatcher.bson.JValue]].
+ *
+ * @tparam ElementType either [[org.beaucatcher.bson.BValue]] or [[org.beaucatcher.bson.JValue]]
+ */
 sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
     with immutable.LinearSeq[ElementType] {
     override val bsonType = BsonType.ARRAY
+
+    /**
+     * The underlying list enclosed by this array. Note the subtle difference from
+     * the `unwrapped` method: `unwrapped`
+     * unwraps the elements recursively, while this is a list of wrapped values.
+     */
     val value : List[ElementType]
 
     type WrappedType = List[Any]
@@ -237,6 +269,10 @@ sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
     override def iterator : Iterator[ElementType] = value.iterator
 }
 
+/**
+ * A BSON array of values. Implements [[scala.collection.LinearSeqLike]] so you can
+ * use it like a regular Scala sequence of [[org.beaucatcher.bson.BValue]].
+ */
 case class BArray(override val value : List[BValue])
     extends ArrayBase[BValue]
     with LinearSeqLike[BValue, BArray] {
@@ -246,29 +282,57 @@ case class BArray(override val value : List[BValue])
     override def newBuilder = BArray.newBuilder
 }
 
+/**
+ * Companion object for [[org.beaucatcher.bson.BArray]]
+ */
 object BArray {
+    /** An empty [[org.beaucatcher.bson.BArray]] */
     val empty : BArray = BArray(List())
 
+    /** Constructs an empty array */
     def apply() : BArray = {
         empty
     }
 
+    /**
+     * Constructs a [[org.beaucatcher.bson.BArray]] of length one containing the provided value.
+     * @param v a value that can be wrapped in a [[org.beaucatcher.bson.BValue]]
+     * @tparam V the type of the value
+     */
     def apply[V <% BValue](v : V) : BArray = {
         BArray(List[BValue](if (v == null) BNull else v))
     }
 
+    /**
+     * Constructs a [[org.beaucatcher.bson.BArray]] containing the values in the sequence,
+     * each wrapped in a [[org.beaucatcher.bson.BValue]].
+     * @param seq a sequence of values convertible to [[org.beaucatcher.bson.BValue]]
+     * @tparam V type of elements in the sequence
+     */
     def apply[V <% BValue](seq : Seq[V]) : BArray = {
         val bvalues = for { v <- seq }
             yield if (v == null) BNull else v : BValue
         BArray(bvalues.toList)
     }
 
+    /**
+     * Constructs a [[org.beaucatcher.bson.BArray]] containing the listed
+     * values.
+     *
+     * @param v1 a first [[org.beaucatcher.bson.BValue]]
+     * @param v2 a second [[org.beaucatcher.bson.BValue]]
+     * @param vs optional additional [[org.beaucatcher.bson.BValue]]
+     */
     def apply(v1 : BValue, v2 : BValue, vs : BValue*) : BArray = {
         BArray((if (v1 == null) BNull else v1) ::
             (if (v2 == null) BNull else v2) ::
             vs.map({ v => if (v == null) BNull else v }).toList)
     }
 
+    /**
+     * Creates a builder object used to efficiently build a new [[org.beaucatcher.bson.BArray]]
+     * @return a new builder for [[org.beaucatcher.bson.BArray]]
+     */
     def newBuilder : Builder[BValue, BArray] = newArrayBuilder(list => BArray(list))
 
     implicit def canBuildFrom : CanBuildFrom[BArray, BValue, BArray] = {
@@ -279,6 +343,10 @@ object BArray {
     }
 }
 
+/**
+ * Exactly like [[org.beaucatcher.bson.BArray]] but guaranteed to contain only
+ * [[org.beaucatcher.bson.JValue]] (all JSON, no BSON types).
+ */
 case class JArray(override val value : List[JValue])
     extends ArrayBase[JValue]
     with LinearSeqLike[JValue, JArray]
@@ -290,29 +358,39 @@ case class JArray(override val value : List[JValue])
     override def newBuilder = JArray.newBuilder
 }
 
+/**
+ * Companion object to [[org.beaucatcher.bson.JArray]]. See the documentation
+ * for [[org.beaucatcher.bson.BArray]]'s companion object.
+ */
 object JArray {
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
     val empty : JArray = JArray(List())
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
     def apply() : JArray = {
         empty
     }
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
     def apply[V <% JValue](v : V) : JArray = {
         JArray(List[JValue](if (v == null) BNull else v))
     }
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
     def apply[V <% JValue](seq : Seq[V]) : JArray = {
         val jvalues = for { v <- seq }
             yield if (v == null) BNull else v : JValue
         JArray(jvalues.toList)
     }
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
     def apply(v1 : JValue, v2 : JValue, vs : JValue*) : JArray = {
         JArray((if (v1 == null) BNull else v1) ::
             (if (v2 == null) BNull else v2) ::
             vs.map({ v => if (v == null) BNull else v }).toList)
     }
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BArray]]'s companion object. */
     def newBuilder : Builder[JValue, JArray] = newArrayBuilder(list => JArray(list))
 
     implicit def canBuildFrom : CanBuildFrom[JArray, JValue, JArray] = {
@@ -323,6 +401,12 @@ object JArray {
     }
 }
 
+/**
+ * A BSON binary data value, wrapping [[org.bson.types.Binary]].
+ *
+ * @param value the raw byte array of binary data
+ * @param subtype the "type detail" of the binary data see [[org.beaucatcher.bson.BsonSubtype]]
+ */
 case class BBinData(val value : Array[Byte], val subtype : BsonSubtype.Value) extends BValue {
     type WrappedType = Binary
     override lazy val unwrapped = new Binary(BsonSubtype.toByte(subtype), value)
@@ -354,7 +438,7 @@ case class BBinData(val value : Array[Byte], val subtype : BsonSubtype.Value) ex
     }
 
     // have to make hashCode match equals (array hashCode doesn't
-    // look at elements, Seq hashCode does
+    // look at elements, Seq hashCode does)
     override def hashCode() : Int = {
         41 * (41 + subtype.hashCode) + (value : Seq[Byte]).hashCode
     }
@@ -382,12 +466,15 @@ case class BBinData(val value : Array[Byte], val subtype : BsonSubtype.Value) ex
     }
 }
 
+/** Companion object for [[org.beaucatcher.bson.BBinData]]. */
 object BBinData {
+    /** Construct a [[org.beaucatcher.bson.BBinData]] from a [[org.bson.types.Binary]] object */
     def apply(b : Binary) : BBinData = {
         BBinData(b.getData(), BsonSubtype.fromByte(b.getType()).get)
     }
 }
 
+/** A BSON object ID value, wrapping [[org.bson.types.ObjectId]]. */
 case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonType.OID, value) {
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
@@ -401,9 +488,11 @@ case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonTyp
     }
 }
 
+/** A BSON or JSON boolean value. */
 case class BBoolean(override val value : Boolean) extends BSingleValue(BsonType.BOOLEAN, value) with JValue {
 }
 
+/** A BSON date time value, wrapping [[org.joda.time.DateTime]]. */
 case class BISODate(override val value : DateTime) extends BSingleValue(BsonType.DATE, value) {
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
@@ -417,6 +506,7 @@ case class BISODate(override val value : DateTime) extends BSingleValue(BsonType
     }
 }
 
+/** A BSON timestamp value, wrapping [[org.bson.types.BSONTimestamp]]. */
 case class BTimestamp(override val value : BSONTimestamp) extends BSingleValue(BsonType.TIMESTAMP, value) {
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
@@ -432,6 +522,16 @@ case class BTimestamp(override val value : BSONTimestamp) extends BSingleValue(B
     }
 }
 
+/**
+ * Common base class of [[org.beaucatcher.bson.BObject]] and [[org.beaucatcher.bson.JObject]], where
+ * [[org.beaucatcher.bson.BObject]] holds any [[org.beaucatcher.bson.BValue]] and [[org.beaucatcher.bson.JObject]]
+ * holds only [[org.beaucatcher.bson.JValue]].
+ *
+ * Implements [[scala.collection.immutable.Map]], where the keys are always strings.
+ *
+ * @tparam ValueType either [[org.beaucatcher.bson.BValue]] or [[org.beaucatcher.bson.JValue]]
+ * @tparam Repr subtype's type, used to implement the [[scala.collection.generic.CanBuildFrom]] mechanism
+ */
 abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     extends BValue
     with immutable.Map[String, ValueType] {
@@ -479,6 +579,13 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
         value.map(field => (field._1, field._2)).iterator
     }
 
+    /**
+     * Gets an unwrapped value from the map, or throws [[java.util.NoSuchElementException]].
+     * A more-convenient alternative to `obj.get(key).get.unwrapped.asInstanceOf[A]`.
+     *
+     * @tparam A type to cast to
+     * @param key the key to get
+     */
     def getUnwrappedAs[A : Manifest](key : String) : A = {
         get(key) match {
             case Some(bvalue) =>
@@ -492,7 +599,11 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
 }
 
 /**
- * BObject implements Map so we get all those convenient APIs.
+ * A BSON object (document). [[org.beaucatcher.bson.BObject]] implements [[scala.collection.immutable.Map]]
+ * with string keys and [[org.beaucatcher.bson.BValue]] values.
+ *
+ * [[org.beaucatcher.bson.BObject]] makes an additional guarantee beyond the usual [[scala.collection.immutable.Map]]
+ * contract, which is that it's ordered. MongoDB relies on ordering in some cases.
  */
 case class BObject(override val value : List[BField]) extends ObjectBase[BValue, BObject]
     with immutable.MapLike[String, BValue, BObject] {
@@ -517,6 +628,12 @@ case class BObject(override val value : List[BField]) extends ObjectBase[BValue,
         }
     }
 
+    /**
+     * Extra overload allows you to get back a [[org.beaucatcher.bson.BObject]] rather than a
+     * generic [[scala.collection.immutable.Map]] when adding a key-value pair to the map.
+     * @param kv the key-value pair to add
+     * @return a new map with the new pair added (or replaced)
+     */
     def +(kv : (String, BValue))(implicit bf : CanBuildFrom[BObject, (String, BValue), BObject]) : BObject = {
         val b = bf(empty)
         b ++= this
@@ -525,43 +642,63 @@ case class BObject(override val value : List[BField]) extends ObjectBase[BValue,
     }
 }
 
+/** Companion object for [[org.beaucatcher.bson.BObject]]. */
 object BObject {
+    /** An empty [[org.beaucatcher.bson.BObject]] with size 0. */
     val empty = new BObject(List())
 
+    /**
+     * Construct a new [[org.beaucatcher.bson.BObject]] from a [[scala.collection.Map]], where
+     * the keys are strings and the values can be converted to [[org.beaucatcher.bson.BValue]].
+     */
     def apply[K <: String, V <% BValue](m : Map[K, V]) : BObject = {
         val fields = for { (k, v) <- m }
             yield Pair[String, BValue](k, if (v == null) BNull else v)
         BObject(fields.toList)
     }
 
-    /* This has to require BValue, not V<:BValue, to support:
-         *  BObject("foo" -> foo, "bar" -> bar)
-         * Otherwise the type of V would be inferred to Any and
-         * then it would not be a subclass of BValue.
-         */
+    /**
+     * Construct a new [[org.beaucatcher.bson.BObject]] from a list of
+     * key-value pairs. Useful to support syntax such as:
+     * {{{
+     *    BObject("foo" -> 42, "bar" -> "hello world")
+     * }}}
+     *
+     * This method has to require `BValue`, not `V<:BValue`.
+     * Otherwise the type of `V` would be inferred to `Any` if mixing different
+     * value types in a list of key-value pairs, and the method would not apply.
+     */
     def apply[K <: String](pair1 : (K, BValue), pair2 : (K, BValue), pairs : (K, BValue)*) : BObject = {
         val fields = for { (k, v) <- List(pair1, pair2) ++ pairs }
             yield (k, if (v == null) BNull else v)
         new BObject(fields.toList)
     }
 
+    /** Construct a new empty [[org.beaucatcher.bson.BObject]] */
     def apply() : BObject = {
         empty
     }
 
-    /* This has to require V<%BValue, otherwise in
-         *  BObject("foo" -> foo)
-         * there's an ambiguous overload with the other 
-         * single-argument apply() flavors. Overload
-         * selection happens before implicit conversion,
-         * so we need an overload that matches unambiguously prior to 
-         * any implicits. That's what this overload provides.
-         */
+    /**
+     * Construct a new [[org.beaucatcher.bson.BObject]] from a single key-value pair
+     * where the value can be converted to [[org.beaucatcher.bson.BValue]].
+     *
+     * This has to require V<%BValue, otherwise in
+     * {{{
+     *   BObject("foo" -> foo)
+     * }}}
+     * there's an ambiguous overload with the other
+     * single-argument apply() flavors. Overload
+     * selection happens before implicit conversion,
+     * so we need an overload that matches unambiguously prior to
+     * any implicits. That's what this overload provides.
+     */
     def apply[K <: String, V <% BValue](pair : (K, V)) : BObject = {
         val bvalue : BValue = if (pair._2 == null) BNull else pair._2
         BObject(List((pair._1, bvalue)))
     }
 
+    /** Creates a new builder for efficiently generating a [[org.beaucatcher.bson.BObject]] */
     def newBuilder : MapBuilder[String, BValue, BObject] =
         new MapBuilder[String, BValue, BObject](empty)
 
@@ -573,6 +710,10 @@ object BObject {
     }
 }
 
+/**
+ * Exactly like [[org.beaucatcher.bson.BObject]] but guaranteed to contain only
+ * [[org.beaucatcher.bson.JValue]] (all JSON, no BSON types).
+ */
 case class JObject(override val value : List[JField]) extends ObjectBase[JValue, JObject]
     with immutable.MapLike[String, JValue, JObject]
     with JValue {
@@ -602,33 +743,44 @@ case class JObject(override val value : List[JField]) extends ObjectBase[JValue,
     }
 }
 
+/**
+ * Companion object to [[org.beaucatcher.bson.JObject]]. See the documentation
+ * for [[org.beaucatcher.bson.BObject]]'s companion object.
+ */
 object JObject {
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
     val empty = new JObject(List())
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
     def apply[K <: String, V <% JValue](m : Map[K, V]) : JObject = {
         val fields = for { (k, v) <- m }
             yield Pair[String, JValue](k, if (v == null) BNull else v)
         JObject(fields.toList)
     }
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
     def apply[K <: String](pair1 : (K, JValue), pair2 : (K, JValue), pairs : (K, JValue)*) : JObject = {
         val fields = for { (k, v) <- List(pair1, pair2) ++ pairs }
             yield (k, if (v == null) BNull else v)
         new JObject(fields.toList)
     }
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
     def apply() : JObject = {
         empty
     }
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
     def apply[K <: String, V <% JValue](pair : (K, V)) : JObject = {
         val bvalue : JValue = if (pair._2 == null) BNull else pair._2
         JObject(List((pair._1, bvalue)))
     }
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
     def newBuilder : MapBuilder[String, JValue, JObject] =
         new MapBuilder[String, JValue, JObject](empty)
 
+    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
     implicit def canBuildFrom : CanBuildFrom[JObject, (String, JValue), JObject] = {
         new CanBuildFrom[JObject, (String, JValue), JObject] {
             def apply() : Builder[(String, JValue), JObject] = newBuilder
@@ -637,13 +789,23 @@ object JObject {
     }
 }
 
+/** Companion object for [[org.beaucatcher.bson.BValue]]. */
 object BValue {
-    // this is a dynamic (untypesafe) wrap, it's always better to
-    // use implicit conversions unless you have an Any with unknown
-    // type. basically this is needed for Java interoperability.
-    // it's a maintenance headache because the big case statement
-    // has to be kept in sync with all the implicits.
+    /**
+     * Wraps an object in a [[org.beaucatcher.bson.BValue]]. Throws
+     * [[java.lang.UnsupportedOperationException]] if wrapping the
+     * object is not possible.
+     *
+     * Because this is a dynamic (untypesafe) wrap, it's always better to
+     * use implicit conversions from [[org.beaucatcher.bson.Implicits]]
+     * unless you have an Any with unknown type.
+     * Typically this untypesafe method is needed for Java interoperability
+     * because you can end up with a [[java.lang.Object]] that needs
+     * wrapping, when dealing with say a Java collection.
+     */
     def wrap(value : Any) : BValue = {
+        // a maintenance headache because the big case statement
+        // has to be kept in sync with all the implicits.
         value match {
             case null =>
                 BNull
@@ -688,22 +850,70 @@ object BValue {
         }
     }
 
+    /**
+     * Parse a JSON string, validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
+     * The JSON string must contain all the fields found in the case class (unless the fields have
+     * a [[scala.Option]] type). If the fields have a BSON type (such as [[org.bson.types.ObjectId]])
+     * then the returned [[org.beaucatcher.bson.BValue]] will contain BSON-only types such as
+     * [[org.beaucatcher.bson.BObjectId]]. The types of the case class fields are used to decide how
+     * to parse the JSON, for example if the `_id` field in the case class has type  [[org.bson.types.ObjectId]],
+     * then the parser knows to return a string in the JSON document as [[org.beaucatcher.bson.BObjectId]]
+     * rather than [[org.beaucatcher.bson.BString]].
+     *
+     * @param json a JSON string
+     * @param schema analysis of a case class
+     * @param flavor expected [[org.beaucatcher.bson.JsonFlavor]] of the incoming JSON
+     * @return parse tree of values
+     */
     def parseJson(json : String, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : BValue =
         BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), flavor)
 
+    /**
+     * Parse JSON from a [[java.io.Reader]], validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
+     * (See documentation on the other version of `parseJson()` that takes a string parameter.)
+     */
     def parseJson(json : Reader, schema : ClassAnalysis[_ <: Product]) : BValue =
         BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), JsonFlavor.CLEAN)
 
+    /**
+     * Parse JSON from a [[java.io.Reader]], validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
+     * (See documentation on the other version of `parseJson()` that takes a string parameter.)
+     */
     def parseJson(json : Reader, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value) : BValue =
         BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), flavor)
 
+    /**
+     * Converts a [[org.beaucatcher.bson.JValue]] to a [[org.beaucatcher.bson.BValue]] using
+     * a case class as a schema to decide on destination types. For example, an object ID might
+     * be a [[org.beaucatcher.bson.BString]] in the [[org.beaucatcher.bson.JValue]], and the
+     * string would be parsed as an object ID and converted to [[org.beaucatcher.bson.BObjectId]].
+     * The mapping from JSON to BSON varies with the [[org.beaucatcher.bson.JsonFlavor]].
+     *
+     * @param jvalue a JSON parse tree
+     * @param schema analysis of a case class
+     * @param flavor expected [[org.beaucatcher.bson.JsonFlavor]] of the incoming JSON
+     * @return parse tree of values
+     */
     def fromJValue(jvalue : JValue, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : BValue =
         BsonValidation.validateAgainstCaseClass(schema, jvalue, flavor)
 }
 
+/**
+ * Companion object for [[org.beaucatcher.bson.JValue]]
+ */
 object JValue {
+    /**
+     * Parses a JSON string into a parse tree.
+     * @param json a JSON string
+     * @return a parse tree
+     */
     def parseJson(json : String) : JValue = BsonJson.fromJson(json)
 
+    /**
+     * Parses JSON from a [[java.io.Reader]] into a parse tree.
+     * @param json a JSON string
+     * @return a parse tree
+     */
     def parseJson(json : Reader) : JValue = BsonJson.fromJson(json)
 }
 

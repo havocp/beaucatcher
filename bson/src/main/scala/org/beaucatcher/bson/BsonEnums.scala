@@ -3,18 +3,29 @@ package org.beaucatcher.bson
 import org.bson.BSON
 
 /**
- * See http://www.mongodb.org/display/DOCS/Mongo+Extended+JSON
- * Flavors JS and TenGen can't be done using JsonAST from lift-json.
+ * A representation of BSON in JSON format.
+ * Only the `CLEAN` flavor is currently implemented.
  *
- * Flavor CLEAN is made up and basically strips the type information
- * from STRICT, so just a string object ID instead of { "$oid" : <oid> }.
- * This is nicer in web services I think.
+ * See http://www.mongodb.org/display/DOCS/Mongo+Extended+JSON
+ * Flavors JS and TenGen from that page can't be done using JsonAST
+ * from lift-json, so are not supported yet.
+ *
+ * Flavor `CLEAN` is made up for this library, and basically strips the
+ * type information from `STRICT`, so just a string object ID for example,
+ * rather than the `STRICT` format which looks like:
+ * {{{
+ *     { "$oid" : <oid> }
+ * }}}
+ * This is nicer in web services perhaps. If you use a case class
+ * or other approach to provide a schema for a JSON object, it isn't
+ * necessary to keep type information in the JSON itself.
  */
 object JsonFlavor extends Enumeration {
     type JsonFlavor = Value
     val CLEAN, STRICT, JS, TEN_GEN = Value
 }
 
+/** A detailed type tag for binary data in BSON. */
 object BsonSubtype extends Enumeration {
     type BsonSubtype = Value
     val GENERAL, FUNC, BINARY, UUID = Value
@@ -36,6 +47,7 @@ object BsonSubtype extends Enumeration {
     }
 }
 
+/** Types that appear in the BSON wire protocol. See [[http://bsonspec.org/]] for more. */
 object BsonType extends Enumeration {
     type BsonType = Value
 
@@ -67,10 +79,20 @@ object BsonType extends Enumeration {
 
     private val toBytes = fromBytes map { _.swap }
 
+    /**
+     * Convert from the byte found in the wire protocol to the [[org.beaucatcher.bson.BsonType]] enumeration.
+     * @param b the byte
+     * @return a [[org.beaucatcher.bson.BsonType]] or `None`
+     */
     def fromByte(b : Byte) : Option[BsonType] = {
         fromBytes.get(b)
     }
 
+    /**
+     * Convert to the wire protocol byte for the given type.
+     * @param v the [[org.beaucatcher.bson.BsonType]] enumeration value
+     * @return a wire protocol byte
+     */
     def toByte(v : Value) : Byte = {
         toBytes.getOrElse(v, throw new IllegalArgumentException("bad BsonType value"))
     }
