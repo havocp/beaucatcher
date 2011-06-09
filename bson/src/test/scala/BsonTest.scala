@@ -15,10 +15,10 @@ class BsonTest {
     def setup() {
     }
 
-    protected def makeObjectManyTypes() = {
-        val someDateTime = new DateTime(1996, 7, 10, 16, 50, 00, 00, DateTimeZone.UTC)
-        val someJavaDate = someDateTime.toDate
+    val someDateTime = new DateTime(1996, 7, 10, 16, 50, 00, 00, DateTimeZone.UTC)
+    val someJavaDate = someDateTime.toDate()
 
+    protected def makeObjectManyTypes() = {
         BObject("null" -> null,
             "int" -> 42,
             "long" -> 37L,
@@ -41,8 +41,6 @@ class BsonTest {
     }
 
     protected def makeArrayManyTypes() = {
-        val someDateTime = new DateTime(1996, 7, 10, 16, 50, 00, 00, DateTimeZone.UTC)
-        val someJavaDate = someDateTime.toDate
         // a non-homogeneous-typed array is pretty much nonsense, but JavaScript
         // lets you do whatever, so we let you do whatever.
         BArray(null,
@@ -68,9 +66,12 @@ class BsonTest {
 
     @Test
     def numericValuesBasicallyBehave() : Unit = {
+        assertTrue(BInt32(1).isWhole)
+        assertTrue(BInt64(1).isWhole)
         assertTrue(BDouble(1.0).isWhole)
         assertFalse(BDouble(1.5).isWhole)
         assertEquals(1, BDouble(1.0).intValue)
+        assertTrue(math.abs(1.0 - BDouble(1.0).doubleValue) < 1e-6)
 
         assertEquals(BInt32(1), BInt32(1))
         assertEquals(BInt32(1), BInt64(1))
@@ -101,6 +102,40 @@ class BsonTest {
         assertFalse(BInt32(1).hashCode == BInt64(2).hashCode)
         assertFalse(BInt32(1).hashCode == BDouble(2.0).hashCode)
         assertFalse(BInt32(1).hashCode == (2.##))
+
+        assertFalse(BInt32(2).hashCode == BDouble(1.5).hashCode)
+        assertTrue(BInt32(2).hashCode == BDouble(2.0).hashCode)
+        assertFalse(BInt32(2).hashCode == BDouble(2.5).hashCode)
+        assertFalse(BInt32(2).hashCode == BDouble(3.0).hashCode)
+    }
+
+    @Test
+    def numericValuesEqualPrimitives() : Unit = {
+        assertEquals(BInt32(1), 1 : Char)
+        assertEquals(BInt32(1), 1 : Byte)
+        assertEquals(BInt32(1), 1 : Short)
+        assertEquals(BInt32(1), 1 : Int)
+        assertEquals(BInt32(1), 1 : Long)
+        assertEquals(BInt32(1), 1 : Float)
+        assertEquals(BInt32(1), 1 : Double)
+
+        assertEquals(BDouble(1), 1 : Char)
+        assertEquals(BDouble(1), 1 : Byte)
+        assertEquals(BDouble(1), 1 : Short)
+        assertEquals(BDouble(1), 1 : Int)
+        assertEquals(BDouble(1), 1 : Long)
+        assertEquals(BDouble(1), 1 : Float)
+        assertEquals(BDouble(1), 1 : Double)
+    }
+
+    @Test
+    def numericValueConversions() : Unit = {
+        for (n <- List(BInt32(5), BInt64(5), BDouble(5))) {
+            assertEquals(5, n.intValue)
+            assertEquals(5, n.longValue)
+            assertTrue(math.abs(5 - n.floatValue) < 1e-6)
+            assertTrue(math.abs(5 - n.doubleValue) < 1e-6)
+        }
     }
 
     // We have a bunch of apply() overloads to handle different numbers of args,
@@ -110,6 +145,7 @@ class BsonTest {
     def objectAppliesWork() : Unit = {
         // 0
         assertEquals(0, BObject().size)
+        assertEquals(0, BObject.empty.size)
 
         // 1
         assertEquals(1, BObject("a" -> 1).size)
@@ -131,6 +167,7 @@ class BsonTest {
 
         // 0
         assertEquals(0, JObject().size)
+        assertEquals(0, JObject.empty.size)
 
         // 1
         assertEquals(1, JObject("a" -> 1).size)
@@ -149,12 +186,39 @@ class BsonTest {
 
         // list
         assertEquals(2, JObject(List[(String, JValue)](Pair("a", BInt32(1)), Pair("b", BInt32(2)))).size)
+
+        // with nulls (null is special-cased in the code so this is needed for coverage)
+        assertEquals(BObject("a" -> BNull),
+            BObject("a" -> null))
+        assertEquals(BObject("a" -> BNull, "b" -> BNull),
+            BObject("a" -> null, "b" -> null))
+        assertEquals(BObject("a" -> BNull, "b" -> BNull, "c" -> BNull),
+            BObject("a" -> null, "b" -> null, "c" -> null))
+        assertEquals(BObject("a" -> BNull, "b" -> BNull, "c" -> BNull, "d" -> BNull),
+            BObject("a" -> null, "b" -> null, "c" -> null, "d" -> null))
+        assertEquals(BObject("a" -> BNull),
+            BObject(Map[String, String]("a" -> null)))
+        assertEquals(BObject("a" -> BNull),
+            BObject(Pair("a", null)))
+        assertEquals(JObject("a" -> BNull),
+            JObject("a" -> null))
+        assertEquals(JObject("a" -> BNull, "b" -> BNull),
+            JObject("a" -> null, "b" -> null))
+        assertEquals(JObject("a" -> BNull, "b" -> BNull, "c" -> BNull),
+            JObject("a" -> null, "b" -> null, "c" -> null))
+        assertEquals(JObject("a" -> BNull, "b" -> BNull, "c" -> BNull, "d" -> BNull),
+            JObject("a" -> null, "b" -> null, "c" -> null, "d" -> null))
+        assertEquals(JObject("a" -> BNull),
+            JObject(Map[String, String]("a" -> null)))
+        assertEquals(JObject("a" -> BNull),
+            JObject(Pair("a", null)))
     }
 
     @Test
     def listAppliesWork() : Unit = {
         // 0
         assertEquals(0, BArray().size)
+        assertEquals(0, BArray.empty.size)
 
         // 1
         assertEquals(1, BArray(1).size)
@@ -180,6 +244,7 @@ class BsonTest {
 
         // 0
         assertEquals(0, JArray().size)
+        assertEquals(0, JArray.empty.size)
 
         // 1
         assertEquals(1, JArray(1).size)
@@ -256,6 +321,39 @@ class BsonTest {
         assertEquals(expected, jsonString)
 
         // FIXME test pretty string, test other json flavors
+    }
+
+    private def intercept[E <: Throwable : Manifest](block : => Unit) : E = {
+        val expectedClass = manifest.erasure.asInstanceOf[Class[E]]
+        var thrown : Option[Throwable] = None
+        try {
+            block
+        } catch {
+            case t : Throwable => thrown = Some(t)
+        }
+        thrown match {
+            case Some(t) if expectedClass.isAssignableFrom(t.getClass) =>
+                t.asInstanceOf[E]
+            case Some(t) =>
+                throw new Exception("Expected exception %s was not thrown, got %s".format(expectedClass.getName, t))
+            case None =>
+                throw new Exception("Expected exception %s was not thrown".format(expectedClass.getName))
+        }
+    }
+
+    @Test
+    def bobjectGetUnwrappedAs() : Unit = {
+        val bobj = makeObjectManyTypes()
+        val i = bobj.getUnwrappedAs[Int]("int")
+        assertEquals(42, i)
+        val badKey = intercept[NoSuchElementException] {
+            val ignored = bobj.getUnwrappedAs[Int]("notinthere")
+        }
+        assertTrue(badKey.getMessage.contains("not found"))
+        val wrongValueType = intercept[ClassCastException] {
+            val ignored = bobj.getUnwrappedAs[String]("int")
+        }
+        assertTrue(wrongValueType.getMessage.contains("cannot be cast"))
     }
 
     @Test
@@ -344,6 +442,29 @@ class BsonTest {
         } {
             assertEquals(v, BValue.wrap(v.unwrapped))
         }
+    }
+
+    @Test
+    def wrapInt64() = {
+        assertEquals(BInt64(Long.MaxValue), BValue.wrap(Long.MaxValue))
+    }
+
+    @Test
+    def wrapJavaDate() = {
+        assertEquals(BISODate(new DateTime(someJavaDate)), BValue.wrap(someJavaDate))
+    }
+
+    @Test
+    def wrapBValue() = {
+        assertEquals(BInt32(56), BValue.wrap(BInt32(56)))
+    }
+
+    @Test
+    def wrapNotSupported() = {
+        val fail = intercept[UnsupportedOperationException] {
+            BValue.wrap(new Object())
+        }
+        assertTrue(fail.getMessage.contains("convert to BValue"))
     }
 
     @Test
