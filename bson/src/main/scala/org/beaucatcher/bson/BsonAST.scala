@@ -587,6 +587,74 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     }
 }
 
+sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueType, Repr] with immutable.MapLike[String, ValueType, Repr]] {
+    protected[bson] def construct(list : List[Pair[String, ValueType]]) : Repr
+    protected[bson] def nullValue : ValueType
+
+    /** An empty object with size 0. */
+    val empty = construct(List())
+
+    /**
+     * Construct a new *SON object from a [[scala.collection.Map]], where
+     * the keys are strings and the values can be converted to [[org.beaucatcher.bson.BValue]]
+     * or [[org.beaucatcher.bson.JValue]].
+     */
+    def apply[K <: String, V <% ValueType](m : Map[K, V]) : Repr = {
+        val fields = for { (k, v) <- m }
+            yield Pair[String, ValueType](k, if (v == null) nullValue else v)
+        construct(fields.toList)
+    }
+
+    /**
+     * Construct a new object from a list of
+     * key-value pairs. Useful to support syntax such as:
+     * {{{
+     *    BObject("foo" -> 42, "bar" -> "hello world")
+     * }}}
+     *
+     * This method has to require `BValue`, not `V<:BValue`.
+     * Otherwise the type of `V` would be inferred to `Any` if mixing different
+     * value types in a list of key-value pairs, and the method would not apply.
+     */
+    def apply[K <: String](pair1 : (K, ValueType), pair2 : (K, ValueType), pairs : (K, ValueType)*) : Repr = {
+        val fields = for { (k, v) <- List(pair1, pair2) ++ pairs }
+            yield (k, if (v == null) nullValue else v)
+        construct(fields.toList)
+    }
+
+    /** Construct a new empty object */
+    def apply() : Repr = {
+        empty
+    }
+
+    /**
+     * Construct a new object from a single key-value pair
+     * where the value can be converted to [[org.beaucatcher.bson.BValue]]
+     * or [[org.beaucatcher.bson.JValue]].
+     *
+     * This has to require V<%BValue, otherwise in
+     * {{{
+     *   BObject("foo" -> foo)
+     * }}}
+     * there's an ambiguous overload with the other
+     * single-argument apply() flavors. Overload
+     * selection happens before implicit conversion,
+     * so we need an overload that matches unambiguously prior to
+     * any implicits. That's what this overload provides.
+     */
+    def apply[K <: String, V <% ValueType](pair : (K, V)) : Repr = {
+        val bvalue : ValueType = if (pair._2 == null) nullValue else pair._2
+        construct(List((pair._1, bvalue)))
+    }
+
+    /**
+     * Creates a new builder for efficiently generating a [[org.beaucatcher.bson.BObject]]
+     * or [[org.beaucatcher.bson.JObject]]
+     */
+    def newBuilder : MapBuilder[String, ValueType, Repr] =
+        new MapBuilder[String, ValueType, Repr](empty)
+}
+
 /**
  * A BSON object (document). [[org.beaucatcher.bson.BObject]] implements [[scala.collection.immutable.Map]]
  * with string keys and [[org.beaucatcher.bson.BValue]] values.
@@ -632,64 +700,9 @@ case class BObject(override val value : List[BField]) extends ObjectBase[BValue,
 }
 
 /** Companion object for [[org.beaucatcher.bson.BObject]]. */
-object BObject {
-    /** An empty [[org.beaucatcher.bson.BObject]] with size 0. */
-    val empty = new BObject(List())
-
-    /**
-     * Construct a new [[org.beaucatcher.bson.BObject]] from a [[scala.collection.Map]], where
-     * the keys are strings and the values can be converted to [[org.beaucatcher.bson.BValue]].
-     */
-    def apply[K <: String, V <% BValue](m : Map[K, V]) : BObject = {
-        val fields = for { (k, v) <- m }
-            yield Pair[String, BValue](k, if (v == null) BNull else v)
-        BObject(fields.toList)
-    }
-
-    /**
-     * Construct a new [[org.beaucatcher.bson.BObject]] from a list of
-     * key-value pairs. Useful to support syntax such as:
-     * {{{
-     *    BObject("foo" -> 42, "bar" -> "hello world")
-     * }}}
-     *
-     * This method has to require `BValue`, not `V<:BValue`.
-     * Otherwise the type of `V` would be inferred to `Any` if mixing different
-     * value types in a list of key-value pairs, and the method would not apply.
-     */
-    def apply[K <: String](pair1 : (K, BValue), pair2 : (K, BValue), pairs : (K, BValue)*) : BObject = {
-        val fields = for { (k, v) <- List(pair1, pair2) ++ pairs }
-            yield (k, if (v == null) BNull else v)
-        new BObject(fields.toList)
-    }
-
-    /** Construct a new empty [[org.beaucatcher.bson.BObject]] */
-    def apply() : BObject = {
-        empty
-    }
-
-    /**
-     * Construct a new [[org.beaucatcher.bson.BObject]] from a single key-value pair
-     * where the value can be converted to [[org.beaucatcher.bson.BValue]].
-     *
-     * This has to require V<%BValue, otherwise in
-     * {{{
-     *   BObject("foo" -> foo)
-     * }}}
-     * there's an ambiguous overload with the other
-     * single-argument apply() flavors. Overload
-     * selection happens before implicit conversion,
-     * so we need an overload that matches unambiguously prior to
-     * any implicits. That's what this overload provides.
-     */
-    def apply[K <: String, V <% BValue](pair : (K, V)) : BObject = {
-        val bvalue : BValue = if (pair._2 == null) BNull else pair._2
-        BObject(List((pair._1, bvalue)))
-    }
-
-    /** Creates a new builder for efficiently generating a [[org.beaucatcher.bson.BObject]] */
-    def newBuilder : MapBuilder[String, BValue, BObject] =
-        new MapBuilder[String, BValue, BObject](empty)
+object BObject extends ObjectBaseCompanion[BValue, BObject] {
+    override def construct(list : List[Pair[String, BValue]]) : BObject = new BObject(list)
+    override def nullValue : BValue = BNull
 
     implicit def canBuildFrom : CanBuildFrom[BObject, (String, BValue), BObject] = {
         new CanBuildFrom[BObject, (String, BValue), BObject] {
@@ -736,40 +749,10 @@ case class JObject(override val value : List[JField]) extends ObjectBase[JValue,
  * Companion object to [[org.beaucatcher.bson.JObject]]. See the documentation
  * for [[org.beaucatcher.bson.BObject]]'s companion object.
  */
-object JObject {
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
-    val empty = new JObject(List())
+object JObject extends ObjectBaseCompanion[JValue, JObject] {
+    override def construct(list : List[Pair[String, JValue]]) : JObject = new JObject(list)
+    override def nullValue : JValue = BNull
 
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
-    def apply[K <: String, V <% JValue](m : Map[K, V]) : JObject = {
-        val fields = for { (k, v) <- m }
-            yield Pair[String, JValue](k, if (v == null) BNull else v)
-        JObject(fields.toList)
-    }
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
-    def apply[K <: String](pair1 : (K, JValue), pair2 : (K, JValue), pairs : (K, JValue)*) : JObject = {
-        val fields = for { (k, v) <- List(pair1, pair2) ++ pairs }
-            yield (k, if (v == null) BNull else v)
-        new JObject(fields.toList)
-    }
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
-    def apply() : JObject = {
-        empty
-    }
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
-    def apply[K <: String, V <% JValue](pair : (K, V)) : JObject = {
-        val bvalue : JValue = if (pair._2 == null) BNull else pair._2
-        JObject(List((pair._1, bvalue)))
-    }
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
-    def newBuilder : MapBuilder[String, JValue, JObject] =
-        new MapBuilder[String, JValue, JObject](empty)
-
-    /** Refer to the docs for the same method on [[org.beaucatcher.bson.BObject]]'s companion object. */
     implicit def canBuildFrom : CanBuildFrom[JObject, (String, JValue), JObject] = {
         new CanBuildFrom[JObject, (String, JValue), JObject] {
             def apply() : Builder[(String, JValue), JObject] = newBuilder
