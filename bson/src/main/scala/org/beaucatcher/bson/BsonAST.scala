@@ -334,6 +334,8 @@ case class BArray(override val value : List[BValue])
     extends ArrayBase[BValue]
     with LinearSeqLike[BValue, BArray] {
 
+    require(value != null)
+
     override def toJValue(flavor : JsonFlavor.Value) : JValue = JArray(value.map(_.toJValue(flavor)))
 
     override def newBuilder = BArray.newBuilder
@@ -363,6 +365,8 @@ case class JArray(override val value : List[JValue])
     extends ArrayBase[JValue]
     with LinearSeqLike[JValue, JArray]
     with JValue {
+
+    require(value != null)
 
     // lift-json overrides equals() on JArray to ignore the array's order.
     // I don't understand that so am not copying it for now.

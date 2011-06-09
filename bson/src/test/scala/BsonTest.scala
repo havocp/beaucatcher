@@ -202,6 +202,26 @@ class BsonTest {
 
         // array of arrays
         assertEquals(1, JArray(JArray(1, 2, 3) : JValue).size)
+
+        // with nulls (the various constructors special-case null)
+        assertEquals(BArray(null : BValue), BArray(BNull))
+        assertEquals(BArray(null, null), BArray(BNull, BNull))
+        assertEquals(BArray(null, null, null), BArray(BNull, BNull, BNull))
+        assertEquals(BArray(Seq(null, null, null)), BArray(BNull, BNull, BNull))
+        assertEquals(JArray(null : JValue), JArray(BNull))
+        assertEquals(JArray(null, null), JArray(BNull, BNull))
+        assertEquals(JArray(null, null, null), JArray(BNull, BNull, BNull))
+        assertEquals(JArray(Seq(null, null, null)), JArray(BNull, BNull, BNull))
+
+        // array indexing
+        val a = BArray(0, 1, 2, 3, 4, 5)
+        for (i <- 0 to 5) {
+            assertEquals(BInt32(i), a(i))
+        }
+        val ja = JArray(0, 1, 2, 3, 4, 5)
+        for (i <- 0 to 5) {
+            assertEquals(BInt32(i), ja(i))
+        }
     }
 
     @Test
