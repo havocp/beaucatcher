@@ -2,6 +2,8 @@ package org.beaucatcher.bson
 
 import java.io.Reader
 import net.liftweb.{ json => lift }
+import scala.collection.mutable
+import scala.collection.mutable.Builder
 
 /** An exception related to JSON parsing or generation. */
 abstract class JsonException(message : String, cause : Throwable = null) extends Exception(message, cause)
@@ -32,29 +34,6 @@ private[bson] object BsonJson {
         }
     }
 
-    private[this] def fromLift(liftValue : lift.JValue) : JValue = {
-        liftValue match {
-            case lift.JObject(fields) =>
-                JObject(fields.map({ field => (field.name, fromLift(field.value)) }))
-            case lift.JArray(values) =>
-                JArray(values.map(fromLift(_)))
-            case lift.JField(name, value) =>
-                throw new IllegalStateException("either JField was a toplevel from lift-json or this function is buggy")
-            case lift.JInt(i) =>
-                if (i.isValidInt) BInt32(i.intValue) else BInt64(i.longValue)
-            case lift.JBool(b) =>
-                BBoolean(b)
-            case lift.JDouble(d) =>
-                BDouble(d)
-            case lift.JString(s) =>
-                BString(s)
-            case lift.JNull =>
-                BNull
-            case lift.JNothing =>
-                throw new IllegalStateException("not sure what to do with lift's JNothing here, shouldn't happen")
-        }
-    }
-
     def toJson(value : BValue, flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String = {
         require(value != null)
         lift.Printer.compact(lift.render(toLift(value.toJValue(flavor))))
@@ -75,14 +54,92 @@ private[bson] object BsonJson {
     }
 
     private def parseString(json : String) : JValue = {
-        withLiftExceptionsConverted(fromLift(lift.parse(json)))
+        withLiftExceptionsConverted(lift.JsonParser.parse[JValue](json, parser))
     }
 
     private def parseReader(json : Reader) : JValue = {
-        withLiftExceptionsConverted(fromLift(lift.JsonParser.parse(json)))
+        withLiftExceptionsConverted(lift.JsonParser.parse[JValue](json, parser))
     }
 
     def fromJson(json : String) : JValue = parseString(json)
 
     def fromJson(json : Reader) : JValue = parseReader(json)
+
+    private val parser = (p : lift.JsonParser.Parser) => {
+        import lift.JsonParser._
+
+        def parseValue(t : Token, tokens : Iterator[Token]) : JValue = {
+            t match {
+                case StringVal(x) => BString(x)
+                case IntVal(x) =>
+                    if (x.isValidInt)
+                        BInt32(x.intValue)
+                    else if (x > Long.MaxValue || x < Long.MinValue)
+                        BDouble(x.doubleValue)
+                    else
+                        BInt64(x.longValue)
+                case DoubleVal(x) => BDouble(x)
+                case BoolVal(x) => BBoolean(x)
+                case NullVal => BNull
+                case OpenObj => parseObj(tokens)
+                case OpenArr => parseArr(tokens)
+                case whatever => throw new lift.JsonParser.ParseException("Invalid token for field value or array element: " + whatever, null)
+            }
+        }
+
+        def parseFields(builder : Builder[(String, JValue), List[(String, JValue)]], tokens : Iterator[Token]) : Unit = {
+            val seen = mutable.Set[String]()
+            while (true) {
+                tokens.next match {
+                    case FieldStart(name) =>
+                        if (seen.contains(name)) {
+                            parseValue(tokens.next, tokens) // discard and ignore (right thing?)
+                        } else {
+                            seen += name
+                            val jvalue = parseValue(tokens.next, tokens)
+                            builder += Pair(name, jvalue)
+                        }
+                    case CloseObj => return
+                    case whatever =>
+                        throw new lift.JsonParser.ParseException("Invalid token, expected } or field name, got " + whatever, null)
+                }
+            }
+        }
+
+        def parseElements(builder : Builder[JValue, List[JValue]], tokens : Iterator[Token]) : Unit = {
+            while (true) {
+                tokens.next match {
+                    case CloseArr => return
+                    case t : Token => builder += parseValue(t, tokens)
+                }
+            }
+        }
+
+        def parseObj(tokens : Iterator[Token]) : JObject = {
+            val builder = List.newBuilder[(String, JValue)]
+            parseFields(builder, tokens)
+            JObject(builder.result)
+        }
+
+        def parseArr(tokens : Iterator[Token]) : JArray = {
+            val builder = List.newBuilder[JValue]
+            parseElements(builder, tokens)
+            JArray(builder.result)
+        }
+
+        val tokens = new Iterator[Token] {
+            override def next = p.nextToken
+            override def hasNext = true // white lie
+        }
+        val result = tokens.next match {
+            case OpenObj => parseObj(tokens)
+            case OpenArr => parseArr(tokens)
+            case End => throw new lift.JsonParser.ParseException("empty JSON document", null)
+            case whatever => throw new lift.JsonParser.ParseException("JSON document must have array or object at root, has: " + whatever, null)
+        }
+        tokens.next match {
+            case End => result
+            case whatever => throw new lift.JsonParser.ParseException("JSON document has extra stuff after first object or array: " + whatever, null)
+        }
+    }
 }

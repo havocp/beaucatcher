@@ -9,7 +9,7 @@ import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
 import org.junit._
 
-class BsonTest {
+class BsonTest extends TestUtils {
 
     @org.junit.Before
     def setup() {
@@ -321,24 +321,6 @@ class BsonTest {
         assertEquals(expected, jsonString)
 
         // FIXME test pretty string, test other json flavors
-    }
-
-    private def intercept[E <: Throwable : Manifest](block : => Unit) : E = {
-        val expectedClass = manifest.erasure.asInstanceOf[Class[E]]
-        var thrown : Option[Throwable] = None
-        try {
-            block
-        } catch {
-            case t : Throwable => thrown = Some(t)
-        }
-        thrown match {
-            case Some(t) if expectedClass.isAssignableFrom(t.getClass) =>
-                t.asInstanceOf[E]
-            case Some(t) =>
-                throw new Exception("Expected exception %s was not thrown, got %s".format(expectedClass.getName, t))
-            case None =>
-                throw new Exception("Expected exception %s was not thrown".format(expectedClass.getName))
-        }
     }
 
     @Test
