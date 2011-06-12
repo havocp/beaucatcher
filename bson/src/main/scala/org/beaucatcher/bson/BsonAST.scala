@@ -18,7 +18,6 @@
 
 package org.beaucatcher.bson
 
-import java.io.Reader
 import scala.math.ScalaNumber
 import scala.math.ScalaNumericConversions
 import scala.collection.LinearSeqLike
@@ -34,6 +33,7 @@ import org.apache.commons.codec.binary.Base64
 import org.bson.types._
 import org.joda.time._
 import scalaj.collection.Implicits._
+import scala.io.Source
 
 /**
  *  [[org.beaucatcher.bson.BValue]] is the base trait for all BSON value types. All [[org.beaucatcher.bson.BValue]]
@@ -844,14 +844,14 @@ object BValue {
      * Parse JSON from a [[java.io.Reader]], validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
      * (See documentation on the other version of `parseJson()` that takes a string parameter.)
      */
-    def parseJson(json : Reader, schema : ClassAnalysis[_ <: Product]) : BValue =
+    def parseJson(json : Source, schema : ClassAnalysis[_ <: Product]) : BValue =
         BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), JsonFlavor.CLEAN)
 
     /**
      * Parse JSON from a [[java.io.Reader]], validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
      * (See documentation on the other version of `parseJson()` that takes a string parameter.)
      */
-    def parseJson(json : Reader, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value) : BValue =
+    def parseJson(json : Source, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value) : BValue =
         BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), flavor)
 
     /**
@@ -882,10 +882,10 @@ object JValue {
     def parseJson(json : String) : JValue = BsonJson.fromJson(json)
 
     /**
-     * Parses JSON from a [[java.io.Reader]] into a parse tree.
+     * Parses JSON from a [[scala.io.Source]] into a parse tree.
      * @param json a JSON string
      * @return a parse tree
      */
-    def parseJson(json : Reader) : JValue = BsonJson.fromJson(json)
+    def parseJson(json : Source) : JValue = BsonJson.fromJson(json)
 }
 

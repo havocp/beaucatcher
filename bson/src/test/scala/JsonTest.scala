@@ -4,11 +4,108 @@ import org.junit.Assert._
 import org.junit._
 import net.liftweb.{ json => lift }
 import java.io.Reader
+import scala.io.Source
 
 class JsonTest extends TestUtils {
 
     @org.junit.Before
     def setup() {
+    }
+
+    @Test
+    def tokenizeAllBasicTypes() : Unit = {
+        import JsonToken._
+
+        // empty string
+        assertEquals(List(Start, End),
+            tokenize("".iterator).toList)
+        // all token types with no spaces (not sure JSON spec wants this to work,
+        // but spec is unclear to me when spaces are required, and banning them
+        // is actually extra work)
+        assertEquals(List(Start, Comma, Colon, CloseObject, OpenObject, CloseArray, OpenArray, StringValue("foo"),
+            LongValue(42), TrueValue, DoubleValue(3.14), FalseValue, NullValue, End),
+            tokenize(""",:}{]["foo"42true3.14falsenull""".iterator).toList)
+        // all token types with spaces
+        assertEquals(List(Start, Comma, Colon, CloseObject, OpenObject, CloseArray, OpenArray, StringValue("foo"),
+            LongValue(42), TrueValue, DoubleValue(3.14), FalseValue, NullValue, End),
+            tokenize(""" , : } { ] [ "foo" 42 true 3.14 false null """.iterator).toList)
+        // all token types with extra spaces
+        assertEquals(List(Start, Comma, Colon, CloseObject, OpenObject, CloseArray, OpenArray, StringValue("foo"),
+            LongValue(42), TrueValue, DoubleValue(3.14), FalseValue, NullValue, End),
+            tokenize("""   ,   :   }   {   ]   [   "foo"   42   true   3.14   false   null   """.iterator).toList)
+    }
+
+    @Test
+    def tokenizerUnescapeStrings() : Unit = {
+        import JsonToken._
+
+        case class UnescapeTest(escaped : String, result : StringValue)
+        implicit def pair2unescapetest(pair : (String, StringValue)) : UnescapeTest = UnescapeTest(pair._1, pair._2)
+
+        // getting the actual 6 chars we want in a string is a little pesky.
+        // \u005C is backslash. Just prove we're doing it right here.
+        assertEquals(6, "\\u0046".length)
+        assertEquals('4', "\\u0046"(4))
+        assertEquals('6', "\\u0046"(5))
+
+        val tests = List[UnescapeTest]((""" "" """, StringValue("")),
+            (" \"\0\" ", StringValue("\0")), // nul byte
+            (""" "\"\\\/\b\f\n\r\t" """, StringValue("\"\\/\b\f\n\r\t")),
+            ("\"\\u0046\"", StringValue("F")),
+            ("\"\\u0046\\u0046\"", StringValue("FF")))
+
+        for (t <- tests) {
+            assertEquals(List(Start, t.result, End),
+                tokenize(t.escaped.iterator).toList)
+        }
+    }
+
+    @Test
+    def tokenizerThrowsOnInvalidStrings() : Unit = {
+        import JsonToken._
+
+        val invalidTests = List(""" "\" """, // nothing after a backslash
+            """ "\q" """, // there is no \q escape sequence
+            "\"\\u123\"", // too short
+            "\"\\u12\"", // too short
+            "\"\\u1\"", // too short
+            "\"\\u\"", // too short
+            "\"", // just a single quote
+            """ "abcdefg""" // no end quote
+            )
+        for (t <- invalidTests) {
+            describeFailure(t) {
+                intercept[JsonParseException] {
+                    // note, toList is mandatory to actually traverse the tokens, which are
+                    // lazily computed
+                    tokenize(t.iterator).toList
+                }
+            }
+        }
+    }
+
+    @Test
+    def tokenizerParseNumbers() : Unit = {
+        import JsonToken._
+
+        abstract class NumberTest[+A](val s : String, val result : A)
+        case class LongTest(override val s : String, override val result : LongValue) extends NumberTest[LongValue](s, result)
+        case class DoubleTest(override val s : String, override val result : DoubleValue) extends NumberTest[DoubleValue](s, result)
+        implicit def pair2inttest(pair : (String, Int)) = LongTest(pair._1, LongValue(pair._2))
+        implicit def pair2longtest(pair : (String, Long)) = LongTest(pair._1, LongValue(pair._2))
+        implicit def pair2doubletest(pair : (String, Double)) = DoubleTest(pair._1, DoubleValue(pair._2))
+
+        val tests = List[NumberTest[Value]](("1", 1),
+            ("1.2", 1.2),
+            ("1e6", 1e6),
+            ("1e-6", 1e-6),
+            ("-1", -1),
+            ("-1.2", -1.2))
+
+        for (t <- tests) {
+            assertEquals(List(Start, t.result, End),
+                tokenize(t.s.iterator).toList)
+        }
     }
 
     private[this] def fromLift(liftValue : lift.JValue) : JValue = {
@@ -64,12 +161,12 @@ class JsonTest extends TestUtils {
         "]",
         "10", // value not in array or object
         "\"foo\"", // value not in array or object
-        "\"", // lift's tokenizer barfs on this so we can't handle it yet
+        "\"", // single quote by itself
         "{ \"foo\" : }", // no value in object
         "{ : 10 }", // no key in object
-        // these two problems are ignored by the lift tokenizer so we can't throw on them either
-        //JsonTest(true, "[:\"foo\", \"bar\"]"), // colon in an array; lift doesn't throw (tokenizer erases it)
-        //JsonTest(true, "[\"foo\" : \"bar\"]"), // colon in an array another way, lift ignores (tokenizer erases it)
+        // these two problems are ignored by the lift tokenizer
+        JsonTest(true, "[:\"foo\", \"bar\"]"), // colon in an array; lift doesn't throw (tokenizer erases it)
+        JsonTest(true, "[\"foo\" : \"bar\"]"), // colon in an array another way, lift ignores (tokenizer erases it)
         "") // empty document again, just for clean formatting of this list ;-)
 
     // We'll automatically try each of these with whitespace modifications
@@ -86,7 +183,13 @@ class JsonTest extends TestUtils {
         """{ "foo" : { "bar" : "baz", "woo" : "w00t" }, "baz" : "boo" }""",
         """{ "foo" : [10,11,12], "baz" : "boo" }""",
         JsonTest(true, """{ "foo" : "bar", "foo" : "bar2" }"""), // dup keys - lift just returns both, we use first
+        """[{},{},{},{}]""",
+        """[[[[[[]]]]]]""",
+        """{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":42}}}}}}}}""",
         "{}")
+
+    // For string quoting, check behavior of escaping a random character instead of one on the list;
+    // lift-json seems to oddly treat that as a \ literal
 
     private def whitespaceVariations(tests : Seq[JsonTest]) : Seq[JsonTest] = {
         val variations = List({ s : String => s }, // identity
@@ -138,7 +241,7 @@ class JsonTest extends TestUtils {
                     JValue.parseJson(invalid.test)
                 }
                 intercept[JsonParseException] {
-                    JValue.parseJson(new java.io.StringReader(invalid.test))
+                    JValue.parseJson(Source.fromString(invalid.test))
                 }
             }
         }
@@ -166,17 +269,17 @@ class JsonTest extends TestUtils {
             val liftASTReader = addOffendingJsonToException("lift-reader", valid.test) {
                 fromJsonWithLiftParser(new java.io.StringReader(valid.test))
             }
-            val ourASTReader = addOffendingJsonToException("beaucatcher-reader", valid.test) {
-                JValue.parseJson(new java.io.StringReader(valid.test))
+            val ourASTSource = addOffendingJsonToException("beaucatcher-source", valid.test) {
+                JValue.parseJson(Source.fromString(valid.test))
             }
             if (valid.liftBehaviorUnexpected) {
                 // ignore this for now
             } else {
                 addOffendingJsonToException("beaucatcher", valid.test) {
-                    assertEquals(ourAST, ourASTReader) // Reader should be same as parsing the string
+                    assertEquals(ourAST, ourASTSource) // Source should be same as parsing the string
                 }
                 addOffendingJsonToException("beaucatcher", valid.test) {
-                    assertEquals(liftASTReader, ourASTReader) // with Reader, we still match Lift
+                    assertEquals(liftASTReader, ourASTSource) // with Reader/Source, we still match Lift
                 }
             }
 

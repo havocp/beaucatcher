@@ -1,9 +1,26 @@
+/*
+ * Copyright 2011 Havoc Pennington
+ * derived in part from lift-json,
+ * Copyright 2009-2010 WorldWide Conferencing, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.beaucatcher.bson
 
-import java.io.Reader
 import net.liftweb.{ json => lift }
 import scala.collection.mutable
 import scala.collection.mutable.Builder
+import scala.io.Source
 
 /** An exception related to JSON parsing or generation. */
 abstract class JsonException(message : String, cause : Throwable = null) extends Exception(message, cause)
@@ -13,6 +30,8 @@ class JsonParseException(message : String, cause : Throwable = null) extends Jso
 class JsonValidationException(message : String, cause : Throwable = null) extends JsonException(message, cause)
 
 private[bson] object BsonJson {
+    import JsonToken._
+
     private[this] def toLift(value : JValue) : lift.JValue = {
         value match {
             case v : JObject =>
@@ -48,50 +67,45 @@ private[bson] object BsonJson {
         try {
             block
         } catch {
-            case e : lift.JsonParser.ParseException =>
+            case e : JsonParseException =>
                 throw new JsonParseException(e.getMessage(), e)
         }
     }
 
-    private def parseString(json : String) : JValue = {
-        withLiftExceptionsConverted(lift.JsonParser.parse[JValue](json, parser))
-    }
+    def fromJson(json : String) : JValue = parse(tokenize(json.iterator))
 
-    private def parseReader(json : Reader) : JValue = {
-        withLiftExceptionsConverted(lift.JsonParser.parse[JValue](json, parser))
-    }
+    def fromJson(json : Source) : JValue = parse(tokenize(json))
 
-    def fromJson(json : String) : JValue = parseString(json)
-
-    def fromJson(json : Reader) : JValue = parseReader(json)
-
-    private val parser = (p : lift.JsonParser.Parser) => {
-        import lift.JsonParser._
-
-        def parseValue(t : Token, tokens : Iterator[Token]) : JValue = {
+    private def parse(tokens : Iterator[JsonToken]) : JValue = {
+        def parseValue(t : JsonToken, tokens : Iterator[JsonToken]) : JValue = {
             t match {
-                case StringVal(x) => BString(x)
-                case IntVal(x) =>
+                case StringValue(x) => BString(x)
+                case LongValue(x) =>
                     if (x.isValidInt)
                         BInt32(x.intValue)
-                    else if (x > Long.MaxValue || x < Long.MinValue)
-                        BDouble(x.doubleValue)
                     else
                         BInt64(x.longValue)
-                case DoubleVal(x) => BDouble(x)
-                case BoolVal(x) => BBoolean(x)
-                case NullVal => BNull
-                case OpenObj => parseObj(tokens)
-                case OpenArr => parseArr(tokens)
-                case whatever => throw new lift.JsonParser.ParseException("Invalid token for field value or array element: " + whatever, null)
+                case DoubleValue(x) => BDouble(x)
+                case TrueValue => BBoolean(true)
+                case FalseValue => BBoolean(false)
+                case NullValue => BNull
+                case OpenObject => parseObj(tokens)
+                case OpenArray => parseArr(tokens)
+                case whatever => throw new JsonParseException("Invalid token for field value or array element: " + whatever)
             }
         }
 
-        def parseFields(builder : Builder[(String, JValue), List[(String, JValue)]], tokens : Iterator[Token]) : Unit = {
+        // this is just after the opening brace { for the object
+        def parseFields(builder : Builder[(String, JValue), List[(String, JValue)]], tokens : Iterator[JsonToken]) : Unit = {
             val seen = mutable.Set[String]()
             while (true) {
                 tokens.next match {
-                    case FieldStart(name) =>
+                    case StringValue(name) =>
+                        tokens.next match {
+                            case Colon => // OK
+                            case whatever =>
+                                throw new JsonParseException("Expected colon after field name, got: %s".format(whatever))
+                        }
                         if (seen.contains(name)) {
                             parseValue(tokens.next, tokens) // discard and ignore (right thing?)
                         } else {
@@ -99,47 +113,73 @@ private[bson] object BsonJson {
                             val jvalue = parseValue(tokens.next, tokens)
                             builder += Pair(name, jvalue)
                         }
-                    case CloseObj => return
+                    case CloseObject => return
                     case whatever =>
-                        throw new lift.JsonParser.ParseException("Invalid token, expected } or field name, got " + whatever, null)
+                        throw new JsonParseException("Expected } or field name, got %s".format(whatever))
                 }
-            }
-        }
-
-        def parseElements(builder : Builder[JValue, List[JValue]], tokens : Iterator[Token]) : Unit = {
-            while (true) {
                 tokens.next match {
-                    case CloseArr => return
-                    case t : Token => builder += parseValue(t, tokens)
+                    case CloseObject => return
+                    case Comma =>
+                    case whatever =>
+                        throw new JsonParseException("Expected } or comma, got %s".format(whatever))
                 }
             }
         }
 
-        def parseObj(tokens : Iterator[Token]) : JObject = {
+        // this is just after the opening bracket [ for the array
+        def parseElements(builder : Builder[JValue, List[JValue]], tokens : Iterator[JsonToken]) : Unit = {
+            // first element in the array
+            tokens.next match {
+                case CloseArray => return
+                case t : Value => builder += parseValue(t, tokens)
+                case OpenObject => builder += parseObj(tokens)
+                case OpenArray => builder += parseArr(tokens)
+                case whatever => throw new JsonParseException("JSON array should have had first element or ended with ], instead had %s".format(whatever))
+            }
+            while (true) {
+                // here we are just after a value, before any comma
+                tokens.next match {
+                    case CloseArray => return
+                    case Comma =>
+                    case whatever => throw new JsonParseException("JSON array should have ended or had a comma, instead had %s".format(whatever))
+                }
+                // now we are just after a comma
+                tokens.next match {
+                    case t : Value => builder += parseValue(t, tokens)
+                    case OpenObject => builder += parseObj(tokens)
+                    case OpenArray => builder += parseArr(tokens)
+                    case whatever => throw new JsonParseException("JSON array should have had a new element after comma, instead had %s".format(whatever))
+                }
+            }
+        }
+
+        def parseObj(tokens : Iterator[JsonToken]) : JObject = {
             val builder = List.newBuilder[(String, JValue)]
             parseFields(builder, tokens)
             JObject(builder.result)
         }
 
-        def parseArr(tokens : Iterator[Token]) : JArray = {
+        def parseArr(tokens : Iterator[JsonToken]) : JArray = {
             val builder = List.newBuilder[JValue]
             parseElements(builder, tokens)
             JArray(builder.result)
         }
 
-        val tokens = new Iterator[Token] {
-            override def next = p.nextToken
-            override def hasNext = true // white lie
+        tokens.next match {
+            case Start =>
+            case whatever => throw new JsonParseException("JSON document did not start with a Start token")
         }
+
         val result = tokens.next match {
-            case OpenObj => parseObj(tokens)
-            case OpenArr => parseArr(tokens)
-            case End => throw new lift.JsonParser.ParseException("empty JSON document", null)
-            case whatever => throw new lift.JsonParser.ParseException("JSON document must have array or object at root, has: " + whatever, null)
+            case OpenObject => parseObj(tokens)
+            case OpenArray => parseArr(tokens)
+            case End => throw new JsonParseException("empty JSON document")
+            case whatever => throw new JsonParseException("JSON document must have array or object at root, has: " + whatever)
         }
+
         tokens.next match {
             case End => result
-            case whatever => throw new lift.JsonParser.ParseException("JSON document has extra stuff after first object or array: " + whatever, null)
+            case whatever => throw new JsonParseException("JSON document has extra stuff after first object or array: " + whatever)
         }
     }
 }

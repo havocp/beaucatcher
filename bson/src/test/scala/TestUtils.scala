@@ -17,4 +17,14 @@ abstract trait TestUtils {
                 throw new Exception("Expected exception %s was not thrown".format(expectedClass.getName))
         }
     }
+
+    protected def describeFailure[A](desc : String)(code : => A) : A = {
+        try {
+            code
+        } catch {
+            case t : Throwable =>
+                println("Failure on: '%s'".format(desc))
+                throw t
+        }
+    }
 }
