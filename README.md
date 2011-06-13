@@ -2,6 +2,9 @@ Beaucatcher is a library for using MongoDB collections from Scala. It
 wraps and builds on a "driver library" (currently Casbah, working on
 Hammersmith).
 
+Beaucatcher incidentally includes a basic JSON parser and renderer
+library integrated with its BSON facilities.
+
 ("Beaucatcher" is also the name of the mountain in the middle of
 Asheville, NC, if you're wondering where the word comes from.)
 
@@ -29,8 +32,7 @@ of jars to let people pick-and-choose dependencies. But there are
 essentially these things:
 
  - an immutable AST tree for BSON and JSON (similar to lift-json, but
-   without a lot of API for transformations or other goodies; and just
-   uses lift-json for parsing/stringification for now)
+   without a lot of API for transformations or other goodies)
  - sync and async "DAO" traits, that have find() and all those methods
  - a `CollectionOperations` trait that's essentially a set of DAOs,
    matrix of (result-type x asyncness). The idea is that for a
@@ -107,9 +109,6 @@ Some ideas in the library are:
    from BSON-only dependencies, the case class stuff is separate from
    the `BObject` stuff, etc. You can pick-and-choose which pieces
    to use.
- - currently JSON parsing and generation are done with lift-json but
-   it may be nicer to drop this dependency sometime. The dependency
-   isn't in the API.
  - make it simple to code backbone.js-style REST CRUD methods on
    a MongoDB collection
  - since we have a nice schema in the form of the case class, support
