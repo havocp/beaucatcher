@@ -17,7 +17,6 @@
  */
 package org.beaucatcher.bson
 
-import net.liftweb.{ json => lift }
 import scala.collection.mutable
 import scala.collection.mutable.Builder
 import scala.io.Source
@@ -32,35 +31,25 @@ class JsonValidationException(message : String, cause : Throwable = null) extend
 private[bson] object BsonJson {
     import JsonToken._
 
-    private[this] def toLift(value : JValue) : lift.JValue = {
-        value match {
-            case v : JObject =>
-                lift.JObject(v.map({ kv => lift.JField(kv._1, toLift(kv._2)) }).toList)
-            case v : JArray =>
-                lift.JArray(v.value.map({ elem => toLift(elem) }))
-            case v : BBoolean =>
-                lift.JBool(v.value)
-            case v : BInt32 =>
-                lift.JInt(v.value)
-            case v : BInt64 =>
-                lift.JInt(v.value)
-            case v : BDouble =>
-                lift.JDouble(v.value)
-            case v : BString =>
-                lift.JString(v.value)
-            case BNull =>
-                lift.JNull
-        }
+    object JsonFormatting extends Enumeration {
+        type JsonFormatting = Value
+        val Compact, Pretty = Value
+    }
+
+    private def flattenStrings(i : Iterator[String]) : String = {
+        val sb = new StringBuilder
+        i.foreach(sb.append(_))
+        sb.toString
     }
 
     def toJson(value : BValue, flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String = {
         require(value != null)
-        lift.Printer.compact(lift.render(toLift(value.toJValue(flavor))))
+        flattenStrings(render(value.toJValue(flavor), 0, JsonFormatting.Compact))
     }
 
     def toPrettyJson(value : BValue, flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String = {
         require(value != null)
-        lift.Printer.pretty(lift.render(toLift(value.toJValue(flavor))))
+        flattenStrings(render(value.toJValue(flavor), 0, JsonFormatting.Pretty))
     }
 
     private def withLiftExceptionsConverted[T](block : => T) : T = {
@@ -180,6 +169,124 @@ private[bson] object BsonJson {
         tokens.next match {
             case End => result
             case whatever => throw new JsonParseException("JSON document has extra stuff after first object or array: " + whatever)
+        }
+    }
+
+    private def renderString(s : String) : String = {
+        val sb = new StringBuilder
+        sb.append('"')
+        for (c <- s) {
+            sb.append(c match {
+                // switch from lift-json
+                case '"' => "\\\""
+                case '\\' => "\\\\"
+                case '\b' => "\\b"
+                case '\f' => "\\f"
+                case '\n' => "\\n"
+                case '\r' => "\\r"
+                case '\t' => "\\t"
+                case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c : Int)
+                case c => c
+            })
+        }
+        sb.append('"')
+        sb.toString
+    }
+
+    private def generateJoin[A](whatever : Iterator[A],
+        create : (A) => Iterator[String],
+        separator : String) : Iterator[String] = {
+        var first = true
+        whatever.foldLeft[Iterator[String]](Iterator.empty)({ (soFar, a) =>
+            if (first) {
+                first = false
+                soFar ++ create(a)
+            } else {
+                soFar ++ Iterator.single(separator) ++ create(a)
+            }
+        })
+    }
+
+    private def indentation(indentLevel : Int) = {
+        val indent = "    "
+        Iterator.fill(indentLevel)(indent)
+    }
+
+    private def renderObject(o : JObject, indentLevel : Int, formatting : JsonFormatting.Value) : Iterator[String] = {
+        if (formatting == JsonFormatting.Pretty) {
+            val fields = generateJoin(o.iterator, { kv : (String, JValue) =>
+                indentation(indentLevel + 1) ++ Iterator(renderString(kv._1), " : ") ++
+                    render(kv._2, indentLevel + 1, formatting)
+            }, ",\n")
+
+            Iterator.single("{\n") ++
+                fields ++
+                Iterator.single("\n") ++
+                indentation(indentLevel) ++ Iterator.single("}")
+        } else {
+            val fields = generateJoin(o.iterator, { kv : (String, JValue) =>
+                Iterator(renderString(kv._1), ":") ++
+                    render(kv._2, indentLevel + 1, formatting)
+            }, ",")
+
+            Iterator.single("{") ++
+                fields ++
+                Iterator.single("}")
+        }
+    }
+
+    private def renderArray(a : JArray, indentLevel : Int, formatting : JsonFormatting.Value) : Iterator[String] = {
+        if (formatting == JsonFormatting.Pretty) {
+            val elements = generateJoin(a.iterator,
+                { e : JValue => indentation(indentLevel + 1) ++ render(e, indentLevel + 1, formatting) },
+                ",\n")
+            Iterator.single("[\n") ++
+                elements ++
+                Iterator.single("\n") ++
+                indentation(indentLevel) ++ Iterator.single("]")
+        } else {
+            val elements = generateJoin(a.iterator,
+                { e : JValue => render(e, indentLevel + 1, formatting) },
+                ",")
+            Iterator.single("[") ++
+                elements ++
+                Iterator.single("]")
+        }
+    }
+
+    /**
+     * Render a JValue as a JSON document, as a series of strings that should be concatenated
+     * or written out in the order provided. The iterator may be lazy, that's
+     * why you get an iterator instead of a single string (in theory a large stream of JSON
+     * need never be entirely in RAM). For most small cases the iterator is just wasteful
+     * though. Anytime you end up just flattening into a single string, it'd be faster to
+     * use a StringBuilder throughout instead of all these iterators. Might end up doing
+     * that. This is a little odd.
+     *
+     * Caller must always put indentation in front of the first line; any extra
+     * lines returned are indented according to indentLevel parameter (which should match
+     * the level used for the first line).
+     *
+     * @param value the JSON value to render
+     * @param indentLevel number of indentation steps (4 spaces each) for lines after first
+     * @param formatting Pretty to use extra whitespace and newlines, Compact to be small
+     * @return JSON document as a series of strings that should be concatenated
+     */
+    private[bson] def render(value : JValue, indentLevel : Int, formatting : JsonFormatting.Value) : Iterator[String] = {
+        val rendered = value match {
+            case o : JObject => renderObject(o, indentLevel, formatting)
+            case a : JArray => renderArray(a, indentLevel, formatting)
+            case BBoolean(b) => Iterator.single(if (b) "true" else "false")
+            case BString(s) => Iterator.single(renderString(s))
+            case BInt32(i) => Iterator.single(i.toString)
+            case BInt64(i) => Iterator.single(i.toString)
+            case BDouble(d) => Iterator.single(d.toString)
+            case BNull => Iterator.single("null")
+        }
+        if (formatting == JsonFormatting.Pretty) {
+            rendered ++ Iterator.single("\n")
+        } else {
+            rendered
         }
     }
 }

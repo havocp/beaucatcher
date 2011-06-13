@@ -108,6 +108,27 @@ class JsonTest extends TestUtils {
         }
     }
 
+    private[this] def toLift(value : JValue) : lift.JValue = {
+        value match {
+            case v : JObject =>
+                lift.JObject(v.map({ kv => lift.JField(kv._1, toLift(kv._2)) }).toList)
+            case v : JArray =>
+                lift.JArray(v.value.map({ elem => toLift(elem) }))
+            case v : BBoolean =>
+                lift.JBool(v.value)
+            case v : BInt32 =>
+                lift.JInt(v.value)
+            case v : BInt64 =>
+                lift.JInt(v.value)
+            case v : BDouble =>
+                lift.JDouble(v.value)
+            case v : BString =>
+                lift.JString(v.value)
+            case BNull =>
+                lift.JNull
+        }
+    }
+
     private[this] def fromLift(liftValue : lift.JValue) : JValue = {
         liftValue match {
             case lift.JObject(fields) =>
@@ -186,6 +207,8 @@ class JsonTest extends TestUtils {
         """[{},{},{},{}]""",
         """[[[[[[]]]]]]""",
         """{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":42}}}}}}}}""",
+        // this long one is mostly to test rendering
+        """{ "foo" : { "bar" : "baz", "woo" : "w00t" }, "baz" : { "bar" : "baz", "woo" : [1,2,3,4], "w00t" : true, "a" : false, "b" : 3.14, "c" : null } }""",
         "{}")
 
     // For string quoting, check behavior of escaping a random character instead of one on the list;
@@ -283,9 +306,21 @@ class JsonTest extends TestUtils {
                 }
             }
 
+            /*
+            println("Original:")
+            println(valid.test)
+            println("Compact:")
+            println(ourAST.toJson())
+            println("Pretty:")
+            println(ourAST.toPrettyJson())
+            println("The End")
+             */
+
             // for valid JSON, we should be able to re-serialize and reparse and get same thing back
             val roundtripped = JValue.parseJson(ourAST.toJson())
+            val roundtrippedPretty = JValue.parseJson(ourAST.toPrettyJson())
             assertEquals(ourAST, roundtripped)
+            assertEquals(ourAST, roundtrippedPretty)
         }
     }
 }
