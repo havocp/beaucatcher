@@ -58,6 +58,20 @@ class JsonTest extends TestUtils {
             assertEquals(List(Start, t.result, End),
                 tokenize(t.escaped.iterator).toList)
         }
+
+        def renderString(s : String) = {
+            BString(s).toJson()
+        }
+
+        // check that we re-escape correctly too
+        for (t <- tests) {
+            val rendered = renderString(t.result.value)
+            val reparsed = tokenize(rendered.iterator).toList match {
+                case List(Start, StringValue(s), End) => s
+                case _ => throw new AssertionError("Failed to reparse rendered string")
+            }
+            assertEquals(t.result.value, reparsed)
+        }
     }
 
     @Test
@@ -188,6 +202,27 @@ class JsonTest extends TestUtils {
         // these two problems are ignored by the lift tokenizer
         JsonTest(true, "[:\"foo\", \"bar\"]"), // colon in an array; lift doesn't throw (tokenizer erases it)
         JsonTest(true, "[\"foo\" : \"bar\"]"), // colon in an array another way, lift ignores (tokenizer erases it)
+        "[ foo ]", // not a known token
+        "[ t ]", // start of "true" but ends wrong
+        "[ tx ]",
+        "[ tr ]",
+        "[ trx ]",
+        "[ tru ]",
+        "[ trux ]",
+        "[ truex ]",
+        "[ 10x ]", // number token with trailing junk
+        "[ 10e3e3 ]", // two exponents
+        "[ \"hello ]", // unterminated string
+        JsonTest(true, "{ \"foo\" , true }"), // comma instead of colon, lift is fine with this
+        JsonTest(true, "{ \"foo\" : true \"bar\" : false }"), // missing comma between fields, lift fine with this
+        "[ 10, }]", // array with } as an element
+        "[ 10, {]", // array with { as an element
+        "{}x", // trailing invalid token after the root object
+        "[]x", // trailing invalid token after the root array
+        JsonTest(true, "{}{}"), // trailing token after the root object - lift OK with it
+        "{}true", // trailing token after the root object
+        JsonTest(true, "[]{}"), // trailing valid token after the root array
+        "[]true", // trailing valid token after the root array
         "") // empty document again, just for clean formatting of this list ;-)
 
     // We'll automatically try each of these with whitespace modifications

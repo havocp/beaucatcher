@@ -147,7 +147,8 @@ private[bson] object BsonJson {
 
         tokens.next match {
             case Start =>
-            case whatever => throw new JsonParseException("JSON document did not start with a Start token")
+            // internal error if this happens, so don't use JsonParseException
+            case whatever => throw new IllegalStateException("JSON document did not start with a Start token (bug in json parser)")
         }
 
         val result = tokens.next match {
