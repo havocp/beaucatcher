@@ -52,7 +52,6 @@ object JsonToken {
         throw new JsonParseException(message, cause)
     }
 
-    private def nextOrNone(i : Iterator[Char]) : Option[Char] = if (i.hasNext) Some(i.next) else None
     private def headOrNone(i : BufferedIterator[Char]) : Option[Char] = if (i.hasNext) Some(i.head) else None
     private def nextOrElse(i : Iterator[Char], action : => Char) : Char = if (i.hasNext) i.next else action
     private def nextIsOrThrow(input : Iterator[Char], expectedBefore : String, expectedNow : String) : Unit = {
