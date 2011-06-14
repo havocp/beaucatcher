@@ -52,15 +52,6 @@ private[bson] object BsonJson {
         flattenStrings(render(value.toJValue(flavor), 0, JsonFormatting.Pretty))
     }
 
-    private def withLiftExceptionsConverted[T](block : => T) : T = {
-        try {
-            block
-        } catch {
-            case e : JsonParseException =>
-                throw new JsonParseException(e.getMessage(), e)
-        }
-    }
-
     def fromJson(json : String) : JValue = parse(tokenize(json.iterator))
 
     def fromJson(json : Source) : JValue = parse(tokenize(json))
