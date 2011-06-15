@@ -1,5 +1,7 @@
 package org.beaucatcher.mongo
 
+import org.beaucatcher.bson._
+
 /**
  * Object which converts queries as they go from a DAO into or out of an "underlying" DAO.
  */
@@ -40,4 +42,32 @@ class IdentityIdComposer[IdType]
     extends IdComposer[IdType, IdType] {
     override def idIn(id : IdType) = id
     override def idOut(id : IdType) = id
+}
+
+/**
+ * Object which converts values (the value part of the key-value pairs of a BSON object) as they go from a DAO into or out of an "underlying" DAO.
+ */
+abstract trait ValueComposer[OuterValueType, InnerValueType] {
+    def valueIn(v : OuterValueType) : InnerValueType
+    def valueOut(v : InnerValueType) : OuterValueType
+}
+
+class IdentityValueComposer[ValueType]
+    extends ValueComposer[ValueType, ValueType] {
+    override def valueIn(id : ValueType) = id
+    override def valueOut(id : ValueType) = id
+}
+
+private[beaucatcher] class InnerBValueValueComposer
+    extends ValueComposer[Any, BValue] {
+
+    override def valueIn(v : Any) : BValue = BValue.wrap(v)
+    override def valueOut(v : BValue) : Any = v.unwrapped
+}
+
+private[beaucatcher] class OuterBValueValueComposer
+    extends ValueComposer[BValue, Any] {
+
+    override def valueIn(v : BValue) : Any = v.unwrapped
+    override def valueOut(v : Any) : BValue = BValue.wrap(v)
 }

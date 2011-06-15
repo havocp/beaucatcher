@@ -46,7 +46,7 @@ class DAOTest {
     def testSaveAndFindOneCaseClass() {
         val foo = Foo(new ObjectId(), 23, "woohoo")
         Foo.caseClassSyncDAO.save(foo)
-        val maybeFound = Foo.caseClassSyncDAO.findOneByID(foo._id)
+        val maybeFound = Foo.caseClassSyncDAO.findOneById(foo._id)
         assertTrue(maybeFound.isDefined)
         assertEquals(foo, maybeFound.get)
     }
@@ -55,7 +55,7 @@ class DAOTest {
     def testSaveAndFindOneCaseClassWithIntId() {
         val foo = FooWithIntId(89, 23, "woohoo")
         FooWithIntId.caseClassSyncDAO.save(foo)
-        val maybeFound = FooWithIntId.caseClassSyncDAO.findOneByID(foo._id)
+        val maybeFound = FooWithIntId.caseClassSyncDAO.findOneById(foo._id)
         assertTrue(maybeFound.isDefined)
         assertEquals(foo, maybeFound.get)
     }
@@ -82,11 +82,11 @@ class DAOTest {
         val foo = Foo(new ObjectId(), 23, "woohoo")
         Foo.caseClassSyncDAO.save(foo)
 
-        val o = Foo.syncDAO[BObject].findOneByID(foo._id).get
+        val o = Foo.syncDAO[BObject].findOneById(foo._id).get
         assertEquals(BInt32(23), o.get("intField").get)
         assertEquals(BString("woohoo"), o.get("stringField").get)
 
-        val f = Foo.syncDAO[Foo].findOneByID(foo._id).get
+        val f = Foo.syncDAO[Foo].findOneById(foo._id).get
         assertEquals(23, f.intField)
         assertEquals("woohoo", f.stringField)
 
@@ -116,11 +116,11 @@ class DAOTest {
         val foo = FooWithIntId(101, 23, "woohoo")
         FooWithIntId.caseClassSyncDAO.save(foo)
 
-        val o = FooWithIntId.syncDAO[BObject].findOneByID(foo._id).get
+        val o = FooWithIntId.syncDAO[BObject].findOneById(foo._id).get
         assertEquals(BInt32(23), o.get("intField").get)
         assertEquals(BString("woohoo"), o.get("stringField").get)
 
-        val f = FooWithIntId.syncDAO[FooWithIntId].findOneByID(foo._id).get
+        val f = FooWithIntId.syncDAO[FooWithIntId].findOneById(foo._id).get
         assertEquals(23, f.intField)
         assertEquals("woohoo", f.stringField)
     }

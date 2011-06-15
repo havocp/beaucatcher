@@ -8,7 +8,7 @@ import com.mongodb.WriteResult
  * A Sync DAO parameterized to support returning case class entities.
  */
 abstract trait CaseClassSyncDAO[OuterQueryType, EntityType <: Product, IdType]
-    extends SyncDAO[OuterQueryType, EntityType, IdType] {
+    extends SyncDAO[OuterQueryType, EntityType, IdType, Any] {
 
 }
 
@@ -16,9 +16,9 @@ abstract trait CaseClassSyncDAO[OuterQueryType, EntityType <: Product, IdType]
  * The general type of a case class DAO that backends to another DAO.
  * This is an internal implementation class not exported from the library.
  */
-private[beaucatcher] abstract trait CaseClassComposedSyncDAO[OuterQueryType, EntityType <: Product, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType]
+private[beaucatcher] abstract trait CaseClassComposedSyncDAO[OuterQueryType, EntityType <: Product, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
     extends CaseClassSyncDAO[OuterQueryType, EntityType, OuterIdType]
-    with ComposedSyncDAO[OuterQueryType, EntityType, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType] {
+    with ComposedSyncDAO[OuterQueryType, EntityType, OuterIdType, Any, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType] {
 }
 
 private[beaucatcher] class CaseClassBObjectEntityComposer[EntityType <: Product : Manifest]
@@ -44,10 +44,15 @@ private[beaucatcher] class CaseClassBObjectEntityComposer[EntityType <: Product 
  * This is an internal implementation class not exported from the library.
  */
 private[beaucatcher] abstract trait CaseClassBObjectSyncDAO[EntityType <: Product, OuterIdType, InnerIdType]
-    extends CaseClassComposedSyncDAO[BObject, EntityType, OuterIdType, BObject, BObject, InnerIdType] {
+    extends CaseClassComposedSyncDAO[BObject, EntityType, OuterIdType, BObject, BObject, InnerIdType, BValue] {
     override protected val backend : BObjectSyncDAO[InnerIdType]
+
+    override def entityToModifierObject(entity : EntityType) : BObject = {
+        entityIn(entity)
+    }
 
     override protected val queryComposer : QueryComposer[BObject, BObject]
     override protected val entityComposer : EntityComposer[EntityType, BObject]
     override protected val idComposer : IdComposer[OuterIdType, InnerIdType]
+    override protected val valueComposer : ValueComposer[Any, BValue]
 }

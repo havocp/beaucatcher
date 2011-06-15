@@ -7,44 +7,116 @@ import com.mongodb.WriteResult
 import com.mongodb.casbah.MongoCollection
 import com.mongodb.CommandResult
 import com.mongodb.DBObject
+import com.mongodb.casbah.commons.MongoDBObject
 
 /**
  * Base trait that chains SyncDAO methods to a Casbah collection, which must be provided
  * by a subclass of this trait.
  */
-abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType] {
+abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType, Any] {
     protected def collection : MongoCollection
 
-    override def find[A <% DBObject](ref : A) : Iterator[DBObject] = {
-        collection.find(ref)
+    private implicit def fields2dbobject(fields : Fields) : DBObject = {
+        val builder = MongoDBObject.newBuilder
+        for (i <- fields.included) {
+            builder += (i -> 1)
+        }
+        for (e <- fields.excluded) {
+            builder += (e -> 0)
+        }
+        builder.result
     }
 
-    override def findOne[A <% DBObject](t : A) : Option[DBObject] = {
-        collection.findOne(t)
+    override def emptyQuery : DBObject = MongoDBObject() // not immutable, so we always make a new one
+
+    override def entityToModifierObject(entity : DBObject) : DBObject = {
+        entity
     }
 
-    override def findOneByID(id : IdType) : Option[DBObject] = {
-        collection.findOneByID(id.asInstanceOf[AnyRef])
+    override def count(query : DBObject, options : CountOptions) : Long = {
+        if (options.fields.isDefined)
+            collection.count(query, options.fields.get)
+        else
+            collection.count(query)
     }
 
-    override def findAndModify[A <% DBObject](q : A, t : DBObject) : Option[DBObject] = {
-        collection.findAndModify(q, t)
+    override def distinct(key : String, options : DistinctOptions[DBObject]) : Seq[Any] = {
+        if (options.query.isDefined)
+            collection.distinct(key, options.query.get)
+        else
+            collection.distinct(key)
     }
 
-    override def save(t : DBObject) : WriteResult = {
-        collection.save(t)
+    override def find(query : DBObject, options : FindOptions) : Iterator[DBObject] = {
+        if (options.fields.isDefined && (options.batchSize.isDefined || options.numToSkip.isDefined)) {
+            collection.find(query, options.fields.get,
+                options.numToSkip.getOrElse(0),
+                options.batchSize.getOrElse(-1))
+        } else if (options.fields.isDefined) {
+            collection.find(query, options.fields.get)
+        } else {
+            collection.find(query)
+        }
     }
 
-    override def insert(t : DBObject) : WriteResult = {
-        collection.insert(t)
+    override def findOne(query : DBObject, options : FindOneOptions) : Option[DBObject] = {
+        if (options.fields.isDefined) {
+            collection.findOne(query, options.fields.get)
+        } else {
+            collection.findOne(query)
+        }
     }
 
-    override def update[A <% DBObject](q : A, o : DBObject) : WriteResult = {
-        collection.update(q, o)
+    override def findOneById(id : IdType, options : FindOneByIdOptions) : Option[DBObject] = {
+        if (options.fields.isDefined) {
+            collection.findOneByID(id.asInstanceOf[AnyRef], options.fields.get)
+        } else {
+            collection.findOneByID(id.asInstanceOf[AnyRef])
+        }
     }
 
-    override def remove(t : DBObject) : WriteResult = {
-        collection.remove(t)
+    override def findAndModify(query : DBObject, update : Option[DBObject], options : FindAndModifyOptions[DBObject]) : Option[DBObject] = {
+        if (options.flags.contains(FindAndModifyRemove)) {
+            if (update.isDefined)
+                throw new IllegalArgumentException("Does not make sense to provide a replacement or modifier object to findAndModify with remove flag")
+            collection.findAndRemove(query)
+        } else if (!update.isDefined) {
+            throw new IllegalArgumentException("Must provide a replacement or modifier object to findAndModify")
+        } else if (options.flags.isEmpty && !options.fields.isDefined) {
+            if (options.sort.isDefined)
+                collection.findAndModify(query, options.sort.get, update.get)
+            else
+                collection.findAndModify(query, update.get)
+        } else {
+            collection.findAndModify(query,
+                // getOrElse mixes poorly with implicit conversion from Fields
+                if (options.fields.isDefined) { options.fields.get : DBObject } else { emptyQuery },
+                options.sort.getOrElse(emptyQuery),
+                false, // remove
+                update.get,
+                options.flags.contains(FindAndModifyNew),
+                options.flags.contains(FindAndModifyUpsert))
+        }
+    }
+
+    override def save(o : DBObject) : WriteResult = {
+        collection.save(o)
+    }
+
+    override def insert(o : DBObject) : WriteResult = {
+        collection.insert(o)
+    }
+
+    override def update(query : DBObject, modifier : DBObject, options : UpdateOptions) : WriteResult = {
+        collection.update(query, modifier, options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
+    }
+
+    override def remove(query : DBObject) : WriteResult = {
+        collection.remove(query)
+    }
+
+    override def removeById(id : IdType) : WriteResult = {
+        collection.remove(MongoDBObject("_id" -> id))
     }
 }
 
@@ -143,10 +215,11 @@ private[casbah] class BObjectCasbahEntityComposer extends EntityComposer[BObject
  * Subclass would provide the backend and could override the in/out type converters.
  */
 private[casbah] abstract trait BObjectCasbahSyncDAO[OuterIdType, InnerIdType]
-    extends BObjectComposedSyncDAO[OuterIdType, DBObject, DBObject, InnerIdType] {
+    extends BObjectComposedSyncDAO[OuterIdType, DBObject, DBObject, InnerIdType, Any] {
     override protected val backend : CasbahSyncDAO[InnerIdType]
 
     override protected val queryComposer : QueryComposer[BObject, DBObject]
     override protected val entityComposer : EntityComposer[BObject, DBObject]
     override protected val idComposer : IdComposer[OuterIdType, InnerIdType]
+    override protected val valueComposer : ValueComposer[BValue, Any]
 }

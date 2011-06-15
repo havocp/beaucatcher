@@ -37,7 +37,7 @@ abstract trait CollectionOperations[EntityType <: Product, IdType] {
      * BObject results. So for example you can implement query logic that supports
      * both kinds of result.
      */
-    def syncDAO[E](implicit chooser : SyncDAOChooser[E]) : SyncDAO[BObject, E, IdType] = {
+    def syncDAO[E](implicit chooser : SyncDAOChooser[E]) : SyncDAO[BObject, E, IdType, _] = {
         chooser.choose(this)
     }
 }
@@ -45,7 +45,7 @@ abstract trait CollectionOperations[EntityType <: Product, IdType] {
 object CollectionOperations {
     // used as an implicit parameter to select the correct DAO based on requested query result type
     trait GenericSyncDAOChooser[E, I, -CO] {
-        def choose(ops : CO) : SyncDAO[BObject, E, I]
+        def choose(ops : CO) : SyncDAO[BObject, E, I, _]
     }
 
     implicit def createDAOChooserForBObject[I] : GenericSyncDAOChooser[BObject, I, CollectionOperations[_, I]] = {

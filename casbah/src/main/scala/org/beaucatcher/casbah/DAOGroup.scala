@@ -1,8 +1,7 @@
 package org.beaucatcher.casbah
 
 import org.beaucatcher.mongo._
-import org.beaucatcher.bson.ClassAnalysis
-import org.beaucatcher.bson.BObject
+import org.beaucatcher.bson._
 import com.mongodb.DBObject
 import com.mongodb.casbah.MongoCollection
 import org.bson.types.ObjectId
@@ -45,6 +44,8 @@ private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Man
         new BObjectCasbahEntityComposer()
     private lazy val bobjectCasbahIdComposer : IdComposer[BObjectIdType, CasbahIdType] =
         new IdentityIdComposer()
+    private lazy val bobjectCasbahValueComposer : ValueComposer[BValue, Any] =
+        new OuterBValueValueComposer()
 
     /**
      *  This is the "raw" Casbah DAO, if you need to work with a DBObject for some reason.
@@ -72,6 +73,7 @@ private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Man
             override val queryComposer = bobjectCasbahQueryComposer
             override val entityComposer = bobjectCasbahEntityComposer
             override val idComposer = bobjectCasbahIdComposer
+            override val valueComposer = bobjectCasbahValueComposer
         }
     }
 
@@ -86,6 +88,7 @@ private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Man
             override val queryComposer = caseClassBObjectQueryComposer
             override val entityComposer = caseClassBObjectEntityComposer
             override val idComposer = caseClassBObjectIdComposer
+            override val valueComposer = new InnerBValueValueComposer()
         }
     }
 }
