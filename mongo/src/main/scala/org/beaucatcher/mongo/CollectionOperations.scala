@@ -10,9 +10,14 @@ import org.bson.types.ObjectId
  * This trait's interface supports operations on the collection itself.
  * Here, the trait doesn't have knowledge of a specific MongoDB implementation
  * (Hammersmith, Casbah, etc.)
+ *
+ * A subclass of this trait has to provide a [[org.beaucatcher.mongo.DAOGroup]] which has
+ * a concrete connection to a specific MongoDB implementation.
  */
 abstract trait CollectionOperations[EntityType <: Product, IdType] {
     import CollectionOperations._
+
+    implicit protected def entityTypeManifest : Manifest[EntityType]
 
     /**
      * This method performs any one-time-on-startup setup for the collection, such as ensuring an index.
@@ -20,11 +25,15 @@ abstract trait CollectionOperations[EntityType <: Product, IdType] {
      */
     def migrate() : Unit = {}
 
+    protected val daoGroup : SyncDAOGroup[EntityType, IdType, IdType]
+
     /** Synchronous DAO returning BObject values from the collection */
-    val bobjectSyncDAO : BObjectSyncDAO[IdType]
+    final val bobjectSyncDAO : BObjectSyncDAO[IdType] =
+        daoGroup.bobjectSyncDAO
 
     /** Synchronous DAO returning case class entity values from the collection */
-    val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, IdType]
+    final val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, IdType] =
+        daoGroup.caseClassSyncDAO
 
     /**
      * The type of a DAO chooser that will select the proper DAO for result type E on this
@@ -40,6 +49,24 @@ abstract trait CollectionOperations[EntityType <: Product, IdType] {
     def syncDAO[E](implicit chooser : SyncDAOChooser[E]) : SyncDAO[BObject, E, IdType, _] = {
         chooser.choose(this)
     }
+
+    /**
+     * There probably isn't a reason to override this, but it would modify a query
+     * as it went from the case class DAO to the BObject DAO.
+     */
+    protected val caseClassBObjectQueryComposer : QueryComposer[BObject, BObject] =
+        new IdentityQueryComposer()
+
+    /**
+     * You would override this if you want to adjust how a BObject is mapped to a
+     * case class entity. For example if you need to deal with missing fields or
+     * database format changes, you could do that in this composer. Or if you
+     * wanted to do a type mapping, say from Int to an enumeration, you could do that
+     * here. Many things you might do with an annotation in something like JPA
+     * could instead be done by subclassing CaseClassBObjectEntityComposer, in theory.
+     */
+    protected val caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject] =
+        new CaseClassBObjectEntityComposer[EntityType]
 }
 
 object CollectionOperations {

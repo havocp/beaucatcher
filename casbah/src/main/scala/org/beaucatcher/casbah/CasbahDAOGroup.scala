@@ -23,7 +23,8 @@ private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Man
     val collection : MongoCollection,
     val caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
     val caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject],
-    val caseClassBObjectIdComposer : IdComposer[CaseClassIdType, BObjectIdType]) {
+    val caseClassBObjectIdComposer : IdComposer[CaseClassIdType, BObjectIdType])
+    extends SyncDAOGroup[EntityType, CaseClassIdType, BObjectIdType] {
     require(collection != null)
     require(caseClassBObjectQueryComposer != null)
     require(caseClassBObjectEntityComposer != null)
@@ -67,7 +68,7 @@ private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Man
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    lazy val bobjectSyncDAO : BObjectSyncDAO[BObjectIdType] = {
+    override lazy val bobjectSyncDAO : BObjectSyncDAO[BObjectIdType] = {
         new BObjectCasbahSyncDAO[BObjectIdType, CasbahIdType] {
             override val backend = casbahSyncDAO
             override val queryComposer = bobjectCasbahQueryComposer
@@ -82,7 +83,7 @@ private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Man
      *  from within Scala code. You also know that all the fields are present
      *  if the case class was successfully constructed.
      */
-    lazy val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, CaseClassIdType] = {
+    override lazy val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, CaseClassIdType] = {
         new CaseClassBObjectSyncDAO[EntityType, CaseClassIdType, BObjectIdType] {
             override val backend = bobjectSyncDAO
             override val queryComposer = caseClassBObjectQueryComposer
