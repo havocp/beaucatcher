@@ -9,7 +9,7 @@ import org.junit.Assert._
 import org.junit._
 
 package foo {
-    case class Foo(_id : ObjectId, intField : Int, stringField : String)
+    case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
 
     object Foo extends CollectionOperations[Foo, ObjectId]
         with CasbahTestProvider {
@@ -18,7 +18,7 @@ package foo {
         }
     }
 
-    case class FooWithIntId(_id : Int, intField : Int, stringField : String)
+    case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
 
     object FooWithIntId extends CollectionOperations[FooWithIntId, Int]
         with CasbahTestProvider {
@@ -28,39 +28,13 @@ package foo {
     }
 }
 
-class DAOTest {
-    import foo._
+import foo._
+class DAOTest
+    extends AbstractDAOTest[Foo, FooWithIntId](Foo, FooWithIntId) {
+    override def newFoo(_id : ObjectId, intField : Int, stringField : String) = Foo(_id, intField, stringField)
+    override def newFooWithIntId(_id : Int, intField : Int, stringField : String) = FooWithIntId(_id, intField, stringField)
 
-    @org.junit.Before
-    def setup() {
-        Foo.bobjectSyncDAO.remove(BObject())
-        FooWithIntId.bobjectSyncDAO.remove(BObject())
-    }
-
-    @Test
-    def haveProperCollectionNames() = {
-        assertEquals("foo", Foo.collectionName)
-        assertEquals("fooWithIntId", FooWithIntId.collectionName)
-    }
-
-    @Test
-    def testSaveAndFindOneCaseClass() {
-        val foo = Foo(new ObjectId(), 23, "woohoo")
-        Foo.caseClassSyncDAO.save(foo)
-        val maybeFound = Foo.caseClassSyncDAO.findOneById(foo._id)
-        assertTrue(maybeFound.isDefined)
-        assertEquals(foo, maybeFound.get)
-    }
-
-    @Test
-    def testSaveAndFindOneCaseClassWithIntId() {
-        val foo = FooWithIntId(89, 23, "woohoo")
-        FooWithIntId.caseClassSyncDAO.save(foo)
-        val maybeFound = FooWithIntId.caseClassSyncDAO.findOneById(foo._id)
-        assertTrue(maybeFound.isDefined)
-        assertEquals(foo, maybeFound.get)
-    }
-
+    // factoring this up into AbstractDAOTest is just too annoying
     @Test
     def testCustomQueryReturnsVariousEntityTypes() {
         val foo = Foo(new ObjectId(), 23, "woohoo")
@@ -78,23 +52,7 @@ class DAOTest {
         assertEquals("woohoo", f.stringField)
     }
 
-    @Test
-    def testFindByIDAllResultTypes() {
-        val foo = Foo(new ObjectId(), 23, "woohoo")
-        Foo.caseClassSyncDAO.save(foo)
-
-        val o = Foo.syncDAO[BObject].findOneById(foo._id).get
-        assertEquals(BInt32(23), o.get("intField").get)
-        assertEquals(BString("woohoo"), o.get("stringField").get)
-
-        val f = Foo.syncDAO[Foo].findOneById(foo._id).get
-        assertEquals(23, f.intField)
-        assertEquals("woohoo", f.stringField)
-
-        // should not compile because FooWithIntId is wrong type
-        //val n = Foo.syncDAO[FooWithIntId].findOneByID(foo._id).get
-    }
-
+    // factoring this up into AbstractDAOTest is just too annoying
     @Test
     def testCustomQueryReturnsVariousEntityTypesWithIntId() {
         val foo = FooWithIntId(100, 23, "woohoo")
@@ -108,20 +66,6 @@ class DAOTest {
         val caseClasses = FooWithIntId.customQuery[FooWithIntId].toIndexedSeq
         assertEquals(1, caseClasses.size)
         val f = caseClasses(0)
-        assertEquals(23, f.intField)
-        assertEquals("woohoo", f.stringField)
-    }
-
-    @Test
-    def testFindByIDAllResultTypesWithIntId() {
-        val foo = FooWithIntId(101, 23, "woohoo")
-        FooWithIntId.caseClassSyncDAO.save(foo)
-
-        val o = FooWithIntId.syncDAO[BObject].findOneById(foo._id).get
-        assertEquals(BInt32(23), o.get("intField").get)
-        assertEquals(BString("woohoo"), o.get("stringField").get)
-
-        val f = FooWithIntId.syncDAO[FooWithIntId].findOneById(foo._id).get
         assertEquals(23, f.intField)
         assertEquals("woohoo", f.stringField)
     }
