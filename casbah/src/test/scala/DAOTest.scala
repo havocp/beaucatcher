@@ -13,8 +13,6 @@ package foo {
 
     object Foo extends CollectionOperations[Foo, ObjectId]
         with CasbahTestProvider {
-        override val collectionName = "foo"
-
         def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
@@ -24,8 +22,6 @@ package foo {
 
     object FooWithIntId extends CollectionOperations[FooWithIntId, Int]
         with CasbahTestProvider {
-        override val collectionName = "fooWithIntId"
-
         def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
@@ -39,6 +35,12 @@ class DAOTest {
     def setup() {
         Foo.bobjectSyncDAO.remove(BObject())
         FooWithIntId.bobjectSyncDAO.remove(BObject())
+    }
+
+    @Test
+    def haveProperCollectionNames() = {
+        assertEquals("foo", Foo.collectionName)
+        assertEquals("fooWithIntId", FooWithIntId.collectionName)
     }
 
     @Test

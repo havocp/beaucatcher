@@ -17,7 +17,11 @@ package restdemo {
         extends CollectionOperations[Foo, ObjectId]
         with CasbahTestProvider
         with JsonMethods[Foo] {
-        override val collectionName = "restdemofoo"
+        // the default collection name would conflict with the Foo
+        // in DAOTest since tests are run concurrently;
+        // in apps you don't usually have to set this manually
+        override val collectionName = "restfoo"
+
         override val jsonAnalysis = new ClassAnalysis(classOf[Foo])
         override def jsonDAO = bobjectSyncDAO
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
@@ -32,7 +36,11 @@ package restdemo {
         extends CollectionOperations[FooWithIntId, Int]
         with CasbahTestProvider
         with JsonMethods[FooWithIntId] {
-        override val collectionName = "restdemofooWithIntId"
+        // the default collection name would conflict with the FooWithIntId
+        // in DAOTest since tests are run concurrently;
+        // in apps you don't usually have to set this manually
+        override val collectionName = "restfooWithIntId"
+
         override val jsonAnalysis = new ClassAnalysis(classOf[FooWithIntId])
         override def jsonDAO = bobjectSyncDAO
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test

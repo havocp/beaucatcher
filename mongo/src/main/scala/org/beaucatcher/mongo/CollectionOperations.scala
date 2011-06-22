@@ -28,7 +28,24 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
 
     implicit protected def entityTypeManifest : Manifest[EntityType]
 
-    protected val collectionName : String
+    /**
+     * The name of the collection. Defaults to the unqualified (no package) name of the object,
+     * with the first character made lowercase. So "object FooBar" gets collection name "fooBar" for
+     * example. Override this value to change it.
+     */
+    val collectionName : String = {
+        // "org.bar.Foo$" -> "foo"
+
+        val fullname = getClass().getName()
+        val dot = fullname.lastIndexOf('.')
+        val withoutPackage = if (dot < 0) fullname else fullname.substring(dot + 1)
+        // an object has a trailing $
+        val withoutDollar = if (withoutPackage.endsWith("$"))
+            withoutPackage.substring(0, withoutPackage.length - 1)
+        else
+            withoutPackage
+        withoutDollar.substring(0, 1).toLowerCase + withoutDollar.substring(1)
+    }
 
     /**
      * This method performs any one-time-on-startup setup for the collection, such as ensuring an index.
