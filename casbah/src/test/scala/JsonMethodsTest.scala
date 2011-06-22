@@ -2,6 +2,7 @@ import com.mongodb.casbah.commons.MongoDBObject
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.casbah._
+import org.beaucatcher.mongo._
 import org.beaucatcher.mongo.JsonMethods
 import org.beaucatcher.bson.ClassAnalysis
 import org.bson.types._
@@ -13,9 +14,10 @@ package restdemo {
     case class Foo(_id : ObjectId, aString : String, anInt : Int)
 
     object Foo
-        extends CasbahCollectionOperationsWithObjectId[Foo]
+        extends CollectionOperations[Foo, ObjectId]
+        with CasbahTestProvider
         with JsonMethods[Foo] {
-        override lazy val collection = CasbahUtil.collection("restdemofoo")
+        override val collectionName = "restdemofoo"
         override val jsonAnalysis = new ClassAnalysis(classOf[Foo])
         override def jsonDAO = bobjectSyncDAO
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
@@ -27,9 +29,10 @@ package restdemo {
 
     case class FooWithIntId(_id : Int, aString : String, anInt : Int)
     object FooWithIntId
-        extends CasbahCollectionOperations[FooWithIntId, Int]
+        extends CollectionOperations[FooWithIntId, Int]
+        with CasbahTestProvider
         with JsonMethods[FooWithIntId] {
-        override lazy val collection = CasbahUtil.collection("restdemofooWithIntId")
+        override val collectionName = "restdemofooWithIntId"
         override val jsonAnalysis = new ClassAnalysis(classOf[FooWithIntId])
         override def jsonDAO = bobjectSyncDAO
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
@@ -61,8 +64,8 @@ class JsonMethodsTest {
 
     @org.junit.Before
     def setup() {
-        Foo.collection.remove(MongoDBObject())
-        FooWithIntId.collection.remove(MongoDBObject())
+        Foo.bobjectSyncDAO.remove(BObject())
+        FooWithIntId.bobjectSyncDAO.remove(BObject())
     }
 
     @Test

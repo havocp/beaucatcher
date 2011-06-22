@@ -3,6 +3,7 @@ import com.mongodb.casbah.MongoCollection
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.casbah._
+import org.beaucatcher.mongo._
 import org.bson.types._
 import org.junit.Assert._
 import org.junit._
@@ -10,10 +11,9 @@ import org.junit._
 package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String)
 
-    object Foo extends CasbahCollectionOperationsWithObjectId[Foo] {
-        override protected lazy val collection : MongoCollection = {
-            CasbahUtil.collection("foo")
-        }
+    object Foo extends CollectionOperations[Foo, ObjectId]
+        with CasbahTestProvider {
+        override val collectionName = "foo"
 
         def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
             syncDAO[E].find(BObject("intField" -> 23))
@@ -22,10 +22,9 @@ package foo {
 
     case class FooWithIntId(_id : Int, intField : Int, stringField : String)
 
-    object FooWithIntId extends CasbahCollectionOperations[FooWithIntId, Int] {
-        override protected lazy val collection : MongoCollection = {
-            CasbahUtil.collection("fooWithIntId")
-        }
+    object FooWithIntId extends CollectionOperations[FooWithIntId, Int]
+        with CasbahTestProvider {
+        override val collectionName = "fooWithIntId"
 
         def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
             syncDAO[E].find(BObject("intField" -> 23))
@@ -38,8 +37,8 @@ class DAOTest {
 
     @org.junit.Before
     def setup() {
-        CasbahUtil.collection("foo").remove(MongoDBObject())
-        CasbahUtil.collection("fooWithIntId").remove(MongoDBObject())
+        Foo.bobjectSyncDAO.remove(BObject())
+        FooWithIntId.bobjectSyncDAO.remove(BObject())
     }
 
     @Test
