@@ -6,6 +6,8 @@ import org.beaucatcher.bson._
 sealed trait Fields {
     val included : Set[String]
     val excluded : Set[String]
+
+    override def toString = "Fields(included=%s,excluded=%s)".format(included, excluded)
 }
 
 sealed trait IncludeIdFlag

@@ -189,6 +189,8 @@ private[casbah] class BObjectBSONObject extends BSONObject {
         bvalue = b
     }
 
+    override def toString = "BObjectBSONObject(%s)".format(bvalue)
+
     /* BSONObject interface */
     override def containsField(s : String) : Boolean = {
         bvalue.contains(s)
@@ -252,6 +254,8 @@ private[casbah] class BObjectDBObject(b : BObject) extends BObjectBSONObject(b) 
     override def markAsPartialObject() : Unit = {
         isPartial = true
     }
+
+    override def toString = "BObjectDBObject(%s)".format(b)
 }
 
 private[casbah] class BObjectCasbahQueryComposer extends QueryComposer[BObject, DBObject] {
