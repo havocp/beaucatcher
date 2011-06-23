@@ -86,4 +86,159 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(23, f.intField)
         assertEquals("woohoo", f.stringField)
     }
+
+    @Test
+    def testEmptyQuery() {
+
+    }
+
+    @Test
+    def testCountAll() {
+
+    }
+
+    @Test
+    def testCountWithQuery() {
+
+    }
+
+    @Test
+    def testCountWithFields() {
+
+    }
+
+    @Test
+    def testDistinct() {
+
+    }
+
+    @Test
+    def testDistinctWithQuery() {
+
+    }
+
+    @Test
+    def testFindAll() {
+
+    }
+
+    @Test
+    def testFindWithQuery() {
+
+    }
+
+    @Test
+    def testFindWithFields() {
+
+    }
+
+    @Test
+    def testFindWithSkip() {
+
+    }
+
+    @Test
+    def testFindWithLimit() {
+
+    }
+
+    @Test
+    def testFindOne() {
+
+    }
+
+    @Test
+    def testFindOneWithQuery() {
+
+    }
+
+    @Test
+    def testFindOneWithFields() {
+
+    }
+
+    @Test
+    def testFindOneById() {
+
+    }
+
+    @Test
+    def testFindOneByIdWithFields() {
+
+    }
+
+    @Test
+    def testFindAndReplace() {
+
+    }
+
+    @Test
+    def testFindAndReplaceWithSort() {
+
+    }
+
+    @Test
+    def testFindAndReplaceWithFields() {
+
+    }
+
+    @Test
+    def testFindAndModify() {
+
+    }
+
+    @Test
+    def testFindAndModifyWithSort() {
+
+    }
+
+    @Test
+    def testFindAndModifyWithFields() {
+
+    }
+
+    @Test
+    def testFindAndRemove() {
+
+    }
+
+    @Test
+    def testFindAndRemoveWithSort() {
+
+    }
+
+    @Test
+    def testInsert() {
+
+    }
+
+    @Test
+    def testSave() {
+
+    }
+
+    @Test
+    def testUpdate() {
+
+    }
+
+    @Test
+    def testUpdateUpsert() {
+
+    }
+
+    @Test
+    def testUpdateMulti() {
+
+    }
+
+    @Test
+    def testRemove() {
+
+    }
+
+    @Test
+    def testRemoveById() {
+
+    }
 }
