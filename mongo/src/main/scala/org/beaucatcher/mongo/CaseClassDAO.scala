@@ -51,6 +51,14 @@ private[beaucatcher] abstract trait CaseClassBObjectSyncDAO[EntityType <: Produc
         entityIn(entity)
     }
 
+    override def entityToUpdateQuery(entity : EntityType) : BObject = {
+        // FIXME this is wasteful to copy entire entity into an object
+        // then dump everything except the ID. Provide an API that does
+        // something better.
+        val o : BObject = entityIn(entity)
+        BObject("_id" -> o.getOrElse("_id", throw new IllegalArgumentException("only objects with an _id field work here")))
+    }
+
     override protected val queryComposer : QueryComposer[BObject, BObject]
     override protected val entityComposer : EntityComposer[EntityType, BObject]
     override protected val idComposer : IdComposer[OuterIdType, InnerIdType]

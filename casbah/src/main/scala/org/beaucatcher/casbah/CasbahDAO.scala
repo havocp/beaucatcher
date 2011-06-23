@@ -8,6 +8,7 @@ import com.mongodb.casbah.MongoCollection
 import com.mongodb.CommandResult
 import com.mongodb.DBObject
 import com.mongodb.casbah.commons.MongoDBObject
+import com.mongodb.Bytes
 
 /**
  * Base trait that chains SyncDAO methods to a Casbah collection, which must be provided
@@ -33,45 +34,106 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
         entity
     }
 
-    override def count(query : DBObject, options : CountOptions) : Long = {
-        if (options.fields.isDefined)
-            collection.count(query, options.fields.get)
-        else
-            collection.count(query)
+    private def queryFlagsAsInt(flags : Set[QueryFlag]) : Int = {
+        var i = 0
+        for (f <- flags) {
+            val o = f match {
+                case QueryAwaitData => Bytes.QUERYOPTION_AWAITDATA
+                case QueryExhaust => Bytes.QUERYOPTION_EXHAUST
+                case QueryNoTimeout => Bytes.QUERYOPTION_NOTIMEOUT
+                case QueryOpLogReplay => Bytes.QUERYOPTION_OPLOGREPLAY
+                case QuerySlaveOk => Bytes.QUERYOPTION_SLAVEOK
+                case QueryTailable => Bytes.QUERYOPTION_TAILABLE
+            }
+            i |= o
+        }
+        i
     }
 
-    override def distinct(key : String, options : DistinctOptions[DBObject]) : Seq[Any] = {
-        if (options.query.isDefined)
-            collection.distinct(key, options.query.get)
-        else
-            collection.distinct(key)
-    }
+    private def withQueryFlags[R](maybeOverrideFlags : Option[Set[QueryFlag]])(body : => R) : R = {
+        if (maybeOverrideFlags.isDefined) {
+            // FIXME this is outrageously unthreadsafe but I'm not sure how to
+            // fix it given how Casbah works. It doesn't have API to override options
+            // for anything other than find() it looks like
+            // so for now just always throw an exception
+            val saved = collection.getOptions()
+            collection.resetOptions()
+            collection.addOption(queryFlagsAsInt(maybeOverrideFlags.get))
 
-    override def find(query : DBObject, options : FindOptions) : Iterator[DBObject] = {
-        if (options.fields.isDefined && (options.batchSize.isDefined || options.numToSkip.isDefined)) {
-            collection.find(query, options.fields.get,
-                options.numToSkip.getOrElse(0),
-                options.batchSize.getOrElse(-1))
-        } else if (options.fields.isDefined) {
-            collection.find(query, options.fields.get)
+            val result = body
+
+            collection.resetOptions()
+            collection.addOption(saved)
+            throw new UnsupportedOperationException("Casbah backend can't override query options on this operation")
+            //result
         } else {
-            collection.find(query)
+            body
         }
     }
 
+    override def entityToUpdateQuery(entity : DBObject) : DBObject = {
+        if (!entity.containsField("_id"))
+            throw new IllegalArgumentException("Object is missing an _id field, can't save() or whatever you are doing")
+        MongoDBObject("_id" -> entity.get("_id"))
+    }
+
+    override def count(query : DBObject, options : CountOptions) : Long = {
+        withQueryFlags(options.overrideQueryFlags) {
+            val fieldsQuery = if (options.fields.isDefined) options.fields.get : DBObject else emptyQuery
+            if (options.limit.isDefined || options.skip.isDefined)
+                collection.getCount(query, fieldsQuery, options.limit.getOrElse(0), options.skip.getOrElse(0))
+            else
+                collection.count(query, fieldsQuery)
+        }
+    }
+
+    override def distinct(key : String, options : DistinctOptions[DBObject]) : Seq[Any] = {
+        withQueryFlags(options.overrideQueryFlags) {
+            if (options.query.isDefined)
+                collection.distinct(key, options.query.get)
+            else
+                collection.distinct(key)
+        }
+    }
+
+    override def find(query : DBObject, options : FindOptions) : Iterator[DBObject] = {
+        val cursor = {
+            if (options.fields.isDefined) {
+                collection.find(query, options.fields.get)
+            } else {
+                collection.find(query)
+            }
+        }
+        if (options.skip.isDefined)
+            cursor.skip(options.skip.get.intValue)
+        if (options.limit.isDefined)
+            cursor.limit(options.limit.get.intValue)
+        if (options.batchSize.isDefined)
+            cursor.batchSize(options.batchSize.get.intValue)
+        if (options.overrideQueryFlags.isDefined) {
+            cursor.options = queryFlagsAsInt(options.overrideQueryFlags.get)
+        }
+
+        cursor
+    }
+
     override def findOne(query : DBObject, options : FindOneOptions) : Option[DBObject] = {
-        if (options.fields.isDefined) {
-            collection.findOne(query, options.fields.get)
-        } else {
-            collection.findOne(query)
+        withQueryFlags(options.overrideQueryFlags) {
+            if (options.fields.isDefined) {
+                collection.findOne(query, options.fields.get)
+            } else {
+                collection.findOne(query)
+            }
         }
     }
 
     override def findOneById(id : IdType, options : FindOneByIdOptions) : Option[DBObject] = {
-        if (options.fields.isDefined) {
-            collection.findOneByID(id.asInstanceOf[AnyRef], options.fields.get)
-        } else {
-            collection.findOneByID(id.asInstanceOf[AnyRef])
+        withQueryFlags(options.overrideQueryFlags) {
+            if (options.fields.isDefined) {
+                collection.findOneByID(id.asInstanceOf[AnyRef], options.fields.get)
+            } else {
+                collection.findOneByID(id.asInstanceOf[AnyRef])
+            }
         }
     }
 
@@ -97,10 +159,6 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
                 options.flags.contains(FindAndModifyNew),
                 options.flags.contains(FindAndModifyUpsert))
         }
-    }
-
-    override def save(o : DBObject) : WriteResult = {
-        collection.save(o)
     }
 
     override def insert(o : DBObject) : WriteResult = {

@@ -17,4 +17,8 @@ private[beaucatcher] abstract trait BObjectComposedSyncDAO[OuterIdType, InnerQue
     override def entityToModifierObject(entity : BObject) : BObject = {
         entity
     }
+
+    override def entityToUpdateQuery(entity : BObject) : BObject = {
+        BObject("_id" -> entity.getOrElse("_id", throw new IllegalArgumentException("only objects with an _id field work here")))
+    }
 }

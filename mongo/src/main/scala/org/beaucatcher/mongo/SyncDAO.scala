@@ -32,35 +32,48 @@ object ExcludedFields {
     def apply(excluded : TraversableOnce[String]) = new ExcludedFields(excluded.toSet)
 }
 
-case class CountOptions(fields : Option[Fields])
+sealed trait QueryFlag
+case object QueryTailable extends QueryFlag
+case object QuerySlaveOk extends QueryFlag
+case object QueryOpLogReplay extends QueryFlag
+case object QueryNoTimeout extends QueryFlag
+case object QueryAwaitData extends QueryFlag
+case object QueryExhaust extends QueryFlag
+
+case class CountOptions(fields : Option[Fields], skip : Option[Long], limit : Option[Long], overrideQueryFlags : Option[Set[QueryFlag]])
 private object CountOptions {
-    final val empty = CountOptions(None)
+    final val empty = CountOptions(None, None, None, None)
 }
 
-case class DistinctOptions[+QueryType](query : Option[QueryType]) {
+case class DistinctOptions[+QueryType](query : Option[QueryType], overrideQueryFlags : Option[Set[QueryFlag]]) {
     def convert[AnotherQueryType](converter : QueryType => AnotherQueryType) =
-        DistinctOptions[AnotherQueryType](query map { converter(_) })
+        DistinctOptions[AnotherQueryType](query map { converter(_) }, overrideQueryFlags)
 }
 
 private object DistinctOptions {
-    final val _empty = DistinctOptions[Nothing](None)
+    final val _empty = DistinctOptions[Nothing](None, None)
     def empty[QueryType] : DistinctOptions[QueryType] = _empty
 }
 
-// FIXME I think we need limit here since it isn't on cursor
-case class FindOptions(fields : Option[Fields], numToSkip : Option[Int], batchSize : Option[Int])
+// for find(), fields on the wire level is a separate object; while for findAndModify for example
+// it goes in the query/command object sort of like orderby in find().
+// for now, FindOptions doesn't include the stuff that you can put in the query object
+// by putting the query under a "query : {}" key, but FindAndModifyOptions is
+// assumes that the query object passed in is only the query
+// not sure how to sort this out yet.
+case class FindOptions(fields : Option[Fields], skip : Option[Long], limit : Option[Long], batchSize : Option[Int], overrideQueryFlags : Option[Set[QueryFlag]])
 private object FindOptions {
-    final val empty = FindOptions(None, None, None)
+    final val empty = FindOptions(None, None, None, None, None)
 }
 
-case class FindOneOptions(fields : Option[Fields])
+case class FindOneOptions(fields : Option[Fields], overrideQueryFlags : Option[Set[QueryFlag]])
 private object FindOneOptions {
-    final val empty = FindOneOptions(None)
+    final val empty = FindOneOptions(None, None)
 }
 
-case class FindOneByIdOptions(fields : Option[Fields])
+case class FindOneByIdOptions(fields : Option[Fields], overrideQueryFlags : Option[Set[QueryFlag]])
 private object FindOneByIdOptions {
-    final val empty = FindOneByIdOptions(None)
+    final val empty = FindOneByIdOptions(None, None)
 }
 
 sealed trait FindAndModifyFlag
@@ -114,14 +127,14 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     final def count[A <% QueryType](query : A) : Long =
         count(query : QueryType, CountOptions.empty)
     final def count[A <% QueryType](query : A, fields : Fields) : Long =
-        count(query : QueryType, CountOptions(Some(fields)))
+        count(query : QueryType, CountOptions(Some(fields), None, None, None))
 
     def count(query : QueryType, options : CountOptions) : Long
 
     final def distinct(key : String) : Seq[ValueType] =
         distinct(key, DistinctOptions.empty)
     final def distinct[A <% QueryType](key : String, query : A) : Seq[ValueType] =
-        distinct(key, DistinctOptions[QueryType](Some(query)))
+        distinct(key, DistinctOptions[QueryType](Some(query), None))
 
     def distinct(key : String, options : DistinctOptions[QueryType]) : Seq[ValueType]
 
@@ -130,9 +143,9 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     final def find[A <% QueryType](query : A) : Iterator[EntityType] =
         find(query : QueryType, FindOptions.empty)
     final def find[A <% QueryType](query : A, fields : Fields) : Iterator[EntityType] =
-        find(query : QueryType, FindOptions(Some(fields), None, None))
-    final def find[A <% QueryType](query : A, fields : Fields, numToSkip : Int, batchSize : Int) : Iterator[EntityType] =
-        find(query : QueryType, FindOptions(Some(fields), Some(numToSkip), Some(batchSize)))
+        find(query : QueryType, FindOptions(Some(fields), None, None, None, None))
+    final def find[A <% QueryType](query : A, fields : Fields, skip : Long, limit : Long, batchSize : Int) : Iterator[EntityType] =
+        find(query : QueryType, FindOptions(Some(fields), Some(skip), Some(limit), Some(batchSize), None))
 
     def find(query : QueryType, options : FindOptions) : Iterator[EntityType]
 
@@ -141,14 +154,14 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     final def findOne[A <% QueryType](query : A) : Option[EntityType] =
         findOne(query : QueryType, FindOneOptions.empty)
     final def findOne[A <% QueryType](query : A, fields : Fields) : Option[EntityType] =
-        findOne(query : QueryType, FindOneOptions(Some(fields)))
+        findOne(query : QueryType, FindOneOptions(Some(fields), None))
 
     def findOne(query : QueryType, options : FindOneOptions) : Option[EntityType]
 
     final def findOneById(id : IdType) : Option[EntityType] =
         findOneById(id, FindOneByIdOptions.empty)
     final def findOneById(id : IdType, fields : Fields) : Option[EntityType] =
-        findOneById(id, FindOneByIdOptions(Some(fields)))
+        findOneById(id, FindOneByIdOptions(Some(fields), None))
 
     def findOneById(id : IdType, options : FindOneByIdOptions) : Option[EntityType]
 
@@ -199,11 +212,22 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
         findAndModify(query : QueryType, None, FindAndModifyOptions[QueryType](Some(sort), None, Set(FindAndModifyRemove)))
 
     def entityToModifierObject(entity : EntityType) : QueryType
+    def entityToUpdateQuery(entity : EntityType) : QueryType
     def findAndModify(query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) : Option[EntityType]
 
-    def save(o : EntityType) : WriteResult
     def insert(o : EntityType) : WriteResult
 
+    /**
+     * Does an updateUpsert() on the object.
+     *
+     * Unlike save() in Casbah, does not look at mutable isNew() flag
+     * in the ObjectId if there's an ObjectId so it never does an insert().
+     * I guess this may be less efficient, but ObjectId.isNew() seems like
+     * a total hack to me. Would rather just require people to use insert()
+     * if they just finished creating the object.
+     */
+    final def save(o : EntityType) : WriteResult =
+        updateUpsert(entityToUpdateQuery(o), entityToModifierObject(o))
     final def update[A <% QueryType](query : A, o : EntityType) : WriteResult =
         update(query : QueryType, entityToModifierObject(o), UpdateOptions.empty)
     final def updateUpsert[A <% QueryType](query : A, o : EntityType) : WriteResult =

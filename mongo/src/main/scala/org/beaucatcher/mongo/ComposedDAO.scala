@@ -37,9 +37,6 @@ private[beaucatcher] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityT
     override def findAndModify(query : OuterQueryType, update : Option[OuterQueryType], options : FindAndModifyOptions[OuterQueryType]) : Option[OuterEntityType] =
         entityOut(backend.findAndModify(queryIn(query), queryIn(update), options.convert(queryIn(_))))
 
-    override def save(o : OuterEntityType) : WriteResult =
-        backend.save(entityIn(o))
-
     override def insert(o : OuterEntityType) : WriteResult =
         backend.insert(entityIn(o))
 
