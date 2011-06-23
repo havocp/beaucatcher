@@ -26,13 +26,20 @@ package foo {
             syncDAO[E].find(BObject("intField" -> 23))
         }
     }
+
+    case class FooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) extends abstractfoo.AbstractFooWithOptionalField
+
+    object FooWithOptionalField extends CollectionOperations[FooWithOptionalField, ObjectId]
+        with CasbahTestProvider {
+    }
 }
 
 import foo._
 class DAOTest
-    extends AbstractDAOTest[Foo, FooWithIntId](Foo, FooWithIntId) {
+    extends AbstractDAOTest[Foo, FooWithIntId, FooWithOptionalField](Foo, FooWithIntId, FooWithOptionalField) {
     override def newFoo(_id : ObjectId, intField : Int, stringField : String) = Foo(_id, intField, stringField)
     override def newFooWithIntId(_id : Int, intField : Int, stringField : String) = FooWithIntId(_id, intField, stringField)
+    override def newFooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) = FooWithOptionalField(_id, intField, stringField)
 
     // factoring this up into AbstractDAOTest is just too annoying
     @Test

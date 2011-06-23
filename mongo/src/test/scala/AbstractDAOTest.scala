@@ -17,20 +17,30 @@ package abstractfoo {
         val intField : Int
         val stringField : String
     }
+
+    trait AbstractFooWithOptionalField extends Product {
+        val _id : ObjectId
+        val intField : Int
+        val stringField : Option[String]
+    }
 }
 
 import abstractfoo._
 
-abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId](Foo : CollectionOperations[Foo, ObjectId], FooWithIntId : CollectionOperations[FooWithIntId, Int])
+abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionOperations[Foo, ObjectId],
+    FooWithIntId : CollectionOperations[FooWithIntId, Int],
+    FooWithOptionalField : CollectionOperations[FooWithOptionalField, ObjectId])
     extends TestUtils {
 
     protected def newFoo(id : ObjectId, i : Int, s : String) : Foo
     protected def newFooWithIntId(id : Int, i : Int, s : String) : FooWithIntId
+    protected def newFooWithOptionalField(id : ObjectId, i : Int, s : Option[String]) : FooWithOptionalField
 
     @org.junit.Before
     def setup() {
         Foo.bobjectSyncDAO.remove(BObject())
         FooWithIntId.bobjectSyncDAO.remove(BObject())
+        FooWithOptionalField.bobjectSyncDAO.remove(BObject())
     }
 
     @Test
@@ -100,6 +110,13 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         for (i <- 1 to 4) {
             val foo = newFoo(new ObjectId(), i, i.toString)
             Foo.caseClassSyncDAO.insert(foo)
+        }
+    }
+
+    private def create1234Optional() {
+        for (i <- 1 to 4) {
+            val foo = newFooWithOptionalField(new ObjectId(), i, Some(i.toString))
+            FooWithOptionalField.caseClassSyncDAO.insert(foo)
         }
     }
 
@@ -263,6 +280,31 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
                 IncludedFields("intField")).toIndexedSeq
         }
         assertTrue(e.getMessage.contains("requires value"))
+    }
+
+    @Test
+    def testFindWithFieldsWorksOnCaseClassWithOptional() {
+        create1234Optional()
+        create1234Optional()
+        assertEquals(8, FooWithOptionalField.bobjectSyncDAO.count())
+
+        val threesWithout = FooWithOptionalField.syncDAO[FooWithOptionalField].find(BObject("intField" -> 3),
+            IncludedFields("intField")).toIndexedSeq
+        assertEquals(2, threesWithout.length)
+        assertEquals(3, threesWithout(0).intField)
+        assertEquals(3, threesWithout(1).intField)
+        assertTrue(threesWithout(0).stringField.isEmpty)
+        assertTrue(threesWithout(1).stringField.isEmpty)
+
+        val threesWith = FooWithOptionalField.syncDAO[FooWithOptionalField].find(BObject("intField" -> 3),
+            IncludedFields("intField", "stringField")).toIndexedSeq
+        assertEquals(2, threesWith.length)
+        assertEquals(3, threesWith(0).intField)
+        assertEquals(3, threesWith(1).intField)
+        assertFalse(threesWith(0).stringField.isEmpty)
+        assertFalse(threesWith(1).stringField.isEmpty)
+        assertEquals("3", threesWith(0).stringField.get)
+        assertEquals("3", threesWith(1).stringField.get)
     }
 
     @Test
