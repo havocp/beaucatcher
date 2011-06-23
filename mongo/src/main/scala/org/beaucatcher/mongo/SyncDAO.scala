@@ -131,6 +131,7 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
 
     def count(query : QueryType, options : CountOptions) : Long
 
+    // FIXME shouldn't distinct return an iterator not a seq for scalability (so it can be lazy?)
     final def distinct(key : String) : Seq[ValueType] =
         distinct(key, DistinctOptions.empty)
     final def distinct[A <% QueryType](key : String, query : A) : Seq[ValueType] =
