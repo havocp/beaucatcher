@@ -169,6 +169,7 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
             FindAndModifyOptions.empty)
 
+    // FIXME none of the flags make sense when replacing? or maybe it's always an upsert?
     final def findAndReplace[A <% QueryType](query : A, o : EntityType, flags : Set[FindAndModifyFlag]) : Option[EntityType] =
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
             FindAndModifyOptions[QueryType](None, None, flags))
