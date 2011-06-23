@@ -198,8 +198,58 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     }
 
     @Test
-    def testFindWithFields() {
+    def testFindWithIncludedFields() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
+        val threes = Foo.syncDAO[BObject].find(BObject("intField" -> 3),
+            IncludedFields("intField")).toIndexedSeq
+        assertEquals(2, threes.length)
+        assertEquals(3, threes(0).getUnwrappedAs[Int]("intField"))
+        assertEquals(3, threes(1).getUnwrappedAs[Int]("intField"))
+        // _id is included by default
+        assertTrue(threes(0).contains("_id"))
+        assertTrue(threes(1).contains("_id"))
+        // we shouldn't get a field we didn't ask for
+        assertFalse(threes(0).contains("stringField"))
+        assertFalse(threes(1).contains("stringField"))
+    }
 
+    @Test
+    def testFindWithIncludedFieldsWithoutId() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
+
+        val threes = Foo.syncDAO[BObject].find(BObject("intField" -> 3),
+            IncludedFields(WithoutId, "intField")).toIndexedSeq
+        assertEquals(2, threes.length)
+        assertEquals(3, threes(0).getUnwrappedAs[Int]("intField"))
+        assertEquals(3, threes(1).getUnwrappedAs[Int]("intField"))
+        // _id was explicitly excluded
+        assertFalse(threes(0).contains("_id"))
+        assertFalse(threes(1).contains("_id"))
+        // we shouldn't get a field we didn't ask for
+        assertFalse(threes(0).contains("stringField"))
+        assertFalse(threes(1).contains("stringField"))
+    }
+
+    @Test
+    def testFindWithExcludedFields() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
+
+        val threes = Foo.syncDAO[BObject].find(BObject("intField" -> 3),
+            ExcludedFields("intField")).toIndexedSeq
+        assertEquals(2, threes.length)
+        assertEquals(3.toString, threes(0).getUnwrappedAs[String]("stringField"))
+        assertEquals(3.toString, threes(1).getUnwrappedAs[String]("stringField"))
+        assertTrue(threes(0).contains("_id"))
+        assertTrue(threes(1).contains("_id"))
+        // we shouldn't get a field we excluded
+        assertFalse(threes(0).contains("intField"))
+        assertFalse(threes(1).contains("intField"))
     }
 
     @Test
