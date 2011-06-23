@@ -89,42 +89,112 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testEmptyQuery() {
+        val e1 = Foo.syncDAO[BObject].emptyQuery
+        assertEquals(BObject.empty, e1)
+        val e2 = Foo.syncDAO[Foo].emptyQuery
+        assertEquals(BObject.empty, e2)
+    }
 
+    private def create1234() {
+        for (i <- 1 to 4) {
+            val foo = newFoo(new ObjectId(), i, i.toString)
+            Foo.caseClassSyncDAO.insert(foo)
+        }
+    }
+
+    private def create1to50() {
+        for (i <- 1 to 50) {
+            val foo = newFoo(new ObjectId(), i, i.toString)
+            Foo.caseClassSyncDAO.insert(foo)
+        }
     }
 
     @Test
     def testCountAll() {
+        create1234()
+        assertEquals(4, Foo.bobjectSyncDAO.count())
+        assertEquals(4, Foo.caseClassSyncDAO.count())
+    }
 
+    @Test
+    def testCountAllWithManyObjects() {
+        create1to50()
+        assertEquals(50, Foo.bobjectSyncDAO.count())
+        assertEquals(50, Foo.caseClassSyncDAO.count())
     }
 
     @Test
     def testCountWithQuery() {
-
+        create1234()
+        val query = BObject("intField" -> 2)
+        assertEquals(1, Foo.bobjectSyncDAO.count(query))
+        assertEquals(1, Foo.caseClassSyncDAO.count(query))
     }
 
     @Test
     def testCountWithFields() {
-
+        // FIXME wtf does fields do on count() ? Casbah has a version of count() with fields,
+        // that's the only evidence I've found that this should exist
     }
 
     @Test
     def testDistinct() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
 
+        val allIds = Foo.bobjectSyncDAO.distinct("_id")
+        assertEquals(8, allIds.length)
+        val allInts = Foo.bobjectSyncDAO.distinct("intField")
+        assertEquals(4, allInts.length)
+        for (i <- 1 to 4) {
+            assertTrue(allInts.find(_.unwrapped == i).isDefined)
+        }
+        val allStrings = Foo.bobjectSyncDAO.distinct("stringField")
+        assertEquals(4, allStrings.length)
+        for (i <- 1 to 4) {
+            assertTrue(allStrings.find(_.unwrapped == i.toString).isDefined)
+        }
     }
 
     @Test
     def testDistinctWithQuery() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
 
+        assertEquals(2, Foo.bobjectSyncDAO.distinct("_id", BObject("intField" -> 3)).length)
+        assertEquals(1, Foo.bobjectSyncDAO.distinct("intField", BObject("intField" -> 3)).length)
     }
 
     @Test
     def testFindAll() {
+        create1234()
+        assertEquals(4, Foo.bobjectSyncDAO.count())
 
+        val allBObject = Foo.bobjectSyncDAO.find().toSeq
+        assertEquals(4, allBObject.length)
+        for (i <- 1 to 4) {
+            assertTrue(allBObject.find(_.getUnwrappedAs[Int]("intField") == i).isDefined)
+        }
+
+        val allCaseClasses = Foo.caseClassSyncDAO.find().toSeq
+        assertEquals(4, allCaseClasses.length)
+        for (i <- 1 to 4) {
+            assertTrue(allCaseClasses.find(_.intField == i).isDefined)
+        }
     }
 
     @Test
     def testFindWithQuery() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
 
+        val twos = Foo.syncDAO[Foo].find(BObject("intField" -> 2)).toIndexedSeq
+        assertEquals(2, twos.length)
+        assertEquals(2, twos(0).intField)
+        assertEquals(2, twos(1).intField)
     }
 
     @Test
