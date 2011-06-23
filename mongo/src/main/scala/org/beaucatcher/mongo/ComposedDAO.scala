@@ -26,7 +26,7 @@ private[beaucatcher] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityT
         backend.distinct(key, options.convert(queryIn(_))) map { valueOut(_) }
 
     override def find(query : OuterQueryType, options : FindOptions) : Iterator[OuterEntityType] =
-        backend.find(queryIn(query)).map(entityOut(_))
+        backend.find(queryIn(query), options).map(entityOut(_))
 
     override def findOne(query : OuterQueryType, options : FindOneOptions) : Option[OuterEntityType] =
         entityOut(backend.findOne(queryIn(query), options))
