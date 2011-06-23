@@ -21,7 +21,8 @@ package abstractfoo {
 
 import abstractfoo._
 
-abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId](Foo : CollectionOperations[Foo, ObjectId], FooWithIntId : CollectionOperations[FooWithIntId, Int]) {
+abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId](Foo : CollectionOperations[Foo, ObjectId], FooWithIntId : CollectionOperations[FooWithIntId, Int])
+    extends TestUtils {
 
     protected def newFoo(id : ObjectId, i : Int, s : String) : Foo
     protected def newFooWithIntId(id : Int, i : Int, s : String) : FooWithIntId
@@ -250,6 +251,18 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         // we shouldn't get a field we excluded
         assertFalse(threes(0).contains("intField"))
         assertFalse(threes(1).contains("intField"))
+    }
+
+    @Test
+    def testFindWithFieldsFailsOnCaseClass() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
+        val e = intercept[Exception] {
+            val threes = Foo.syncDAO[Foo].find(BObject("intField" -> 3),
+                IncludedFields("intField")).toIndexedSeq
+        }
+        assertTrue(e.getMessage.contains("requires value"))
     }
 
     @Test
