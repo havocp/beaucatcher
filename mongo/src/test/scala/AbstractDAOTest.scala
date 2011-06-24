@@ -325,12 +325,32 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testFindWithSkip() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
 
+        for (i <- 1 to 8) {
+            val found = Foo.bobjectSyncDAO.find(BObject(), AllFields,
+                i, /* skip */
+                -1, /* limit */
+                0 /* batch size */ ).toSeq
+            assertEquals(8 - i, found.length)
+        }
     }
 
     @Test
     def testFindWithLimit() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
 
+        for (i <- 1 to 8) {
+            val found = Foo.bobjectSyncDAO.find(BObject(), AllFields,
+                0, /* skip */
+                i, /* limit */
+                0 /* batch size */ ).toSeq
+            assertEquals(i, found.length)
+        }
     }
 
     @Test
