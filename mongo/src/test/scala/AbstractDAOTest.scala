@@ -215,6 +215,22 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(2, twos(1).intField)
     }
 
+    // tests that the AllFields object does the same thing as not passing in
+    // a fields object
+    @Test
+    def testFindWithAllFields() {
+        create1234()
+        create1234()
+        assertEquals(8, Foo.bobjectSyncDAO.count())
+
+        val twos = Foo.syncDAO[Foo].find(BObject("intField" -> 2), AllFields).toIndexedSeq
+        assertEquals(2, twos.length)
+        assertEquals(2, twos(0).intField)
+        assertEquals(2, twos(1).intField)
+        assertEquals("2", twos(0).stringField)
+        assertEquals("2", twos(1).stringField)
+    }
+
     @Test
     def testFindWithIncludedFields() {
         create1234()

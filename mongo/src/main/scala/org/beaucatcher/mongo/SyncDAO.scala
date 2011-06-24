@@ -14,6 +14,13 @@ sealed trait IncludeIdFlag
 case object WithId extends IncludeIdFlag
 case object WithoutId extends IncludeIdFlag
 
+object AllFields extends Fields {
+    override val included : Set[String] = Set.empty
+    override val excluded : Set[String] = Set.empty
+
+    override def toString = "AllFields"
+}
+
 class IncludedFields(includeId : IncludeIdFlag, override val included : Set[String]) extends Fields {
     override val excluded : Set[String] = if (includeId == WithId) Set.empty else Set("_id")
 }
@@ -124,12 +131,22 @@ private object UpdateOptions {
 abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     def emptyQuery : QueryType
 
+    // this causes the backend to see None instead of generating an
+    // empty Fields BSON object (even though the empty object would
+    // work fine)
+    private def fieldsToOption(fields : Fields) : Option[Fields] = {
+        fields match {
+            case AllFields => None
+            case _ => Some(fields)
+        }
+    }
+
     final def count() : Long =
         count(emptyQuery)
     final def count[A <% QueryType](query : A) : Long =
         count(query : QueryType, CountOptions.empty)
     final def count[A <% QueryType](query : A, fields : Fields) : Long =
-        count(query : QueryType, CountOptions(Some(fields), None, None, None))
+        count(query : QueryType, CountOptions(fieldsToOption(fields), None, None, None))
 
     def count(query : QueryType, options : CountOptions) : Long
 
@@ -146,9 +163,9 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     final def find[A <% QueryType](query : A) : Iterator[EntityType] =
         find(query : QueryType, FindOptions.empty)
     final def find[A <% QueryType](query : A, fields : Fields) : Iterator[EntityType] =
-        find(query : QueryType, FindOptions(Some(fields), None, None, None, None))
+        find(query : QueryType, FindOptions(fieldsToOption(fields), None, None, None, None))
     final def find[A <% QueryType](query : A, fields : Fields, skip : Long, limit : Long, batchSize : Int) : Iterator[EntityType] =
-        find(query : QueryType, FindOptions(Some(fields), Some(skip), Some(limit), Some(batchSize), None))
+        find(query : QueryType, FindOptions(fieldsToOption(fields), Some(skip), Some(limit), Some(batchSize), None))
 
     def find(query : QueryType, options : FindOptions) : Iterator[EntityType]
 
@@ -157,14 +174,14 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     final def findOne[A <% QueryType](query : A) : Option[EntityType] =
         findOne(query : QueryType, FindOneOptions.empty)
     final def findOne[A <% QueryType](query : A, fields : Fields) : Option[EntityType] =
-        findOne(query : QueryType, FindOneOptions(Some(fields), None))
+        findOne(query : QueryType, FindOneOptions(fieldsToOption(fields), None))
 
     def findOne(query : QueryType, options : FindOneOptions) : Option[EntityType]
 
     final def findOneById(id : IdType) : Option[EntityType] =
         findOneById(id, FindOneByIdOptions.empty)
     final def findOneById(id : IdType, fields : Fields) : Option[EntityType] =
-        findOneById(id, FindOneByIdOptions(Some(fields), None))
+        findOneById(id, FindOneByIdOptions(fieldsToOption(fields), None))
 
     def findOneById(id : IdType, options : FindOneByIdOptions) : Option[EntityType]
 
@@ -187,7 +204,7 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
 
     final def findAndReplace[A <% QueryType, B <% QueryType](query : A, o : EntityType, sort : B, fields : Fields, flags : Set[FindAndModifyFlag] = Set.empty) : Option[EntityType] =
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
-            FindAndModifyOptions[QueryType](Some(sort), Some(fields), flags))
+            FindAndModifyOptions[QueryType](Some(sort), fieldsToOption(fields), flags))
 
     final def findAndModify[A <% QueryType, B <% QueryType](query : A, modifier : B) : Option[EntityType] =
         findAndModify(query : QueryType, Some(modifier : QueryType),
@@ -207,7 +224,7 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
 
     final def findAndModify[A <% QueryType, B <% QueryType, C <% QueryType](query : A, modifier : B, sort : C, fields : Fields, flags : Set[FindAndModifyFlag] = Set.empty) : Option[EntityType] =
         findAndModify(query : QueryType, Some(modifier : QueryType),
-            FindAndModifyOptions[QueryType](Some(sort), Some(fields), flags))
+            FindAndModifyOptions[QueryType](Some(sort), fieldsToOption(fields), flags))
 
     final def findAndRemove[A <% QueryType](query : QueryType) : Option[EntityType] =
         findAndModify(query : QueryType, None, FindAndModifyOptions.remove)
