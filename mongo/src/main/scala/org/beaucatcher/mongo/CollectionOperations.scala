@@ -4,6 +4,7 @@ import org.beaucatcher.bson.ClassAnalysis
 import org.beaucatcher.bson.BObject
 import com.mongodb.DBObject
 import org.bson.types.ObjectId
+import scala.annotation.implicitNotFound
 
 /**
  * You generally want [[org.beaucatcher.mongo.CollectionOperations]] class rather than
@@ -109,6 +110,7 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
 
 object CollectionOperationsTrait {
     // used as an implicit parameter to select the correct DAO based on requested query result type
+    @implicitNotFound(msg = "No synchronous DAO that returns entity type '${E}' (with ID type '${I}' and CollectionOperations '${CO}') (implicit GenericSyncDAOChooser not resolved)")
     trait GenericSyncDAOChooser[E, I, -CO] {
         def choose(ops : CO) : SyncDAO[BObject, E, I, _]
     }
