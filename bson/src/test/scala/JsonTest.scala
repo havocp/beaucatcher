@@ -200,8 +200,8 @@ class JsonTest extends TestUtils {
         "{ \"foo\" : }", // no value in object
         "{ : 10 }", // no key in object
         // these two problems are ignored by the lift tokenizer
-        JsonTest(true, "[:\"foo\", \"bar\"]"), // colon in an array; lift doesn't throw (tokenizer erases it)
-        JsonTest(true, "[\"foo\" : \"bar\"]"), // colon in an array another way, lift ignores (tokenizer erases it)
+        "[:\"foo\", \"bar\"]", // colon in an array; lift doesn't throw (tokenizer erases it)
+        "[\"foo\" : \"bar\"]", // colon in an array another way, lift ignores (tokenizer erases it)
         "[ foo ]", // not a known token
         "[ t ]", // start of "true" but ends wrong
         "[ tx ]",
