@@ -355,27 +355,62 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testFindOne() {
-
+        create1234()
+        assertEquals(4, Foo.bobjectSyncDAO.count())
+        val found = Foo.syncDAO[Foo].findOne()
+        assertTrue(found.isDefined)
     }
 
     @Test
     def testFindOneWithQuery() {
-
+        create1234()
+        assertEquals(4, Foo.bobjectSyncDAO.count())
+        val found = Foo.syncDAO[Foo].findOne(BObject("intField" -> 3))
+        assertTrue(found.isDefined)
+        assertEquals(3, found.get.intField)
     }
 
     @Test
     def testFindOneWithFields() {
-
+        create1234Optional()
+        assertEquals(4, FooWithOptionalField.bobjectSyncDAO.count())
+        val found = FooWithOptionalField.syncDAO[FooWithOptionalField].findOne(BObject("intField" -> 3),
+            IncludedFields("intField"))
+        assertTrue(found.isDefined)
+        assertEquals(3, found.get.intField)
+        assertTrue(found.get.stringField.isEmpty)
     }
 
     @Test
     def testFindOneById() {
+        create1234()
+        assertEquals(4, Foo.bobjectSyncDAO.count())
+        val found = Foo.syncDAO[Foo].findOne()
+        assertTrue(found.isDefined)
 
+        // now refind it by id
+        val foundById = Foo.syncDAO[Foo].findOneById(found.get._id)
+        assertTrue(foundById.isDefined)
+        assertEquals(found, foundById)
     }
 
     @Test
     def testFindOneByIdWithFields() {
+        create1234Optional()
+        assertEquals(4, FooWithOptionalField.bobjectSyncDAO.count())
+        val found = FooWithOptionalField.syncDAO[FooWithOptionalField].findOne(BObject("intField" -> 3),
+            IncludedFields("intField"))
+        assertTrue(found.isDefined)
+        assertEquals(3, found.get.intField)
+        assertTrue(found.get.stringField.isEmpty)
 
+        // now refind it by id
+        val foundById = FooWithOptionalField.syncDAO[FooWithOptionalField].findOneById(found.get._id,
+            IncludedFields("intField"))
+        assertTrue(foundById.isDefined)
+        assertEquals(3, foundById.get.intField)
+        assertTrue(foundById.get.stringField.isEmpty)
+        assertEquals(found, foundById)
     }
 
     @Test
