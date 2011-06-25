@@ -60,11 +60,11 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
     }
 
     /** Synchronous DAO returning BObject values from the collection */
-    final lazy val bobjectSyncDAO : BObjectSyncDAO[IdType] =
+    private[mongo] final lazy val bobjectSyncDAO : BObjectSyncDAO[IdType] =
         daoGroup.bobjectSyncDAO
 
     /** Synchronous DAO returning case class entity values from the collection */
-    final lazy val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, IdType] =
+    private[mongo] final lazy val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, IdType] =
         daoGroup.caseClassSyncDAO
 
     /**
@@ -81,6 +81,12 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
     def syncDAO[E](implicit chooser : SyncDAOChooser[E]) : SyncDAO[BObject, E, IdType, _] = {
         chooser.choose(this)
     }
+
+    /**
+     * If the type of entity returned doesn't matter, then you can use this overload
+     * of syncDAO which does not require you to specify an entity type.
+     */
+    def syncDAO : SyncDAO[BObject, _, IdType, _] = bobjectSyncDAO
 
     /**
      * There probably isn't a reason to override this, but it would modify a query

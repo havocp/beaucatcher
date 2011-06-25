@@ -23,7 +23,7 @@ package restdemo {
         override val collectionName = "restfoo"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[Foo])
-        override def jsonDAO = bobjectSyncDAO
+        override def jsonDAO : SyncDAO[BObject, BObject, _, _] = syncDAO[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         // This object inherits a complete DAO for BObject and for the Foo case class,
@@ -42,7 +42,7 @@ package restdemo {
         override val collectionName = "restfooWithIntId"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[FooWithIntId])
-        override def jsonDAO = bobjectSyncDAO
+        override def jsonDAO : SyncDAO[BObject, BObject, _, _] = syncDAO[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         override def parseJValueIdFromPath(path : String) : BInt32 = {
@@ -72,8 +72,8 @@ class JsonMethodsTest {
 
     @org.junit.Before
     def setup() {
-        Foo.bobjectSyncDAO.remove(BObject())
-        FooWithIntId.bobjectSyncDAO.remove(BObject())
+        Foo.syncDAO.remove(BObject())
+        FooWithIntId.syncDAO.remove(BObject())
     }
 
     @Test

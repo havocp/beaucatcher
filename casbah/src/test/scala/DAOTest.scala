@@ -45,7 +45,7 @@ class DAOTest
     @Test
     def testCustomQueryReturnsVariousEntityTypes() {
         val foo = Foo(new ObjectId(), 23, "woohoo")
-        Foo.caseClassSyncDAO.save(foo)
+        Foo.syncDAO[Foo].save(foo)
 
         val objects = Foo.customQuery[BObject].toIndexedSeq
         assertEquals(1, objects.size)
@@ -63,7 +63,7 @@ class DAOTest
     @Test
     def testCustomQueryReturnsVariousEntityTypesWithIntId() {
         val foo = FooWithIntId(100, 23, "woohoo")
-        FooWithIntId.caseClassSyncDAO.save(foo)
+        FooWithIntId.syncDAO[FooWithIntId].save(foo)
 
         val objects = FooWithIntId.customQuery[BObject].toIndexedSeq
         assertEquals(1, objects.size)
