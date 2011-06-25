@@ -13,7 +13,7 @@ package foo {
 
     object Foo extends CollectionOperations[Foo, ObjectId]
         with CasbahTestProvider {
-        def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
+        def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
     }
@@ -22,7 +22,7 @@ package foo {
 
     object FooWithIntId extends CollectionOperations[FooWithIntId, Int]
         with CasbahTestProvider {
-        def customQuery[E](implicit chooser : SyncDAOChooser[E]) = {
+        def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
     }
