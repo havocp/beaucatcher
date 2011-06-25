@@ -555,11 +555,25 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
         construct(value.filter(_._1 != key))
     }
 
+    private lazy val index : Option[Map[String, ValueType]] = {
+        // for maps with more than 7 elements, we build an index.
+        // otherwise we assume the cost of the index exceeds the
+        // cost of O(n) searches.
+        if (value.isDefinedAt(7))
+            Some(immutable.HashMap[String, ValueType](value : _*))
+        else
+            None
+    }
+
     // Map: Optionally returns the value associated with a key.
     override def get(key : String) : Option[ValueType] = {
-        value.find(_._1 == key) match {
-            case Some(field) => Some(field._2)
-            case None => None
+        if (index.isDefined) {
+            index.get.get(key)
+        } else {
+            value.find(_._1 == key) match {
+                case Some(field) => Some(field._2)
+                case None => None
+            }
         }
     }
 
