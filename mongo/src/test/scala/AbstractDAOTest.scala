@@ -164,19 +164,17 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         create1234()
         assertEquals(8, Foo.syncDAO.count())
 
-        val allIds = Foo.syncDAO[BObject].distinct("_id")
+        val allIds = Foo.syncDAO[BObject, BValue].distinct("_id")
         assertEquals(8, allIds.length)
-        val allInts = Foo.syncDAO[BObject].distinct("intField")
+        val allInts = Foo.syncDAO[BObject, BValue].distinct("intField")
         assertEquals(4, allInts.length)
         for (i <- 1 to 4) {
-            // FIXME temporarily disabled, syncDAO[BObject] needs to leave ValueType known
-            //assertTrue(allInts.find(_.unwrapped == i).isDefined)
+            assertTrue(allInts.find(_.unwrapped == i).isDefined)
         }
-        val allStrings = Foo.syncDAO[BObject].distinct("stringField")
+        val allStrings = Foo.syncDAO[BObject, BValue].distinct("stringField")
         assertEquals(4, allStrings.length)
         for (i <- 1 to 4) {
-            // FIXME temporarily disabled, syncDAO[BObject] needs to leave ValueType known
-            // assertTrue(allStrings.find(_.unwrapped == i.toString).isDefined)
+            assertTrue(allStrings.find(_.unwrapped == i.toString).isDefined)
         }
     }
 
