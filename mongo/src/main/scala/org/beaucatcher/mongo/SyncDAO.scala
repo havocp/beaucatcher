@@ -121,12 +121,40 @@ private object UpdateOptions {
  * removing indexes; you would use the underlying API such as Casbah or Hammersmith
  * for that, for now.
  *
- * The type parameters are invariant because they
- * occur in both covariant and contravariant positions. I think
- * it could be split up so there were 2x the number of type
- * parameters, for example QueryType becomes CoQueryType and ContraQueryType,
- * but it gets really confusing and I don't know if there's
- * really any utility to it.
+ * The recommended way to obtain an instance of [[org.beaucatcher.mongo.SyncDAO]]
+ * is from the `syncDAO` property on [[org.beaucatcher.mongo.CollectionOperations]],
+ * which would in turn be implemented by the companion object of a case class
+ * representing an object in a collection. For example you might have `case class Foo`
+ * representing objects in the `foo` collection, with a companion object `object Foo`
+ * which implements [[org.beaucatcher.mongo.CollectionOperations]]. You would then
+ * write code such as:
+ * {{{
+ *    Foo.syncDAO[BObject].find() // obtain results as a BObject
+ *    Foo.syncDAO[Foo].find()     // obtain results as a case class instance
+ *    Foo.syncDAO.count()         // entity type not relevant
+ * }}}
+ * This is only a convention though, of course there's more than one way to do it.
+ *
+ * @define findAndModifyVsUpdate
+ *
+ *   findAndModify(), findAndReplace() will affect only one object and will return
+ *   either the old or the new object depending on whether you specify the
+ *   [[org.beaucatcher.mongo.FindAndModifyNew]] flag. update() and its variants
+ *   do not return an object, and with updateMulti() you can modify multiple
+ *   objects at once.
+ *
+ * @define findAndReplaceDocs
+ *
+ *   Finds the first object matching the query and updates it with the
+ *   values from the provided entity. However, the ID is not updated.
+ *   Returns the old object, or the new one if the
+ *   [[org.beaucatcher.mongo.FindAndModifyNew]] flag was provided.
+ *   If multiple objects match the query, then the `sort` parameter
+ *   determines which will be replaced; only one object is ever replaced.
+ *   A sort object is a map from fields to the integer "1" for ascending,
+ *   "-1" for descending.
+ *   If specified, the `fields` parameter determines which fields are
+ *   returned in the old (or new) object returned from the method.
  */
 abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     def emptyQuery : QueryType
@@ -185,55 +213,116 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
 
     def findOneById(id : IdType, options : FindOneByIdOptions) : Option[EntityType]
 
+    /**
+     * $findAndReplaceDocs
+     *
+     * $findAndModifyVsUpdate
+     *
+     * @param query query to find the object
+     * @param o object with new values
+     * @return old object
+     */
     final def findAndReplace[A <% QueryType](query : A, o : EntityType) : Option[EntityType] =
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
             FindAndModifyOptions.empty)
 
-    // FIXME none of the flags make sense when replacing? or maybe it's always an upsert?
+    /**
+     * $findAndReplaceDocs
+     *
+     * $findAndModifyVsUpdate
+     */
     final def findAndReplace[A <% QueryType](query : A, o : EntityType, flags : Set[FindAndModifyFlag]) : Option[EntityType] =
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
             FindAndModifyOptions[QueryType](None, None, flags))
 
+    /**
+     * $findAndReplaceDocs
+     *
+     * $findAndModifyVsUpdate
+     */
     final def findAndReplace[A <% QueryType, B <% QueryType](query : A, o : EntityType, sort : B) : Option[EntityType] =
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
             FindAndModifyOptions[QueryType](Some(sort), None, Set.empty))
 
+    /**
+     * $findAndReplaceDocs
+     *
+     * $findAndModifyVsUpdate
+     */
     final def findAndReplace[A <% QueryType, B <% QueryType](query : A, o : EntityType, sort : B, flags : Set[FindAndModifyFlag]) : Option[EntityType] =
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
             FindAndModifyOptions[QueryType](Some(sort), None, flags))
 
+    /**
+     * $findAndReplaceDocs
+     *
+     * $findAndModifyVsUpdate
+     *
+     * @param query query to find the object
+     * @param o object with new values
+     * @param sort sort object
+     * @param fields fields to include in returned object
+     * @param flags may include [[org.beaucatcher.mongo.FindAndModifyNew]] to return new rather than old object
+     * @return old or new object according to flags
+     */
     final def findAndReplace[A <% QueryType, B <% QueryType](query : A, o : EntityType, sort : B, fields : Fields, flags : Set[FindAndModifyFlag] = Set.empty) : Option[EntityType] =
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
             FindAndModifyOptions[QueryType](Some(sort), fieldsToOption(fields), flags))
 
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def findAndModify[A <% QueryType, B <% QueryType](query : A, modifier : B) : Option[EntityType] =
         findAndModify(query : QueryType, Some(modifier : QueryType),
             FindAndModifyOptions.empty)
+
+    /**
+     * $findAndModifyVsUpdate
+     */
 
     final def findAndModify[A <% QueryType, B <% QueryType](query : A, modifier : B, flags : Set[FindAndModifyFlag]) : Option[EntityType] =
         findAndModify(query : QueryType, Some(modifier : QueryType),
             FindAndModifyOptions[QueryType](None, None, flags))
 
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def findAndModify[A <% QueryType, B <% QueryType, C <% QueryType](query : A, modifier : B, sort : C) : Option[EntityType] =
         findAndModify(query : QueryType, Some(modifier : QueryType),
             FindAndModifyOptions[QueryType](Some(sort), None, Set.empty))
 
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def findAndModify[A <% QueryType, B <% QueryType, C <% QueryType](query : A, modifier : B, sort : C, flags : Set[FindAndModifyFlag]) : Option[EntityType] =
         findAndModify(query : QueryType, Some(modifier : QueryType),
             FindAndModifyOptions[QueryType](Some(sort), None, flags))
 
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def findAndModify[A <% QueryType, B <% QueryType, C <% QueryType](query : A, modifier : B, sort : C, fields : Fields, flags : Set[FindAndModifyFlag] = Set.empty) : Option[EntityType] =
         findAndModify(query : QueryType, Some(modifier : QueryType),
             FindAndModifyOptions[QueryType](Some(sort), fieldsToOption(fields), flags))
 
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def findAndRemove[A <% QueryType](query : QueryType) : Option[EntityType] =
         findAndModify(query : QueryType, None, FindAndModifyOptions.remove)
 
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def findAndRemove[A <% QueryType, B <% QueryType](query : A, sort : B) : Option[EntityType] =
         findAndModify(query : QueryType, None, FindAndModifyOptions[QueryType](Some(sort), None, Set(FindAndModifyRemove)))
 
     def entityToModifierObject(entity : EntityType) : QueryType
     def entityToUpdateQuery(entity : EntityType) : QueryType
+
+    /**
+     * $findAndModifyVsUpdate
+     */
     def findAndModify(query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) : Option[EntityType]
 
     def insert(o : EntityType) : WriteResult
@@ -249,22 +338,48 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
      */
     final def save(o : EntityType) : WriteResult =
         updateUpsert(entityToUpdateQuery(o), entityToModifierObject(o))
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def update[A <% QueryType](query : A, o : EntityType) : WriteResult =
         update(query : QueryType, entityToModifierObject(o), UpdateOptions.empty)
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def updateUpsert[A <% QueryType](query : A, o : EntityType) : WriteResult =
         update(query : QueryType, entityToModifierObject(o), UpdateOptions.upsert)
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def updateMulti[A <% QueryType](query : A, o : EntityType) : WriteResult =
         update(query : QueryType, entityToModifierObject(o), UpdateOptions.multi)
-
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def update[A <% QueryType, B <% QueryType](query : A, modifier : B) : WriteResult =
         update(query : QueryType, modifier, UpdateOptions.empty)
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def updateUpsert[A <% QueryType, B <% QueryType](query : A, modifier : B) : WriteResult =
         update(query : QueryType, modifier, UpdateOptions.upsert)
+    /**
+     * $findAndModifyVsUpdate
+     */
     final def updateMulti[A <% QueryType, B <% QueryType](query : A, modifier : B) : WriteResult =
         update(query : QueryType, modifier, UpdateOptions.multi)
-
+    /**
+     * $findAndModifyVsUpdate
+     */
     def update(query : QueryType, modifier : QueryType, options : UpdateOptions) : WriteResult
 
+    /**
+     * Deletes all objects matching the query.
+     */
     def remove(query : QueryType) : WriteResult
+
+    /**
+     * Deletes the object with the given ID, if any.
+     */
     def removeById(id : IdType) : WriteResult
 }
