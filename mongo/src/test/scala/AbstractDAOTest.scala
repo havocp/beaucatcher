@@ -418,17 +418,82 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testFindAndReplace() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
 
+        val old = Foo.syncDAO[Foo].findOne(BObject("intField" -> 3))
+        assertTrue(old.isDefined)
+        assertEquals(3, old.get.intField)
+
+        // check we replace and return the old one
+        val stillOld = Foo.syncDAO[Foo].findAndReplace(BObject("intField" -> 3),
+            newFoo(old.get._id, 42, "42"))
+        assertTrue(stillOld.isDefined)
+        assertEquals(3, stillOld.get.intField)
+        assertEquals(4, Foo.syncDAO.count())
+        assertEquals(old.get._id, stillOld.get._id)
+
+        // but we wrote out the new one
+        val replaced = Foo.syncDAO[Foo].findOneById(old.get._id)
+        assertTrue(replaced.isDefined)
+        assertEquals(42, replaced.get.intField)
+        assertEquals(old.get._id, replaced.get._id)
+
+        // now pass in the flag to return the new one and check that works
+        val nowNew = Foo.syncDAO[Foo].findAndReplace(BObject("intField" -> 42),
+            newFoo(old.get._id, 43, "43"), Set[FindAndModifyFlag](FindAndModifyNew))
+        assertTrue(nowNew.isDefined)
+        assertEquals(43, nowNew.get.intField)
+        assertEquals(old.get._id, nowNew.get._id)
     }
 
     @Test
     def testFindAndReplaceWithSort() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
 
+        // in natural order, we're expecting 1, 2, 3, 4
+        // since we insert them that way (not sure if mongo
+        // guarantees this?)
+        val firstNatural = Foo.syncDAO[Foo].findOne()
+        assertTrue(firstNatural.isDefined)
+        assertEquals(1, firstNatural.get.intField)
+
+        val sortedByIntBackward = Foo.syncDAO[Foo].find(BObject("query" -> BObject(),
+            "orderby" -> BObject("intField" -> -1)), AllFields, 0, 1, 0).toSeq
+        assertTrue(!sortedByIntBackward.isEmpty)
+        val last = sortedByIntBackward.last
+
+        assertEquals(4, last.intField)
+
+        // replace the last item sorting backward by intField
+        val old = Foo.syncDAO[Foo].findAndReplace(BObject(),
+            newFoo(last._id, 42, "42"),
+            BObject("intField" -> -1))
+
+        assertTrue(old.isDefined)
+        assertEquals(4, old.get.intField)
+        assertEquals(4, Foo.syncDAO.count())
+        assertEquals(last._id, old.get._id)
     }
 
     @Test
     def testFindAndReplaceWithFields() {
+        create1234Optional()
+        assertEquals(4, FooWithOptionalField.syncDAO.count())
 
+        val old = FooWithOptionalField.syncDAO[FooWithOptionalField].findOne(BObject("intField" -> 3))
+        assertTrue(old.isDefined)
+        assertEquals(3, old.get.intField)
+
+        // check we replace and return the old one minus excluded field
+        val stillOld = FooWithOptionalField.syncDAO[FooWithOptionalField].findAndReplace(BObject("intField" -> 3),
+            newFooWithOptionalField(old.get._id, 42, Some("42")), BObject(), ExcludedFields("stringField"), Set())
+        assertTrue(stillOld.isDefined)
+        assertEquals(3, stillOld.get.intField)
+        assertTrue(stillOld.get.stringField.isEmpty)
+        assertEquals(4, FooWithOptionalField.syncDAO.count())
+        assertEquals(old.get._id, stillOld.get._id)
     }
 
     @Test
