@@ -497,6 +497,31 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     }
 
     @Test
+    def testFindAndReplaceIgnoresId() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
+
+        val old = Foo.syncDAO[Foo].findOne(BObject("intField" -> 3))
+        assertTrue(old.isDefined)
+        assertEquals(3, old.get.intField)
+
+        // check we replace and return the old one
+        val stillOld = Foo.syncDAO[Foo].findAndReplace(BObject("intField" -> 3),
+            // this new ObjectId() is the thing that needs to get ignored
+            newFoo(new ObjectId(), 42, "42"))
+        assertTrue(stillOld.isDefined)
+        assertEquals(3, stillOld.get.intField)
+        assertEquals(4, Foo.syncDAO.count())
+        assertEquals(old.get._id, stillOld.get._id)
+
+        // but we wrote out the new one and it has the old id
+        val replaced = Foo.syncDAO[Foo].findOneById(old.get._id)
+        assertTrue(replaced.isDefined)
+        assertEquals(42, replaced.get.intField)
+        assertEquals(old.get._id, replaced.get._id)
+    }
+
+    @Test
     def testFindAndModify() {
 
     }

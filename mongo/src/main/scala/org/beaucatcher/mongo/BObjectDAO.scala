@@ -14,8 +14,13 @@ private[beaucatcher] abstract trait BObjectComposedSyncDAO[OuterIdType, InnerQue
     extends BObjectSyncDAO[OuterIdType]
     with ComposedSyncDAO[BObject, BObject, OuterIdType, BValue, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType] {
 
-    override def entityToModifierObject(entity : BObject) : BObject = {
+    override def entityToUpsertableObject(entity : BObject) : BObject = {
         entity
+    }
+
+    override def entityToModifierObject(entity : BObject) : BObject = {
+        // not allowed to change the _id
+        entity - "_id"
     }
 
     override def entityToUpdateQuery(entity : BObject) : BObject = {

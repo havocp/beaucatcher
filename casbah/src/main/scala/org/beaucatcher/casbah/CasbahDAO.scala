@@ -30,8 +30,15 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
 
     override def emptyQuery : DBObject = MongoDBObject() // not immutable, so we always make a new one
 
-    override def entityToModifierObject(entity : DBObject) : DBObject = {
+    override def entityToUpsertableObject(entity : DBObject) : DBObject = {
+        // maybe we should copy this since it isn't immutable :-/
+        // however at the moment I don't think the app can get a reference to it,
+        // at least not easily, so copying would just be paranoia
         entity
+    }
+
+    override def entityToModifierObject(entity : DBObject) : DBObject = {
+        entityToUpsertableObject(entity)
     }
 
     private def queryFlagsAsInt(flags : Set[QueryFlag]) : Int = {

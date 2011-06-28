@@ -47,8 +47,13 @@ private[beaucatcher] abstract trait CaseClassBObjectSyncDAO[EntityType <: Produc
     extends CaseClassComposedSyncDAO[BObject, EntityType, OuterIdType, BObject, BObject, InnerIdType, BValue] {
     override protected val backend : BObjectSyncDAO[InnerIdType]
 
-    override def entityToModifierObject(entity : EntityType) : BObject = {
+    override def entityToUpsertableObject(entity : EntityType) : BObject = {
         entityIn(entity)
+    }
+
+    override def entityToModifierObject(entity : EntityType) : BObject = {
+        // "_id" has to come out, because you can't change the id of a document in findAndModify, update, etc.
+        entityToUpsertableObject(entity) - "_id"
     }
 
     override def entityToUpdateQuery(entity : EntityType) : BObject = {

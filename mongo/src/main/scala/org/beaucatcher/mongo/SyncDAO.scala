@@ -317,7 +317,17 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     final def findAndRemove[A <% QueryType, B <% QueryType](query : A, sort : B) : Option[EntityType] =
         findAndModify(query : QueryType, None, FindAndModifyOptions[QueryType](Some(sort), None, Set(FindAndModifyRemove)))
 
+    /** An upsertable object generally must have all fields and must have an ID. */
+    def entityToUpsertableObject(entity : EntityType) : QueryType
+    /**
+     * A modifier object generally must not have an ID, and may be missing fields that
+     * won't be modified.
+     */
     def entityToModifierObject(entity : EntityType) : QueryType
+    /**
+     * Returns a query that matches only the given entity,
+     * such as a query for the entity's ID.
+     */
     def entityToUpdateQuery(entity : EntityType) : QueryType
 
     /**
@@ -337,7 +347,7 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
      * if they just finished creating the object.
      */
     final def save(o : EntityType) : WriteResult =
-        updateUpsert(entityToUpdateQuery(o), entityToModifierObject(o))
+        updateUpsert(entityToUpdateQuery(o), entityToUpsertableObject(o))
     /**
      * $findAndModifyVsUpdate
      */
