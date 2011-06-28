@@ -523,27 +523,27 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testFindAndModify() {
-
+        // FIXME
     }
 
     @Test
     def testFindAndModifyWithSort() {
-
+        // FIXME
     }
 
     @Test
     def testFindAndModifyWithFields() {
-
+        // FIXME
     }
 
     @Test
     def testFindAndRemove() {
-
+        // FIXME
     }
 
     @Test
     def testFindAndRemoveWithSort() {
-
+        // FIXME
     }
 
     @Test
@@ -574,7 +574,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertTrue(foundById.isDefined)
         assertEquals(14, foundById.get.intField)
 
-        // duplicate should not throw on a save
+        // duplicate should not throw on a save, unlike insert
         Foo.syncDAO[Foo].save(f)
         assertEquals(1, Foo.syncDAO.count())
         val foundById2 = Foo.syncDAO[Foo].findOneById(f._id)
@@ -593,26 +593,119 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testUpdate() {
+        // updating when there's nothing there should do nothing
+        assertEquals(0, Foo.syncDAO.count())
+        val f = newFoo(new ObjectId(), 14, "14")
+        Foo.syncDAO[Foo].update(BObject("_id" -> f._id), f)
+        assertEquals(0, Foo.syncDAO.count())
+        val foundById = Foo.syncDAO[Foo].findOneById(f._id)
+        assertFalse(foundById.isDefined)
 
+        // now use insert to add it
+        assertEquals(0, Foo.syncDAO.count())
+        Foo.syncDAO[Foo].insert(f)
+        assertEquals(1, Foo.syncDAO.count())
+
+        // duplicate should not throw on an update
+        Foo.syncDAO[Foo].update(BObject("_id" -> f._id), f)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById2 = Foo.syncDAO[Foo].findOneById(f._id)
+        assertTrue(foundById2.isDefined)
+        assertEquals(14, foundById2.get.intField)
+
+        // making a change should be possible with an update
+        val f2 = newFoo(f._id, 15, "15")
+        Foo.syncDAO[Foo].update(BObject("_id" -> f2._id), f2)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById3 = Foo.syncDAO[Foo].findOneById(f2._id)
+        assertTrue(foundById3.isDefined)
+        assertEquals(15, foundById3.get.intField)
+        assertEquals(f._id, foundById3.get._id)
+    }
+
+    @Test
+    def testUpdateWithModifier() {
+        // FIXME test update with modifier object
     }
 
     @Test
     def testUpdateUpsert() {
+        // upserting when there's nothing there should insert
+        assertEquals(0, Foo.syncDAO.count())
+        val f = newFoo(new ObjectId(), 14, "14")
+        Foo.syncDAO[Foo].updateUpsert(BObject("_id" -> f._id), f)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById = Foo.syncDAO[Foo].findOneById(f._id)
+        assertTrue(foundById.isDefined)
+        assertEquals(14, foundById.get.intField)
 
+        // duplicate should not throw on an upsert
+        Foo.syncDAO[Foo].updateUpsert(BObject("_id" -> f._id), f)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById2 = Foo.syncDAO[Foo].findOneById(f._id)
+        assertTrue(foundById2.isDefined)
+        assertEquals(14, foundById2.get.intField)
+
+        // making a change should be possible with an upsert
+        val f2 = newFoo(f._id, 15, "15")
+        Foo.syncDAO[Foo].updateUpsert(BObject("_id" -> f2._id), f2)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById3 = Foo.syncDAO[Foo].findOneById(f2._id)
+        assertTrue(foundById3.isDefined)
+        assertEquals(15, foundById3.get.intField)
+        assertEquals(f._id, foundById3.get._id)
+    }
+
+    @Test
+    def testUpdateUpsertWithModifier() {
+        // FIXME test upsert with a modifier object, see
+        // http://www.mongodb.org/display/DOCS/Updating
+        // for how to make this work
     }
 
     @Test
     def testUpdateMulti() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
 
+        assertEquals(10, Foo.syncDAO[Foo].find().foldLeft(0)({ (v, f) => v + f.intField }))
+
+        Foo.syncDAO[Foo].updateMulti(BObject(), BObject("$inc" -> BObject("intField" -> 1)))
+
+        val all = Foo.syncDAO[Foo].find().toSeq
+        assertEquals(4, all.length)
+
+        val sum = all.foldLeft(0)({ (v, f) => v + f.intField })
+        assertEquals(14, sum)
     }
 
     @Test
     def testRemove() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
 
+        Foo.syncDAO[Foo].remove(BObject("intField" -> 3))
+        assertEquals(3, Foo.syncDAO.count())
+        val all = Foo.syncDAO[Foo].find().toSeq
+        assertEquals(3, all.length)
+        for (a <- all) {
+            assertFalse(3 == a.intField)
+        }
     }
 
     @Test
     def testRemoveById() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
 
+        val f = Foo.syncDAO[Foo].findOne().get
+        Foo.syncDAO.removeById(f._id)
+        assertEquals(3, Foo.syncDAO.count())
+        val all = Foo.syncDAO[Foo].find().toSeq
+        assertEquals(3, all.length)
+        assertTrue(f._id == f._id) // be sure == at least kinda works on id
+        for (a <- all) {
+            assertFalse(f._id == a._id)
+        }
     }
 }
