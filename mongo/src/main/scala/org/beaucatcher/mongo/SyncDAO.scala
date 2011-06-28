@@ -360,12 +360,13 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
      * $findAndModifyVsUpdate
      */
     final def updateUpsert[A <% QueryType](query : A, o : EntityType) : WriteResult =
-        update(query : QueryType, entityToModifierObject(o), UpdateOptions.upsert)
-    /**
-     * $findAndModifyVsUpdate
+        update(query : QueryType, entityToUpsertableObject(o), UpdateOptions.upsert)
+
+    /* Note: multi updates are not allowed with a replacement object, only with
+     * "dollar sign operator" modifier objects. So there is no updateMulti overload
+     * taking an entity object.
      */
-    final def updateMulti[A <% QueryType](query : A, o : EntityType) : WriteResult =
-        update(query : QueryType, entityToModifierObject(o), UpdateOptions.multi)
+
     /**
      * $findAndModifyVsUpdate
      */
@@ -377,6 +378,10 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     final def updateUpsert[A <% QueryType, B <% QueryType](query : A, modifier : B) : WriteResult =
         update(query : QueryType, modifier, UpdateOptions.upsert)
     /**
+     * Note that updating with the [[org.beaucatcher.mongo.UpdateMulti]] flag only works if you
+     * do a "dollar sign operator," the modifier object can't just specify new field values. This is a
+     * MongoDB thing, not a library/driver thing.
+     *
      * $findAndModifyVsUpdate
      */
     final def updateMulti[A <% QueryType, B <% QueryType](query : A, modifier : B) : WriteResult =
