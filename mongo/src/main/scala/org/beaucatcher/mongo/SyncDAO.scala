@@ -335,6 +335,9 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
      */
     def findAndModify(query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) : Option[EntityType]
 
+    /**
+     * Adds a new object to the collection. It's an error if an object with the same ID already exists.
+     */
     def insert(o : EntityType) : WriteResult
 
     /**

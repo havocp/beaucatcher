@@ -548,12 +548,47 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testInsert() {
+        assertEquals(0, Foo.syncDAO.count())
+        val f = newFoo(new ObjectId(), 14, "14")
+        Foo.syncDAO[Foo].insert(f)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById = Foo.syncDAO[Foo].findOneById(f._id)
+        assertTrue(foundById.isDefined)
+        assertEquals(14, foundById.get.intField)
 
+        // duplicate should throw
+        val e = intercept[Exception] {
+            Foo.syncDAO[Foo].insert(f)
+        }
+        assertTrue(e.getMessage.contains("duplicate key"))
+        assertTrue(e.getMessage.contains("E11000"))
     }
 
     @Test
     def testSave() {
+        assertEquals(0, Foo.syncDAO.count())
+        val f = newFoo(new ObjectId(), 14, "14")
+        Foo.syncDAO[Foo].save(f)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById = Foo.syncDAO[Foo].findOneById(f._id)
+        assertTrue(foundById.isDefined)
+        assertEquals(14, foundById.get.intField)
 
+        // duplicate should not throw on a save
+        Foo.syncDAO[Foo].save(f)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById2 = Foo.syncDAO[Foo].findOneById(f._id)
+        assertTrue(foundById2.isDefined)
+        assertEquals(14, foundById2.get.intField)
+
+        // making a change should be possible with a save
+        val f2 = newFoo(f._id, 15, "15")
+        Foo.syncDAO[Foo].save(f2)
+        assertEquals(1, Foo.syncDAO.count())
+        val foundById3 = Foo.syncDAO[Foo].findOneById(f2._id)
+        assertTrue(foundById3.isDefined)
+        assertEquals(15, foundById3.get.intField)
+        assertEquals(f._id, foundById3.get._id)
     }
 
     @Test
