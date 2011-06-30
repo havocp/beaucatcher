@@ -60,7 +60,7 @@ case class DistinctOptions[+QueryType](query : Option[QueryType], overrideQueryF
 }
 
 private object DistinctOptions {
-    final val _empty = DistinctOptions[Nothing](None, None)
+    private final val _empty = DistinctOptions[Nothing](None, None)
     def empty[QueryType] : DistinctOptions[QueryType] = _empty
 }
 
@@ -97,9 +97,9 @@ case class FindAndModifyOptions[+QueryType](sort : Option[QueryType], fields : O
 }
 
 private object FindAndModifyOptions {
-    final val _empty = FindAndModifyOptions[Nothing](None, None, Set.empty)
+    private final val _empty = FindAndModifyOptions[Nothing](None, None, Set.empty)
     def empty[QueryType] : FindAndModifyOptions[QueryType] = _empty
-    final val _remove = FindAndModifyOptions[Nothing](None, None, Set(FindAndModifyRemove))
+    private final val _remove = FindAndModifyOptions[Nothing](None, None, Set(FindAndModifyRemove))
     def remove[QueryType] : FindAndModifyOptions[QueryType] = _remove
 }
 
