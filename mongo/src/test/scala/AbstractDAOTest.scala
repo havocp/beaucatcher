@@ -218,6 +218,8 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(2, twos(1).intField)
     }
 
+    // FIXME test find with an "orderby"
+
     // tests that the AllFields object does the same thing as not passing in
     // a fields object
     @Test
