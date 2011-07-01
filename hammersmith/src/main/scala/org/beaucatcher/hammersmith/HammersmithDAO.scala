@@ -150,14 +150,20 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     override def count(query : BSONDocument, options : CountOptions) : Future[Long] = {
         val f = newPromise[Long]
-        // FIXME collection should have a count method
-        // FIXME handle options.fields, options.limit, options.skip
-        collection.db.count(collection.name)(n => f.completeWithResult(n))
+        // FIXME handle options.overrideQueryFlags
+        collection.count(query,
+            options.fields : BSONDocument,
+            options.limit.getOrElse(0),
+            options.skip.getOrElse(0))(n => f.completeWithResult(n))
         f
     }
 
-    override def distinct(key : String, options : DistinctOptions[BSONDocument]) : Future[Seq[Any]] =
-        throw new UnsupportedOperationException("distinct not implemented")
+    override def distinct(key : String, options : DistinctOptions[BSONDocument]) : Future[Seq[Any]] = {
+        val f = newPromise[Seq[Any]]
+        // FIXME handle options.overrideQueryFlags
+        collection.distinct(key, options.query.getOrElse(emptyQuery))({ seq => f.completeWithResult(seq) })
+        f
+    }
 
     override def find(query : BSONDocument, options : FindOptions) : Future[Iterator[Future[EntityType]]] = {
         val f = newPromise[Iterator[Future[EntityType]]]
@@ -222,8 +228,19 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
         }
     }
 
-    override def findAndModify(query : BSONDocument, update : Option[BSONDocument], options : FindAndModifyOptions[BSONDocument]) : Future[Option[EntityType]] =
-        throw new UnsupportedOperationException("findAndModify not implemented")
+    override def findAndModify(query : BSONDocument, update : Option[BSONDocument], options : FindAndModifyOptions[BSONDocument]) : Future[Option[EntityType]] = {
+        val f = newPromise[Option[EntityType]]
+        val handler = RequestFutures.command[EntityType](completeOptionalFromEither(f)(_))
+        // query, sort, remove, update, getNew, fields, upsert
+        collection.findAndModify(query,
+            if (options.sort.isDefined) { options.sort.get : BSONDocument } else { emptyQuery },
+            options.flags.contains(FindAndModifyRemove),
+            update,
+            options.flags.contains(FindAndModifyNew),
+            if (options.fields.isDefined) { options.fields : BSONDocument } else { emptyQuery },
+            options.flags.contains(FindAndModifyUpsert))(handler)
+        f
+    }
 
     override def insert(o : EntityType) : Future[WriteResult] = {
         val f = newPromise[WriteResult]
@@ -232,16 +249,27 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
         f
     }
 
-    override def update(query : BSONDocument, modifier : BSONDocument, options : UpdateOptions) : Future[WriteResult] =
-        throw new UnsupportedOperationException("update not implemented")
+    override def update(query : BSONDocument, modifier : BSONDocument, options : UpdateOptions) : Future[WriteResult] = {
+        val f = newPromise[WriteResult]
+        val handler = RequestFutures.write(completeWriteFromEither(f)(_))
+        collection.update(query, modifier, options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))(handler)
+        f
+    }
+
     override def remove(query : BSONDocument) : Future[WriteResult] = {
         val f = newPromise[WriteResult]
         val handler = RequestFutures.write(completeWriteFromEither(f)(_))
         collection.remove(query)(handler)
         f
     }
-    override def removeById(id : IdType) : Future[WriteResult] =
-        throw new UnsupportedOperationException("removeById not implemented")
+    override def removeById(id : IdType) : Future[WriteResult] = {
+        val f = newPromise[WriteResult]
+        val handler = RequestFutures.write(completeWriteFromEither(f)(_))
+        val builder = Document.newBuilder
+        builder += Pair("_id", id)
+        collection.remove(builder.result, true)(handler)
+        f
+    }
 }
 
 private[hammersmith] class BObjectBSONDocument(bobject : BObject) extends BSONDocument {
