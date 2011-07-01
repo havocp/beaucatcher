@@ -202,14 +202,16 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     // FIXME shouldn't Hammersmith let us return None if query doesn't match ? or is that an exception ?
     override def findOne(query : BSONDocument, options : FindOneOptions) : Future[Option[EntityType]] = {
+        // FIXME support options.overrideQueryFlags
         val f = newPromise[Option[EntityType]]
         val handler = RequestFutures.findOne[EntityType](completeOptionalFromEither(f)(_))
-        collection.findOne(query)(handler)
+        collection.findOne(query, options.fields : BSONDocument)(handler)
         f
     }
 
     // FIXME shouldn't Hammersmith let us return None if query doesn't match ? or is that an exception ?
     override def findOneById(id : IdType, options : FindOneByIdOptions) : Future[Option[EntityType]] = {
+        // FIXME support options.overrideQueryFlags
         val f = newPromise[Option[EntityType]]
         val handler = RequestFutures.findOne[EntityType](completeOptionalFromEither(f)(_))
         collection.findOneByID(id)(handler)
