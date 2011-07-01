@@ -166,16 +166,37 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
     }
 
     override def find(query : BSONDocument, options : FindOptions) : Future[Iterator[Future[EntityType]]] = {
+        // FIXME handle options.overrideQueryFlags
         val f = newPromise[Iterator[Future[EntityType]]]
+
+        val rawBatchSize = options.batchSize.getOrElse(0)
+        val rawLimit = options.limit.getOrElse(0L)
+        val DEFAULT_BATCH = 100
+        if (!rawLimit.isValidInt)
+            throw new UnsupportedOperationException("Limits larger than Int.MaxValue aren't supported right now")
+        val limit = if (rawLimit <= 0) Int.MaxValue else rawLimit
+        val batchSize = math.min(if (rawBatchSize <= 0) DEFAULT_BATCH else rawBatchSize,
+            limit)
+
         val handler = RequestFutures.query[EntityType]({ result : Either[Throwable, Cursor[EntityType]] =>
             result match {
-                case Left(e) => f.completeWithException(e)
-                case Right(c) => f.completeWithResult(new CursorIterator(c))
+                case Left(e) =>
+                    f.completeWithException(e)
+                case Right(c) =>
+                    // items.take may ask for too many items in the last batch, could be
+                    // fixed by making CursorIterator support a limit natively,
+                    // but just an optimization
+                    val items = new CursorIterator(c)
+                    val limitedItems =
+                        if (limit == Int.MaxValue)
+                            items
+                        else
+                            items.take(limit.intValue)
+                    f.completeWithResult(limitedItems)
             }
         })
         collection.find(query, options.fields : BSONDocument, options.skip.getOrElse(0L).intValue,
-            options.batchSize.getOrElse(0))(handler)
-        // FIXME handle options.limit and options.overrideQueryFlags
+            batchSize.intValue)(handler)
         f
     }
 
