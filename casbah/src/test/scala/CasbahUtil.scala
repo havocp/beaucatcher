@@ -10,5 +10,5 @@ import org.joda.time.DateTime
 trait CasbahTestProvider
     extends MongoConfigProvider
     with CasbahBackendProvider {
-    override val mongoConfig = new SimpleMongoConfig("mongoscalathingy", "localhost", 27017)
+    override val mongoConfig = new SimpleMongoConfig("beaucatchercasbah", "localhost", 27017)
 }

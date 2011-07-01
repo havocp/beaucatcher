@@ -1,8 +1,7 @@
 package org.beaucatcher.hammersmith
 
 import akka.actor.Channel
-import akka.dispatch.Future
-import akka.dispatch.DefaultCompletableFuture
+import akka.dispatch._
 import org.beaucatcher.bson._
 import org.beaucatcher.async._
 import org.beaucatcher.mongo._
@@ -10,13 +9,15 @@ import com.mongodb.WriteResult
 import com.mongodb.CommandResult
 import com.mongodb.async.Collection
 import com.mongodb.async.futures._
-import org.bson.collection.BSONDocument
+import org.bson.collection._
 import org.bson._
 import com.mongodb.async.Cursor
+import com.mongodb.async.{ WriteResult => HammersmithWriteResult }
 import akka.actor.Actor
 import akka.actor.ActorRef
 import org.bson.DefaultBSONSerializer
 import org.bson.collection.Document
+import java.util.concurrent.TimeUnit
 
 private object CursorActor {
     // requests
@@ -81,7 +82,7 @@ private class CursorIterator[T : SerializableBSONObject](val cursor : Cursor[T])
 
     override def next = {
         check
-        val f = new DefaultCompletableFuture[T]
+        val f = newPromise[T]
         result.get.onComplete({ completed : Future[CursorActor.Result] =>
             completed.result match {
                 case None =>
@@ -124,6 +125,18 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
         }
     }
 
+    private def translateWriteResult(h : HammersmithWriteResult) : WriteResult = {
+        // FIXME
+        null
+    }
+
+    private def completeWriteFromEither(f : DefaultCompletableFuture[WriteResult])(result : Either[Throwable, (Option[AnyRef], HammersmithWriteResult)]) : Unit = {
+        result match {
+            case Left(e) => f.completeWithException(e)
+            case Right(valueAndResult) => f.completeWithResult(translateWriteResult(valueAndResult._2))
+        }
+    }
+
     // this is a workaround for a problem where we get a non-option but are wanting an option
     private def completeOptionalFromEither[T](f : DefaultCompletableFuture[Option[T]])(result : Either[Throwable, T]) : Unit = {
         result match {
@@ -135,14 +148,19 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
     override def emptyQuery : BSONDocument =
         Document.empty
 
-    override def count(query : BSONDocument, options : CountOptions) : Future[Long] =
-        throw new UnsupportedOperationException
+    override def count(query : BSONDocument, options : CountOptions) : Future[Long] = {
+        val f = newPromise[Long]
+        // FIXME collection should have a count method
+        // FIXME handle options.fields, options.limit, options.skip
+        collection.db.count(collection.name)(n => f.completeWithResult(n))
+        f
+    }
 
     override def distinct(key : String, options : DistinctOptions[BSONDocument]) : Future[Seq[Any]] =
-        throw new UnsupportedOperationException
+        throw new UnsupportedOperationException("distinct not implemented")
 
     override def find(query : BSONDocument, options : FindOptions) : Future[Iterator[Future[EntityType]]] = {
-        val f = new DefaultCompletableFuture[Iterator[Future[EntityType]]]
+        val f = newPromise[Iterator[Future[EntityType]]]
         val handler = RequestFutures.query[EntityType]({ result : Either[Throwable, Cursor[EntityType]] =>
             result match {
                 case Left(e) => f.completeWithException(e)
@@ -157,7 +175,7 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     // FIXME shouldn't Hammersmith let us return None if query doesn't match ? or is that an exception ?
     override def findOne(query : BSONDocument, options : FindOneOptions) : Future[Option[EntityType]] = {
-        val f = new DefaultCompletableFuture[Option[EntityType]]
+        val f = newPromise[Option[EntityType]]
         val handler = RequestFutures.findOne[EntityType](completeOptionalFromEither(f)(_))
         collection.findOne(query)(handler)
         f
@@ -165,32 +183,66 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     // FIXME shouldn't Hammersmith let us return None if query doesn't match ? or is that an exception ?
     override def findOneById(id : IdType, options : FindOneByIdOptions) : Future[Option[EntityType]] = {
-        val f = new DefaultCompletableFuture[Option[EntityType]]
+        val f = newPromise[Option[EntityType]]
         val handler = RequestFutures.findOne[EntityType](completeOptionalFromEither(f)(_))
         collection.findOneByID(id)(handler)
         f
     }
 
-    override def entityToUpsertableObject(entity : EntityType) : BSONDocument =
-        throw new UnsupportedOperationException
-    override def entityToModifierObject(entity : EntityType) : BSONDocument =
-        throw new UnsupportedOperationException
-    override def entityToUpdateQuery(entity : EntityType) : BSONDocument =
-        throw new UnsupportedOperationException
-    override def findAndModify(query : BSONDocument, update : Option[BSONDocument], options : FindAndModifyOptions[BSONDocument]) : Future[Option[EntityType]] =
-        throw new UnsupportedOperationException
-    override def insert(o : EntityType) : Future[WriteResult] =
-        throw new UnsupportedOperationException
-    override def update(query : BSONDocument, modifier : BSONDocument, options : UpdateOptions) : Future[WriteResult] =
-        throw new UnsupportedOperationException
-    override def remove(query : BSONDocument) : Future[WriteResult] =
-        throw new UnsupportedOperationException
-    override def removeById(id : IdType) : Future[WriteResult] =
-        throw new UnsupportedOperationException
-}
+    override def entityToUpsertableObject(entity : EntityType) : BSONDocument = {
+        entity match {
+            case doc : BSONDocument =>
+                doc
+            case _ =>
+                throw new UnsupportedOperationException("entityToUpsertableObject not implemented for " + entity)
+        }
+    }
 
-private[hammersmith] abstract class HammersmithSyncDAO[EntityType : SerializableBSONObject, IdType <: AnyRef]
-    extends SyncDAO[BSONDocument, EntityType, IdType, Any]
+    override def entityToModifierObject(entity : EntityType) : BSONDocument = {
+        entity match {
+            case doc : BSONDocument =>
+                val builder = Document.newBuilder
+                // strip _id
+                doc.asMap foreach ({ kv => if (kv._1 != "_id") builder += kv })
+                builder.result
+            case _ =>
+                throw new UnsupportedOperationException("entityToModifierObject not implemented for " + entity)
+        }
+    }
+
+    override def entityToUpdateQuery(entity : EntityType) : BSONDocument = {
+        entity match {
+            case doc : BSONDocument =>
+                val builder = Document.newBuilder
+                // we want only _id
+                builder += Pair("_id", doc.get("_id").get)
+                builder.result
+            case _ =>
+                throw new UnsupportedOperationException("entityToUpdateQuery not implemented for " + entity)
+        }
+    }
+
+    override def findAndModify(query : BSONDocument, update : Option[BSONDocument], options : FindAndModifyOptions[BSONDocument]) : Future[Option[EntityType]] =
+        throw new UnsupportedOperationException("findAndModify not implemented")
+
+    override def insert(o : EntityType) : Future[WriteResult] = {
+        val f = newPromise[WriteResult]
+        val handler = RequestFutures.write(completeWriteFromEither(f)(_))
+        collection.insert(o)(handler)
+        f
+    }
+
+    override def update(query : BSONDocument, modifier : BSONDocument, options : UpdateOptions) : Future[WriteResult] =
+        throw new UnsupportedOperationException("update not implemented")
+    override def remove(query : BSONDocument) : Future[WriteResult] = {
+        val f = newPromise[WriteResult]
+        val handler = RequestFutures.write(completeWriteFromEither(f)(_))
+        collection.remove(query)(handler)
+        f
+    }
+    override def removeById(id : IdType) : Future[WriteResult] =
+        throw new UnsupportedOperationException("removeById not implemented")
+}
 
 private[hammersmith] class BObjectBSONDocument(bobject : BObject) extends BSONDocument {
     // we have to make a mutable map to make hammersmith happy, which pretty much blows
@@ -214,7 +266,7 @@ private[hammersmith] class BObjectHammersmithEntityComposer extends EntityCompos
  */
 private[hammersmith] abstract trait BObjectHammersmithSyncDAO[OuterIdType, InnerIdType <: AnyRef]
     extends BObjectComposedSyncDAO[OuterIdType, BSONDocument, BSONDocument, InnerIdType, Any] {
-    override protected val backend : HammersmithSyncDAO[BSONDocument, InnerIdType]
+    override protected val backend : SyncDAO[BSONDocument, BSONDocument, InnerIdType, Any]
 
     override protected val queryComposer : QueryComposer[BObject, BSONDocument]
     override protected val entityComposer : EntityComposer[BObject, BSONDocument]
