@@ -207,18 +207,36 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
     override def findOne(query : BSONDocument, options : FindOneOptions) : Future[Option[EntityType]] = {
         // FIXME support options.overrideQueryFlags
         val f = newPromise[Option[EntityType]]
-        val handler = RequestFutures.findOne[EntityType](completeOptionalFromEither(f)(_))
-        collection.findOne(query, options.fields : BSONDocument)(handler)
+        // we use find() with limit 1 instead of findOne() for now because hammersmith findOne
+        // doesn't let us fail to return an object
+        val handler = RequestFutures.query[EntityType]({ result : Either[Throwable, Cursor[EntityType]] =>
+            result match {
+                case Left(e) =>
+                    f.completeWithException(e)
+                case Right(c) =>
+                    c.next match {
+                        case Cursor.EOF =>
+                            f.completeWithResult(None)
+                        // empty shouldn't happen since we only need 1 doc from the first batch
+                        case Cursor.Empty =>
+                            f.completeWithResult(None)
+                        case Cursor.Entry(doc) =>
+                            f.completeWithResult(Some(doc.asInstanceOf[EntityType]))
+                    }
+                    c.close()
+            }
+        })
+        collection.find(query, options.fields : BSONDocument, 0, 1)(handler)
         f
     }
 
     // FIXME shouldn't Hammersmith let us return None if query doesn't match ? or is that an exception ?
     override def findOneById(id : IdType, options : FindOneByIdOptions) : Future[Option[EntityType]] = {
         // FIXME support options.overrideQueryFlags
-        val f = newPromise[Option[EntityType]]
-        val handler = RequestFutures.findOne[EntityType](completeOptionalFromEither(f)(_))
-        collection.findOneByID(id)(handler)
-        f
+        val builder = Document.newBuilder
+        builder += ("_id" -> id)
+        // chain to findOne instead of hammersmith findOneByID for now because it returns an Option
+        findOne(builder.result, FindOneOptions(options.fields, options.overrideQueryFlags))
     }
 
     override def entityToUpsertableObject(entity : EntityType) : BSONDocument = {
