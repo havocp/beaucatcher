@@ -132,8 +132,11 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     private def completeWriteFromEither(f : DefaultCompletableFuture[WriteResult])(result : Either[Throwable, (Option[AnyRef], HammersmithWriteResult)]) : Unit = {
         result match {
-            case Left(e) => f.completeWithException(e)
-            case Right(valueAndResult) => f.completeWithResult(translateWriteResult(valueAndResult._2))
+            case Left(e) =>
+                f.completeWithException(e)
+            case Right(valueAndResult) =>
+                val result = valueAndResult._2
+                f.completeWithResult(translateWriteResult(result))
         }
     }
 
