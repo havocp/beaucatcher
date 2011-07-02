@@ -49,14 +49,45 @@
       Scala MongoDB API with async and BSON AST -> (JSON or CaseClass) pipeline
     </div>
 
-    <p>Beaucatcher is a library for using MongoDB collections from Scala. It
-    wraps and builds on a "driver library" (currently Casbah, working on
-    Hammersmith). It also includes a simple JSON parser and renderer.
+    <p>
+
+   </p>
+   <p>Beaucatcher is a Scala library for JSON <em>and</em> for
+    using MongoDB collections.
+   </p>
+   <p>("Beaucatcher" is also the name of the mountain in the middle of
+       Asheville, NC, if you're wondering where the word comes from.)
+   </p>
+   <p>
+     The idea is to approach a JSON parser/renderer,
+     a JSON/BSON data type, and a MongoDB API as a single
+     system. Beaucatcher lets you choose, on a per-query basis,
+     whether to make a synchronous or async call, and whether to
+     retrieve a typesafe case class or *SON data.
+   </p>
+    <p>MongoDB maps directly to JSON, and you probably ship JSON over HTTP;
+     why not recognize that in the library design?
+    </p>
+    <p>
+     Beaucatcher wraps and builds on a "driver library" (currently Casbah,
+     Hammersmith <a href="https://github.com/havocp/beaucatcher/commits/hammersmith-0.2">working on a branch</a>); it does not implement the MongoDB
+     wire protocol natively.
+    </p>
+    <p>
+     The JSON/BSON library is in a separate jar that doesn't depend
+     on MongoDB, so it can be used just as a JSON library.
+    </p>
+
+<p>
+Goals for Beaucatcher include:
+<ul>
+<li>Take advantage of the "Scala way" including immutable data, <a href="http://akka.io/">Akka</a>, and <a href="http://www.scala-lang.org/api/current/scala/collection/package.html">scala.collection</a>.</li>
+<li>Directly support both sync and async, and both case class and *SON data types; saving you writing conversion/wrapper code, and saving the overhead of data type conversions.</li>
+<li>Not tied to a specific web framework.</li>
+<li>Make it super easy to support JSON APIs that map to MongoDB, for example it should be trivial to connect something like <a href="http://documentcloud.github.com/backbone/">backbone.js</a> to a MongoDB collection.</li>
+</ul>
 </p>
 
-<p>("Beaucatcher" is also the name of the mountain in the middle of
-Asheville, NC, if you're wondering where the word comes from.)
-</p>
 
 <p>
 For examples and to learn more, please see
@@ -65,8 +96,13 @@ the <a href="https://github.com/havocp/beaucatcher#readme">README</a>.
 
 <p>
 Note: this project isn't quite ready to use, unless you're the kind that's happy
-to hack on the library itself (which should be simple!). You're welcome to send
-comments or play around with it. If you have any trouble let me know.
+to hack on the library itself (which should be simple!). In particular the
+Hammersmith and async support
+remain <a href="https://github.com/havocp/beaucatcher/commits/hammersmith-0.2">on
+a branch</a>, and there isn't a binary release yet. However the synchronous API
+(over Casbah) and the JSON code feel pretty solid, and have quite good unit test
+coverage. You're welcome to send comments or play around with it. If you have
+any trouble let me know.
 </p>
 
 <h2>Install</h2>
