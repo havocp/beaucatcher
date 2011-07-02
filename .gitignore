@@ -1,8 +1,9 @@
+/*/.classpath
+/*/.project
+/*/.scala_dependencies
+/*/.settings
 /bin/
-/.classpath
-/.project
-/.scala_dependencies
-/.settings
+/.history
 /project/build/target/
 /project/plugins/project/build.properties
 /project/plugins/src_managed/
