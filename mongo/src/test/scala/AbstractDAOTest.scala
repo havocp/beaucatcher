@@ -503,6 +503,12 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(4, old.get.intField)
         assertEquals(4, Foo.syncDAO.count())
         assertEquals(last._id, old.get._id)
+
+        // but we wrote out the new one and it has the old id and new field
+        val replaced = Foo.syncDAO[Foo].findOneById(old.get._id)
+        assertTrue(replaced.isDefined)
+        assertEquals(42, replaced.get.intField)
+        assertEquals(old.get._id, replaced.get._id)
     }
 
     @Test
@@ -550,28 +556,159 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     }
 
     @Test
+    def testFindAndReplaceNonexistent() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
+
+        val notThere = Foo.syncDAO[Foo].findAndReplace(BObject("intField" -> 124334),
+            newFoo(new ObjectId(), 42, "42"))
+        assertTrue(notThere.isEmpty)
+    }
+
+    @Test
     def testFindAndModify() {
-        // FIXME
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
+
+        val old = Foo.syncDAO[Foo].findOne(BObject("intField" -> 3))
+        assertTrue(old.isDefined)
+        assertEquals(3, old.get.intField)
+
+        // check we modify and return the old one
+        val stillOld = Foo.syncDAO[Foo].findAndModify(BObject("intField" -> 3),
+            BObject("$inc" -> BObject("intField" -> 87)))
+        assertTrue(stillOld.isDefined)
+        assertEquals(3, stillOld.get.intField)
+        assertEquals(4, Foo.syncDAO.count())
+        assertEquals(old.get._id, stillOld.get._id)
+
+        // but we wrote out the new one
+        val replaced = Foo.syncDAO[Foo].findOneById(old.get._id)
+        assertTrue(replaced.isDefined)
+        assertEquals(3 + 87, replaced.get.intField)
+        assertEquals(old.get._id, replaced.get._id)
+
+        // now pass in the flag to return the new one and check that works
+        val nowNew = Foo.syncDAO[Foo].findAndModify(BObject("intField" -> 90),
+            BObject("$inc" -> BObject("intField" -> 87)), Set[FindAndModifyFlag](FindAndModifyNew))
+        assertTrue(nowNew.isDefined)
+        assertEquals(3 + 87 + 87, nowNew.get.intField)
+        assertEquals(old.get._id, nowNew.get._id)
     }
 
     @Test
     def testFindAndModifyWithSort() {
-        // FIXME
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
+
+        // in natural order, we're expecting 1, 2, 3, 4
+        // since we insert them that way (not sure if mongo
+        // guarantees this?)
+        val firstNatural = Foo.syncDAO[Foo].findOne()
+        assertTrue(firstNatural.isDefined)
+        assertEquals(1, firstNatural.get.intField)
+
+        val sortedByIntBackward = Foo.syncDAO[Foo].find(BObject("query" -> BObject(),
+            "orderby" -> BObject("intField" -> -1)), AllFields, 0, 1, 0).toSeq
+        assertTrue(!sortedByIntBackward.isEmpty)
+        val last = sortedByIntBackward.last
+
+        assertEquals(4, last.intField)
+
+        // modify the last item sorting backward by intField
+        val old = Foo.syncDAO[Foo].findAndModify(BObject(),
+            BObject("$inc" -> BObject("intField" -> 87)),
+            BObject("intField" -> -1))
+
+        assertTrue(old.isDefined)
+        assertEquals(4, old.get.intField)
+        assertEquals(4, Foo.syncDAO.count())
+        assertEquals(last._id, old.get._id)
+
+        // check that the modification was made
+        val replaced = Foo.syncDAO[Foo].findOneById(old.get._id)
+        assertTrue(replaced.isDefined)
+        assertEquals(4 + 87, replaced.get.intField)
+        assertEquals(old.get._id, replaced.get._id)
     }
 
     @Test
     def testFindAndModifyWithFields() {
-        // FIXME
+        create1234Optional()
+        assertEquals(4, FooWithOptionalField.syncDAO.count())
+
+        val old = FooWithOptionalField.syncDAO[FooWithOptionalField].findOne(BObject("intField" -> 3))
+        assertTrue(old.isDefined)
+        assertEquals(3, old.get.intField)
+
+        // check we replace and return the old one minus excluded field
+        val stillOld = FooWithOptionalField.syncDAO[FooWithOptionalField].findAndModify(BObject("intField" -> 3),
+            BObject("$inc" -> BObject("intField" -> 87)), BObject(), ExcludedFields("stringField"), Set())
+        assertTrue(stillOld.isDefined)
+        assertEquals(3, stillOld.get.intField)
+        assertTrue(stillOld.get.stringField.isEmpty)
+        assertEquals(4, FooWithOptionalField.syncDAO.count())
+        assertEquals(old.get._id, stillOld.get._id)
+
+        // check that the modification was made
+        val replaced = FooWithOptionalField.syncDAO[FooWithOptionalField].findOneById(old.get._id)
+        assertTrue(replaced.isDefined)
+        assertEquals(90, replaced.get.intField)
+        assertEquals(old.get._id, replaced.get._id)
+    }
+
+    @Test
+    def testFindAndModifyNonexistent() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
+
+        val notThere = Foo.syncDAO[Foo].findAndModify(BObject("intField" -> 124334),
+            BObject("$inc" -> BObject("intField" -> 87)))
+        assertTrue(notThere.isEmpty)
     }
 
     @Test
     def testFindAndRemove() {
-        // FIXME
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
+
+        val old = Foo.syncDAO[Foo].findOne(BObject("intField" -> 3))
+        assertTrue(old.isDefined)
+        assertEquals(3, old.get.intField)
+
+        // check we remove and return the old one
+        val stillOld = Foo.syncDAO[Foo].findAndRemove(BObject("intField" -> 3))
+        assertTrue(stillOld.isDefined)
+        assertEquals(3, stillOld.get.intField)
+        assertEquals(old.get._id, stillOld.get._id)
+
+        // be sure it's removed
+        assertEquals(3, Foo.syncDAO.count())
+        assertFalse(Foo.syncDAO[Foo].findOneById(old.get._id).isDefined)
     }
 
     @Test
     def testFindAndRemoveWithSort() {
-        // FIXME
+        create2143()
+        assertEquals(4, Foo.syncDAO.count())
+
+        for (remaining <- 4 to 1) {
+            assertEquals(remaining, Foo.syncDAO.count())
+            val removed = Foo.syncDAO[Foo].findAndRemove(BObject(),
+                BObject("intField" -> -1))
+            assertTrue(removed.isDefined)
+            assertEquals(remaining, removed.get.intField)
+            assertEquals(remaining - 1, Foo.syncDAO.count())
+        }
+    }
+
+    @Test
+    def testFindAndRemoveNonexistent() {
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
+
+        val notThere = Foo.syncDAO[Foo].findAndRemove(BObject("intField" -> 124334))
+        assertTrue(notThere.isEmpty)
     }
 
     @Test

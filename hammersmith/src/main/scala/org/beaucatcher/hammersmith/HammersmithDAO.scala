@@ -143,7 +143,12 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
     // this is a workaround for a problem where we get a non-option but are wanting an option
     private def completeOptionalFromEither[T](f : DefaultCompletableFuture[Option[T]])(result : Either[Throwable, T]) : Unit = {
         result match {
-            case Left(e) => f.completeWithException(e)
+            case Left(e) =>
+                // FIXME horrible hack alert.
+                if (e.getMessage.contains("No matching object"))
+                    f.completeWithResult(None)
+                else
+                    f.completeWithException(e)
             case Right(o) => f.completeWithResult(Some(o))
         }
     }
