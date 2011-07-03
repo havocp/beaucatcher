@@ -113,6 +113,13 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         }
     }
 
+    private def create2143() {
+        for (i <- Seq(2, 1, 4, 3)) {
+            val foo = newFoo(new ObjectId(), i, i.toString)
+            Foo.syncDAO[Foo].insert(foo)
+        }
+    }
+
     private def create1234Optional() {
         for (i <- 1 to 4) {
             val foo = newFooWithOptionalField(new ObjectId(), i, Some(i.toString))
@@ -218,7 +225,26 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(2, twos(1).intField)
     }
 
-    // FIXME test find with an "orderby"
+    @Test
+    def testFindWithOrderBy() {
+        create2143()
+        create2143()
+        assertEquals(8, Foo.syncDAO.count())
+
+        val all = Foo.syncDAO[Foo].find(BObject("query" -> BObject(),
+            "orderby" -> BObject("intField" -> 1))).toIndexedSeq
+        assertEquals(8, all.length)
+        val expected = 1 to 4 flatMap { x => IndexedSeq(x, x) }
+        val actual = all map { _.intField }
+        assertEquals(expected, actual)
+
+        val allBackward = Foo.syncDAO[Foo].find(BObject("query" -> BObject(),
+            "orderby" -> BObject("intField" -> -1))).toIndexedSeq
+        assertEquals(8, all.length)
+        val expectedBackward = 1 to 4 flatMap { x => IndexedSeq(x, x) }
+        val actualBackward = all map { _.intField }
+        assertEquals(expectedBackward, actualBackward)
+    }
 
     // tests that the AllFields object does the same thing as not passing in
     // a fields object
