@@ -790,7 +790,40 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testUpdateWithModifier() {
-        // FIXME test update with modifier object
+        create1234()
+        assertEquals(4, Foo.syncDAO.count())
+
+        val old3 = Foo.syncDAO[Foo].findOne(BObject("intField" -> 3))
+        assertTrue(old3.isDefined)
+        assertEquals(3, old3.get.intField)
+
+        val old4 = Foo.syncDAO[Foo].findOne(BObject("intField" -> 4))
+        assertTrue(old4.isDefined)
+        assertEquals(4, old4.get.intField)
+
+        // update 3
+        Foo.syncDAO[Foo].update(BObject("intField" -> 3),
+            BObject("$inc" -> BObject("intField" -> 87)))
+        assertEquals(4, Foo.syncDAO.count())
+
+        // check we changed only one of the objects
+        val replaced3 = Foo.syncDAO[Foo].findOneById(old3.get._id)
+        assertTrue(replaced3.isDefined)
+        assertEquals(3 + 87, replaced3.get.intField)
+        assertEquals(old3.get._id, replaced3.get._id)
+
+        val replaced4 = Foo.syncDAO[Foo].findOneById(old4.get._id)
+        assertTrue(replaced4.isDefined)
+        assertEquals(4, replaced4.get.intField)
+        assertEquals(old4.get._id, replaced4.get._id)
+
+        val replaced1 = Foo.syncDAO[Foo].findOne(BObject("intField" -> 1))
+        assertTrue(replaced1.isDefined)
+        assertEquals(1, replaced1.get.intField)
+
+        val replaced2 = Foo.syncDAO[Foo].findOne(BObject("intField" -> 2))
+        assertTrue(replaced2.isDefined)
+        assertEquals(2, replaced2.get.intField)
     }
 
     @Test
@@ -823,9 +856,17 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testUpdateUpsertWithModifier() {
-        // FIXME test upsert with a modifier object, see
+        // Upsert using a modifier object, see
         // http://www.mongodb.org/display/DOCS/Updating
-        // for how to make this work
+
+        assertEquals(0, Foo.syncDAO.count())
+        Foo.syncDAO[Foo].updateUpsert(BObject("intField" -> 57),
+            BObject("$set" -> BObject("stringField" -> "hello")))
+        assertEquals(1, Foo.syncDAO.count())
+        val found = Foo.syncDAO[Foo].findOne()
+        assertTrue(found.isDefined)
+        assertEquals(57, found.get.intField)
+        assertEquals("hello", found.get.stringField)
     }
 
     @Test
