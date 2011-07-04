@@ -581,46 +581,48 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     override def iterator : Iterator[(String, ValueType)] = {
         value.map(field => (field._1, field._2)).iterator
     }
-    // The issue here is that asInstanceOf[A] doesn't use the
+
+    final private val unboxedClasses : Map[Class[_], Class[_]] = Map(
+        classOf[java.lang.Integer] -> classOf[Int],
+        classOf[java.lang.Double] -> classOf[Double],
+        classOf[java.lang.Boolean] -> classOf[Boolean],
+        classOf[java.lang.Long] -> classOf[Long],
+        classOf[java.lang.Short] -> classOf[Short],
+        classOf[java.lang.Character] -> classOf[Char],
+        classOf[java.lang.Byte] -> classOf[Byte],
+        classOf[java.lang.Float] -> classOf[Float],
+        classOf[scala.runtime.BoxedUnit] -> classOf[Unit])
+
+    // The trickiness here is that asInstanceOf[A] doesn't use the
     // manifest and thus doesn't do anything (no runtime type
-    // check). We have to use the manifest to cast by hand.
-    // Surely there is an easier way to do this! If you know it,
-    // please advise.
-    private def checkedCast[A <: Any : Manifest](value : Any) : A = {
-        // I could not tell you why we have to check both ScalaObject
-        // and AnyRef here, but for example
-        // manifest[BSONDocument] <:< manifest[AnyRef]
-        // is false.
-        if (manifest[A] <:< manifest[AnyRef] ||
-            manifest[A] <:< manifest[ScalaObject]) {
-            // casting to a boxed type
-            //println("casting with Class.cast to " + manifest[A] + " value is " + value)
-            manifest[A].erasure.asInstanceOf[Class[A]].cast(value)
-        } else {
-            // we have either Any or AnyVal, but not AnyRef or ScalaObject
-            if (value == null) {
-                if (manifest[A] == manifest[Any])
-                    // null is an Any
-                    null.asInstanceOf[A]
-                else
-                    throw new ClassCastException("null value can't be converted to AnyVal type " + manifest[A])
+    // check). So we have to do it by hand, special-casing
+    // AnyVal primitives because Java Class.cast won't work
+    // on them as desired.
+    private def checkedCast[A <: Any : ClassManifest](value : Any) : A = {
+        if (value == null) {
+            if (classManifest[A] <:< classManifest[AnyVal]) {
+                throw new ClassCastException("null can't be converted to AnyVal type " + classManifest[A])
             } else {
-                //println("casting with big switch to " + manifest[A] + " value is " + value)
-                // casting to an Any such as Int, we need boxed types to unpack,
-                // which asInstanceOf does but Class.cast does not
-                val asAnyVal = manifest[A] match {
-                    case m if m == manifest[Byte] => value.asInstanceOf[Byte]
-                    case m if m == manifest[Short] => value.asInstanceOf[Short]
-                    case m if m == manifest[Int] => value.asInstanceOf[Int]
-                    case m if m == manifest[Long] => value.asInstanceOf[Long]
-                    case m if m == manifest[Float] => value.asInstanceOf[Float]
-                    case m if m == manifest[Double] => value.asInstanceOf[Double]
-                    case m if m == manifest[Boolean] => value.asInstanceOf[Boolean]
-                    case m if m == manifest[Char] => value.asInstanceOf[Char]
-                    case m if m == manifest[Any] => value.asInstanceOf[Any]
-                    case m => throw new UnsupportedOperationException("Type " + manifest[A] + " not supported by getAs, value is: " + value)
-                }
-                asAnyVal.asInstanceOf[A]
+                null.asInstanceOf[A]
+            }
+        } else {
+            val klass = value.asInstanceOf[AnyRef].getClass
+            val unboxedClass = unboxedClasses.getOrElse(klass, klass)
+
+            /* value and the return value are always boxed because that's how
+             * an Any is passed around; type A we're casting to may be boxed or
+             * unboxed. For example, value is always java.lang.Integer for
+             * ints, but A could be java.lang.Integer OR scala Int. But
+             * even if A is Int, the return value is really always a
+             * java.lang.Integer, so we can leave the value boxed.
+             */
+
+            if (classManifest[A].erasure.isAssignableFrom(unboxedClass) ||
+                classManifest[A].erasure.isAssignableFrom(klass)) {
+                value.asInstanceOf[A]
+            } else {
+                throw new ClassCastException("Requested " + classManifest[A] + " but value is " + value + " with type " +
+                    klass.getName)
             }
         }
     }
