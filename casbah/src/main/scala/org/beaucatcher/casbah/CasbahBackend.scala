@@ -2,29 +2,14 @@ package org.beaucatcher.casbah
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.conversions.scala._
 import org.joda.time.DateTime
 
-class CasbahBackend(private val databaseName : String,
-    private val host : String,
-    private val port : Int) extends MongoBackend {
+private[casbah] class CasbahBackend(private val databaseName : String,
+    private val host : String, private val port : Int) extends MongoBackend {
 
-    private lazy val connection_ = {
-        RegisterJodaTimeConversionHelpers()
-
-        val c = MongoConnection(host, port)
-        // things are awfully race-prone without Safe, and you
-        // don't get constraint violations for example
-        c.setWriteConcern(WriteConcern.Safe)
-        Some(c)
-    }
-
-    /**
-     * Casbah's connection object used by this backend.
-     */
-    lazy val connection = connection_.getOrElse(null)
+    private lazy val connection = CasbahBackend.connections.ensure(MongoConnectionAddress(host, port))
 
     private def collection(name : String) : MongoCollection = {
         if (name == null)
@@ -44,6 +29,22 @@ class CasbahBackend(private val databaseName : String,
             caseClassBObjectEntityComposer,
             new IdentityIdComposer[IdType])
     }
+}
+
+private[casbah] object CasbahBackend {
+
+    val connections = new MongoConnectionStore[MongoConnection] {
+        override def create(address : MongoConnectionAddress) = {
+            RegisterJodaTimeConversionHelpers()
+
+            val c = MongoConnection(address.host, address.port)
+            // things are awfully race-prone without Safe, and you
+            // don't get constraint violations for example
+            c.setWriteConcern(WriteConcern.Safe)
+            c
+        }
+    }
+
 }
 
 /**

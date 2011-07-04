@@ -4,22 +4,14 @@ import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import com.mongodb.async._
 
-class HammersmithBackend(private val databaseName : String,
+private[hammersmith] class HammersmithBackend(private val databaseName : String,
     private val host : String,
     private val port : Int) extends MongoBackend {
-
-    private lazy val connection_ = {
-        val c = MongoConnection(host, port)
-        // things are awfully race-prone without Safe, and you
-        // don't get constraint violations for example
-        c.writeConcern = WriteConcern.Safe
-        Some(c)
-    }
 
     /**
      * Hammersmith's connection object used by this backend.
      */
-    lazy val connection = connection_.getOrElse(null)
+    lazy val connection = HammersmithBackend.connections.ensure(MongoConnectionAddress(host, port))
 
     private def collection(name : String) : Collection = {
         if (name == null)
@@ -38,6 +30,18 @@ class HammersmithBackend(private val databaseName : String,
             caseClassBObjectQueryComposer,
             caseClassBObjectEntityComposer,
             new IdentityIdComposer[IdType])
+    }
+}
+
+private[hammersmith] object HammersmithBackend {
+    val connections = new MongoConnectionStore[MongoConnection] {
+        override def create(address : MongoConnectionAddress) = {
+            val c = MongoConnection(address.host, address.port)
+            // things are awfully race-prone without Safe, and you
+            // don't get constraint violations for example
+            c.writeConcern = WriteConcern.Safe
+            c
+        }
     }
 }
 
