@@ -49,7 +49,7 @@ object Dependencies {
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
     val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
-    val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.0"
+    val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.5"
 
     // Dependencies in "test" configuration
     object Test {
@@ -88,10 +88,6 @@ object BeaucatcherBuild extends Build {
         file("async"),
         settings = projectSettings ++
             Seq(libraryDependencies := Seq(akkaActor))) dependsOn (mongo % "compile->compile;test->test")
-
-    // well, nice idea, but doesn't work with an sbt 0.7 project
-    //lazy val bsonDriver = ProjectRef(uri("git://github.com/havocp/hammersmith.git#havocp-2011-07-01"), "bson-driver")
-    //lazy val mongoDriver = ProjectRef(uri("git://github.com/havocp/hammersmith.git#havocp-2011-07-01"), "mongo-driver")
 
     lazy val hammersmith = Project("beaucatcher-hammersmith",
         file("hammersmith"),
