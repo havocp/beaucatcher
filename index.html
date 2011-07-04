@@ -35,15 +35,7 @@
 
   <div id="container">
 
-    <div class="download">
-      <a href="http://github.com/havocp/beaucatcher/zipball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
-      <a href="http://github.com/havocp/beaucatcher/tarball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
-    </div>
-
-    <h1><a href="http://github.com/havocp/beaucatcher">beaucatcher</a>
-      <span class="small">by <a href="http://github.com/havocp">havocp</a></span></h1>
+    <h1><a href="http://github.com/havocp/beaucatcher">beaucatcher</a></h1>
 
     <div class="description">
       Scala MongoDB API with async and BSON AST -> (JSON or CaseClass) pipeline
@@ -69,13 +61,15 @@
      why not recognize that in the library design?
     </p>
     <p>
-     Beaucatcher wraps and builds on a "driver library" (currently Casbah,
-     Hammersmith <a href="https://github.com/havocp/beaucatcher/commits/hammersmith-0.2">working on a branch</a>); it does not implement the MongoDB
-     wire protocol natively.
+     Beaucatcher wraps and builds on a "driver library"
+     (<a href="https://github.com/mongodb/casbah">Casbah</a>
+     or <a href="https://github.com/bwmcadams/hammersmith">Hammersmith</a>); it
+     does not implement the MongoDB wire protocol natively.
     </p>
     <p>
      The JSON/BSON library is in a separate jar that doesn't depend
-     on MongoDB, so it can be used just as a JSON library.
+     on MongoDB, so it can be used just as a JSON library if you want
+     a simple one.
     </p>
 
 <p>
@@ -94,30 +88,146 @@ For examples and to learn more, please see
 the <a href="https://github.com/havocp/beaucatcher#readme">README</a>.
 </p>
 
+<h2>Status</h2>
+
 <p>
-Note: this project isn't quite ready to use, unless you're the kind that's happy
-to hack on the library itself (which should be simple!). In particular the
-Hammersmith and async support
-remain <a href="https://github.com/havocp/beaucatcher/commits/hammersmith-0.2">on
-a branch</a>, and there isn't a binary release yet. However the synchronous API
-(over Casbah) and the JSON code feel pretty solid, and have quite good unit test
-coverage. You're welcome to send comments or play around with it. If you have
-any trouble let me know.
+This project isn't quite ready to use, unless you're the kind that's happy
+to hack on the library itself (which should be simple!).
+</p>
+
+<p>
+The thorny bits are in the driver code (Casbah or Hammersmith), and you can
+always drop down and use Casbah or Hammersmith directly if you have trouble, so
+you can think of Beaucatcher as the convenience wrapper you don't have to write
+yourself.
+</p>
+
+<p>Here's some stuff that seems to be in good shape:
+<ul>
+<li>BSON/JSON AST and parser are comprehensive and have solid test coverage.</li>
+<li>Complete set of synchronous DAO operations (all the MongoDB query and update types, with the options they support).</li>
+<li>Solid test coverage of synchronous DAO operations.</li>
+<li>CollectionOperations class; derive your case class companion object from it, to get a syncDAO[T] field.</li>
+<li>Validation of JSON against a case class.</li>
+<li>Select Casbah or Hammersmith by mixing in the right trait to your
+CollectionOperations object.
+</li>
+</ul>
+</p>
+
+<p>In short I think it's pretty good as a JSON-friendly case-class-friendly
+convenience wrapper for Casbah's synchronous API, and the same API works on
+Hammersmith too.</p>
+
+<p>Here's some stuff that needs doing, much of it simple, if you need a
+particular thing then let me know:
+<ul>
+<li>A binary release. I have to figure out how to do this and where to put
+it.</li>
+<li>More docs, though there are some. Need an SBT target to publish them.</li>
+<li>A nice example app using akka-mist to illustrate (and test) a JSON API.</li>
+<li>Implement AsyncDAO for Casbah, not just Hammersmith.</li>
+<li>Add asyncDAO[T] to CollectionOperations.</li>
+<li>There's a dumb bug where every collection has its own Mongo connection, needs fixing.</li>
+<li>There's no control over flags such as Tailable, AwaitData.</li>
+<li>There's no support for setting a WriteConcern (Safe mode is hardcoded).</li>
+<li>There's no way to explicitly close a cursor.</li>
+<li>DAO type should probably support ensureIndex(), no point making people use Casbah or Hammersmith directly just to create an index.</li>
+<li>The WriteResult type in the DAO API is really Casbah-specific and needs to be replaced with a Beaucatcher-specific type abstracting the backends.</li>
+<li>ObjectId is mutable, technically, because it has an "isNew" flag. In practice, Beaucatcher ignores that flag and doesn't call the Casbah method that uses it. The flag is used to decide whether save() means insert() or update(), which may be an optimization. Not sure what to do here, doesn't seem worth forking ObjectId over a purely theoretical issue.</li>
+<li>Optimization: clean up intermediate representations. This includes a custom serializer in Hammersmith, or perhaps two (one to go to BObject, one to go straight to case class).</li>
+<li>Optimization: chill out thread handoffs. Right now library boundaries are creating threads in the async case, i.e. there are threads in Hammersmith and then Akka threads in Beaucatcher itself and then probably web threads. In principle we only need one thread per request.</li>
+<li>Optimization: profile and see what actually needs optimizing.</li>
+<li>There's an Akka Actor version of the DAO internally; should it be public API?</li>
+<li>Could have some kind of query DSL for BObject. This seems hard to make too fancy without a Lift-style ActiveRecord setup.</li>
+<li>Haven't figured out exactly how collections will get initialized on
+application load (or on first use of the collection). For example, where do you
+create indexes. For now can be done by hand as you would with Casbah. One option
+is scanning of case classes to figure out what your collections are as in Salat
+or JPA, but I'm not sure that's the right approach for Beaucatcher.
+</li>
+<li>It's software, this list has no end ;-)</li>
+</ul>
+</p>
+
+<p>
+Anyway, you're welcome to send comments or play around with it. If you have any
+trouble let me know. If you like one aspect of the lib but not another, let me
+know about both.
+</p>
+
+<p>
+Please don't expect a stable API for now (though if you snapshot the code, which
+you are welcome to do, the API won't change on your copy!). That said, there's
+enough code written that I don't expect big gratuitous changes.
 </p>
 
 <h2>Install</h2>
-<p>Build from source, for now.</p>
+<p>Build from source, for now. Just get sbt 0.10.0 and use "sbt package".</p>
 <h2>License</h2>
-<p>Apache 2.0</p>
+<p><a href="https://github.com/havocp/beaucatcher/blob/master/LICENSE">Apache 2.0</a></p>
 <h2>Authors</h2>
-<p>Havoc Pennington (hp@pobox.com)<br/><br/>      </p>
-<h2>Contact</h2>
-<p>Havoc Pennington (hp@pobox.com)<br/>      </p>
+<p><a href="http://ometer.com/">Havoc Pennington</a></p>
 
+<h2>Credits</h2>
+
+<p>
+There are ideas and some code
+from <a href="https://github.com/novus/salat">Salat</a>, <a href="https://github.com/jdegoes/blueeyes/tree/master/src/main/scala/blueeyes/persistence/mongo">BlueEyes
+persistence</a>,
+and <a href="https://github.com/lift/framework/tree/master/core/json">lift-json</a>
+included here. You could think of this library as taking the
+MongoDB-object-to-case-class stuff from Salat, the MongoDB-to-syntax-tree stuff
+from BlueEyes persistence, and pulling them together in a stripped-down form. I
+never claimed to be original.
+</p>
+
+<p>
+"Stripped-down form" means for example:
+<ul>
+
+<li>doesn't have the JSON transformation stuff from list-json, or extras such as
+XML conversion, it just has a parser and AST.</li>
+
+<li>doesn't have a lot of the more advanced ORM type functionality of Salat.
+Beaucatcher just does a dead-stupid mapping from BSON to case class, where your
+case class fields have to match the types in the BSON exactly. You can override
+a method to massage the BSON as it goes to/from the case class, but that's about
+it.
+</li>
+
+<li>doesn't have quite a few things found in BlueEyes, such as the query
+builder.
+</li>
+
+<li>
+doesn't have the fancy query safety
+of <a href="https://github.com/foursquare/rogue">Rogue</a> because there isn't a
+Lift Record to get the schema from at compile time.
+</li>
+
+</ul>
+</p>
+
+<p>
+I'm not necessarily against any of these features (the point of Beaucatcher
+isn't necessarily to be "stripped down") but I just haven't thought about them
+or it seems like they should be part of a higher layer like a web framework.
+</p>
+
+<p>
+Beaucatcher might work well with
+say <a href="http://scala.playframework.org/">Play Scala</a>
+or <a href="http://akka.io/docs/akka/1.1.3/scala/http.html">Akka http</a> since
+those lack an existing way to do JSON or MongoDB.
+</p>
 
     <h2>Download</h2>
     <p>
-      You can download this project in either
+      View the source code on GitHub at <a href="http://github.com/havocp/beaucatcher">havocp/beaucatcher</a>
+    </p>
+    <p>
+      You can download source code from github in either
       <a href="http://github.com/havocp/beaucatcher/zipball/master">zip</a> or
       <a href="http://github.com/havocp/beaucatcher/tarball/master">tar</a> formats.
     </p>
@@ -125,10 +235,7 @@ any trouble let me know.
       by running:
       <pre>$ git clone git://github.com/havocp/beaucatcher</pre>
     </p>
-
-    <div class="footer">
-      get the source code on GitHub : <a href="http://github.com/havocp/beaucatcher">havocp/beaucatcher</a>
-    </div>
+    <p><br/></p>
 
   </div>
 
