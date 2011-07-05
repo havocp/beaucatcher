@@ -637,8 +637,6 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     def getUnwrappedAs[A : Manifest](key : String) : A = {
         get(key) match {
             case Some(bvalue) =>
-                // FIXME I don't know if the asInstanceOf will really do anything
-                // or if it just gets erased
                 checkedCast[A](bvalue.unwrapped)
             case None =>
                 throw new NoSuchElementException("Key not found in BSON object: " + key)
