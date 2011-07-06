@@ -28,8 +28,8 @@ private[hammersmith] class CaseClassBObjectHammersmithDAOGroup[EntityType <: Pro
      */
     private lazy val bobjectHammersmithQueryComposer : QueryComposer[BObject, BSONDocument] =
         new BObjectHammersmithQueryComposer()
-    private lazy val bobjectHammersmithEntityComposer : EntityComposer[BObject, BSONDocument] =
-        new BObjectHammersmithEntityComposer()
+    private lazy val bobjectHammersmithEntityComposer : EntityComposer[BObject, BObject] =
+        new IdentityEntityComposer[BObject]()
     private lazy val bobjectHammersmithIdComposer : IdComposer[BObjectIdType, HammersmithIdType] =
         new IdComposer[BObjectIdType, HammersmithIdType] {
             override def idOut(id : HammersmithIdType) : BObjectIdType = id.asInstanceOf[BObjectIdType]
@@ -43,8 +43,8 @@ private[hammersmith] class CaseClassBObjectHammersmithDAOGroup[EntityType <: Pro
      *  This is best avoided because the hope is that Hammersmith would allow us to
      *  eliminate this layer. In fact, we'll make this private...
      */
-    private lazy val hammersmithSyncDAO : SyncDAO[BSONDocument, BSONDocument, HammersmithIdType, Any] = {
-        makeSync(new HammersmithAsyncDAO[BSONDocument, HammersmithIdType](collection))
+    private lazy val hammersmithSyncDAO : SyncDAO[BSONDocument, BObject, HammersmithIdType, Any] = {
+        makeSync(new HammersmithAsyncDAO[BObject, HammersmithIdType](collection))
     }
 
     override lazy val bobjectSyncDAO : BObjectSyncDAO[BObjectIdType] = {

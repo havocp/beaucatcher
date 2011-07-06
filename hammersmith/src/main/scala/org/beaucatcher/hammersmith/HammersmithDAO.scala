@@ -100,7 +100,7 @@ private class CursorIterator[T : SerializableBSONObject](val cursor : Cursor[T])
     }
 }
 
-private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObject, IdType <: AnyRef](protected val collection : Collection)
+private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObject : Manifest, IdType <: AnyRef](protected val collection : Collection)
     extends AsyncDAO[BSONDocument, EntityType, IdType, Any] {
     private implicit def optionalfields2bsondocument(maybeFields : Option[Fields]) : BSONDocument = {
         maybeFields match {
@@ -246,8 +246,10 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     override def entityToUpsertableObject(entity : EntityType) : BSONDocument = {
         entity match {
-            case doc : BSONDocument =>
-                doc
+            case doc : BObject =>
+                new BObjectBSONDocument(doc)
+            case doc : JObject =>
+                new BObjectBSONDocument(doc)
             case _ =>
                 throw new UnsupportedOperationException("entityToUpsertableObject not implemented for " + entity)
         }
@@ -255,11 +257,10 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     override def entityToModifierObject(entity : EntityType) : BSONDocument = {
         entity match {
-            case doc : BSONDocument =>
-                val builder = Document.newBuilder
-                // strip _id
-                doc.asMap foreach ({ kv => if (kv._1 != "_id") builder += kv })
-                builder.result
+            case doc : BObject =>
+                new BObjectBSONDocument(doc - "_id")
+            case doc : JObject =>
+                new BObjectBSONDocument(doc - "_id")
             case _ =>
                 throw new UnsupportedOperationException("entityToModifierObject not implemented for " + entity)
         }
@@ -267,10 +268,10 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     override def entityToUpdateQuery(entity : EntityType) : BSONDocument = {
         entity match {
-            case doc : BSONDocument =>
+            case doc : ObjectBase[_, _] =>
                 val builder = Document.newBuilder
                 // we want only _id
-                builder += Pair("_id", doc.get("_id").get)
+                builder += Pair("_id", doc.getUnwrappedAs[Any]("_id"))
                 builder.result
             case _ =>
                 throw new UnsupportedOperationException("entityToUpdateQuery not implemented for " + entity)
@@ -321,20 +322,9 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
     }
 }
 
-private[hammersmith] class BObjectBSONDocument(bobject : BObject) extends BSONDocument {
-    // we have to make a mutable map to make hammersmith happy, which pretty much blows
-    override val self = scala.collection.mutable.HashMap.empty ++ bobject.unwrapped
-    override def asMap = self
-}
-
 private[hammersmith] class BObjectHammersmithQueryComposer extends QueryComposer[BObject, BSONDocument] {
     override def queryIn(q : BObject) : BSONDocument = new BObjectBSONDocument(q)
     override def queryOut(q : BSONDocument) : BObject = BObject(q.toList map { kv => (kv._1, BValue.wrap(kv._2)) })
-}
-
-private[hammersmith] class BObjectHammersmithEntityComposer extends EntityComposer[BObject, BSONDocument] {
-    override def entityIn(o : BObject) : BSONDocument = new BObjectBSONDocument(o)
-    override def entityOut(o : BSONDocument) : BObject = BObject(o.toList map { kv => (kv._1, BValue.wrap(kv._2)) })
 }
 
 /**
@@ -342,11 +332,11 @@ private[hammersmith] class BObjectHammersmithEntityComposer extends EntityCompos
  * Subclass would provide the backend and could override the in/out type converters.
  */
 private[hammersmith] abstract trait BObjectHammersmithSyncDAO[OuterIdType, InnerIdType <: AnyRef]
-    extends BObjectComposedSyncDAO[OuterIdType, BSONDocument, BSONDocument, InnerIdType, Any] {
-    override protected val backend : SyncDAO[BSONDocument, BSONDocument, InnerIdType, Any]
+    extends BObjectComposedSyncDAO[OuterIdType, BSONDocument, BObject, InnerIdType, Any] {
+    override protected val backend : SyncDAO[BSONDocument, BObject, InnerIdType, Any]
 
     override protected val queryComposer : QueryComposer[BObject, BSONDocument]
-    override protected val entityComposer : EntityComposer[BObject, BSONDocument]
+    override protected val entityComposer : EntityComposer[BObject, BObject]
     override protected val idComposer : IdComposer[OuterIdType, InnerIdType]
 }
 
