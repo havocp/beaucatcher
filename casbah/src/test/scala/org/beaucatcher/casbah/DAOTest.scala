@@ -1,27 +1,29 @@
+package org.beaucatcher.casbah
+
+import com.mongodb.casbah.commons.MongoDBObject
+import com.mongodb.casbah.MongoCollection
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
-import org.beaucatcher.hammersmith._
+import org.beaucatcher.casbah._
 import org.beaucatcher.mongo._
 import org.bson.types._
 import org.junit.Assert._
 import org.junit._
 
-package foohammersmith {
+package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
 
     object Foo extends CollectionOperations[Foo, ObjectId]
-        with HammersmithTestProvider {
+        with CasbahTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
-
-        System.setProperty("org.apache.commons.logging.simplelog.defaultlog", "debug")
     }
 
     case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
 
     object FooWithIntId extends CollectionOperations[FooWithIntId, Int]
-        with HammersmithTestProvider {
+        with CasbahTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
@@ -30,12 +32,12 @@ package foohammersmith {
     case class FooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) extends abstractfoo.AbstractFooWithOptionalField
 
     object FooWithOptionalField extends CollectionOperations[FooWithOptionalField, ObjectId]
-        with HammersmithTestProvider {
+        with CasbahTestProvider {
     }
 }
 
-import foohammersmith._
-class DAOTestHammersmith
+import foo._
+class DAOTest
     extends AbstractDAOTest[Foo, FooWithIntId, FooWithOptionalField](Foo, FooWithIntId, FooWithOptionalField) {
     override def newFoo(_id : ObjectId, intField : Int, stringField : String) = Foo(_id, intField, stringField)
     override def newFooWithIntId(_id : Int, intField : Int, stringField : String) = FooWithIntId(_id, intField, stringField)

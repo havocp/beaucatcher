@@ -1,3 +1,5 @@
+package org.beaucatcher.bson
+
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.bson.types.{ BSONTimestamp, ObjectId, Binary }

@@ -1,3 +1,4 @@
+package org.beaucatcher.bson
 
 abstract trait TestUtils {
     protected def intercept[E <: Throwable : Manifest](block : => Unit) : E = {

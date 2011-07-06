@@ -1,3 +1,5 @@
+package org.beaucatcher.bson
+
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import org.junit.Assert._

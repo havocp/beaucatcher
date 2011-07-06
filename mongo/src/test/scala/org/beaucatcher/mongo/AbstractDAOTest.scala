@@ -1,3 +1,5 @@
+package org.beaucatcher.mongo
+
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._

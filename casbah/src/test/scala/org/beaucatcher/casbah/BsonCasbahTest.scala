@@ -1,3 +1,5 @@
+package org.beaucatcher.casbah
+
 import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._

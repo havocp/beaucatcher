@@ -1,3 +1,5 @@
+package org.beaucatcher.casbah
+
 import org.beaucatcher.mongo.SyncDAO
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._

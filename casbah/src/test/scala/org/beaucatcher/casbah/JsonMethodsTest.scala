@@ -1,3 +1,5 @@
+package org.beaucatcher.casbah
+
 import com.mongodb.casbah.commons.MongoDBObject
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._

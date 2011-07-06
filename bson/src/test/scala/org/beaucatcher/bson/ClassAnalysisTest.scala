@@ -1,5 +1,6 @@
+package org.beaucatcher.bson
+
 import scala.tools.scalap.scalax.rules.scalasig.TypeRefType
-import org.beaucatcher.bson.ClassAnalysis
 import org.junit.Assert._
 import org.junit._
 

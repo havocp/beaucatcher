@@ -1,3 +1,5 @@
+package org.beaucatcher.bson
+
 import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
