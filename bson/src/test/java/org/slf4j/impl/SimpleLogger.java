@@ -40,12 +40,12 @@ import org.slf4j.helpers.MessageFormatter;
 /**
  * A simple (and direct) implementation that logs messages of level INFO or
  * higher on the console (<code>System.err<code>).
- * 
+ *
  * <p>The output includes the relative time in milliseconds, thread
  * name, the level, logger name, and the message followed by the line
  * separator for the host.  In log4j terms it amounts to the "%r [%t]
  * %level %logger - %m%n" pattern. </p>
- * 
+ *
  * <p>Sample output follows.</p>
 <pre>
 176 [main] INFO examples.Sort - Populating an array of 2 elements in reverse order.
@@ -59,7 +59,7 @@ import org.slf4j.helpers.MessageFormatter;
         at org.log4j.examples.Sort.main(Sort.java:64)
 467 [main] INFO  examples.Sort - Exiting main method.
 </pre>
- * 
+ *
  * @author Ceki G&uuml;lc&uuml;
  */
 public class SimpleLogger extends MarkerIgnoringBase {
@@ -84,13 +84,24 @@ public class SimpleLogger extends MarkerIgnoringBase {
     this.name = name;
   }
 
+    private static boolean isEnvVarLevel(String name) {
+        String v = System.getenv("SLF4J_LEVEL");
+        return v != null && v.toLowerCase().startsWith(name);
+  }
+
+    private static final boolean traceEnvVarSet = isEnvVarLevel("trace");
+    private static final boolean debugEnvVarSet = traceEnvVarSet
+            || isEnvVarLevel("debug");
+    private static final boolean infoEnvVarSet = debugEnvVarSet
+            || isEnvVarLevel("info");
+
   /**
    * Always returns false.
-   * 
+   *
    * @return always false
    */
   public boolean isTraceEnabled() {
-    return false;
+        return traceEnvVarSet;
   }
 
   /**
@@ -98,7 +109,8 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * level.
    */
   public void trace(String msg) {
-    // NOP
+        if (isTraceEnabled())
+            log("TRACE", msg, null);
   }
 
   /**
@@ -106,7 +118,8 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * level.
    */
   public void trace(String format, Object param1) {
-    // NOP
+        if (isTraceEnabled())
+            formatAndLog("TRACE", format, param1, null);
   }
 
   /**
@@ -114,11 +127,13 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * level.
    */
   public void trace(String format, Object param1, Object param2) {
-    // NOP
+        if (isTraceEnabled())
+            formatAndLog("TRACE", format, param1, param2);
   }
 
   public void trace(String format, Object[] argArray) {
-    // NOP
+        if (isTraceEnabled())
+            formatAndLog("TRACE", format, argArray);
   }
 
   /**
@@ -126,16 +141,17 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * level.
    */
   public void trace(String msg, Throwable t) {
-    // NOP
+        if (isTraceEnabled())
+            log("TRACE", msg, t);
   }
 
   /**
    * Always returns false.
-   * 
+   *
    * @return always false
    */
   public boolean isDebugEnabled() {
-    return false;
+        return debugEnvVarSet;
   }
 
   /**
@@ -143,7 +159,8 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * level.
    */
   public void debug(String msg) {
-    // NOP
+        if (isDebugEnabled())
+            log("DEBUG", msg, null);
   }
 
   /**
@@ -151,7 +168,8 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * level.
    */
   public void debug(String format, Object param1) {
-    // NOP
+        if (isDebugEnabled())
+            formatAndLog("DEBUG", format, param1, null);
   }
 
   /**
@@ -159,11 +177,13 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * level.
    */
   public void debug(String format, Object param1, Object param2) {
-    // NOP
+        if (isDebugEnabled())
+            formatAndLog("DEBUG", format, param1, param2);
   }
 
   public void debug(String format, Object[] argArray) {
-    // NOP
+        if (isDebugEnabled())
+        formatAndLog("DEBUG", format, argArray);
   }
 
   /**
@@ -171,13 +191,14 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * level.
    */
   public void debug(String msg, Throwable t) {
-    // NOP
+        if (isDebugEnabled())
+            log("DEBUG", msg, t);
   }
 
   /**
    * This is our internal implementation for logging regular (non-parameterized)
    * log messages.
-   * 
+   *
    * @param level
    * @param message
    * @param t
@@ -211,7 +232,7 @@ public class SimpleLogger extends MarkerIgnoringBase {
 
   /**
    * For formatted messages, first substitute arguments and then log.
-   * 
+   *
    * @param level
    * @param format
    * @param param1
@@ -225,7 +246,7 @@ public class SimpleLogger extends MarkerIgnoringBase {
 
   /**
    * For formatted messages, first substitute arguments and then log.
-   * 
+   *
    * @param level
    * @param format
    * @param argArray
@@ -239,7 +260,7 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * Always returns true.
    */
   public boolean isInfoEnabled() {
-    return true;
+        return infoEnvVarSet;
   }
 
   /**
@@ -247,7 +268,8 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * to the format outlined above.
    */
   public void info(String msg) {
-    log(INFO_STR, msg, null);
+        if (isInfoEnabled())
+            log(INFO_STR, msg, null);
   }
 
   /**
@@ -255,7 +277,8 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * INFO according to the format outlined above.
    */
   public void info(String format, Object arg) {
-    formatAndLog(INFO_STR, format, arg, null);
+        if (isInfoEnabled())
+            formatAndLog(INFO_STR, format, arg, null);
   }
 
   /**
@@ -263,7 +286,8 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * INFO according to the format outlined above.
    */
   public void info(String format, Object arg1, Object arg2) {
-    formatAndLog(INFO_STR, format, arg1, arg2);
+        if (isInfoEnabled())
+            formatAndLog(INFO_STR, format, arg1, arg2);
   }
 
   /**
@@ -271,14 +295,16 @@ public class SimpleLogger extends MarkerIgnoringBase {
    * INFO according to the format outlined above.
    */
   public void info(String format, Object[] argArray) {
-    formatAndLog(INFO_STR, format, argArray);
+        if (isInfoEnabled())
+            formatAndLog(INFO_STR, format, argArray);
   }
 
   /**
    * Log a message of level INFO, including an exception.
    */
   public void info(String msg, Throwable t) {
-    log(INFO_STR, msg, t);
+        if (isInfoEnabled())
+            log(INFO_STR, msg, t);
   }
 
   /**
