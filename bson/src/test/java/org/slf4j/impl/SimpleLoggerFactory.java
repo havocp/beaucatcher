@@ -49,10 +49,10 @@ public class SimpleLoggerFactory implements ILoggerFactory {
 
   final static SimpleLoggerFactory INSTANCE = new SimpleLoggerFactory();
 
-  Map loggerMap;
+    Map<Object, Object> loggerMap;
 
   public SimpleLoggerFactory() {
-        loggerMap = new HashMap();
+        loggerMap = new HashMap<Object, Object>();
   }
 
   /**
