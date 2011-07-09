@@ -140,16 +140,12 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
         }
     }
 
-    // this is a workaround for a problem where we get a non-option but are wanting an option
-    private def completeOptionalFromEither[T](f : DefaultCompletableFuture[Option[T]])(result : Either[Throwable, T]) : Unit = {
+    private def completeOptionalFromEither[T](f : DefaultCompletableFuture[Option[T]])(result : Either[Throwable, Option[T]]) : Unit = {
         result match {
             case Left(e) =>
-                // FIXME horrible hack alert.
-                if (e.getMessage.contains("No matching object"))
-                    f.completeWithResult(None)
-                else
-                    f.completeWithException(e)
-            case Right(o) => f.completeWithResult(Some(o))
+                f.completeWithException(e)
+            case Right(o) =>
+                f.completeWithResult(o)
         }
     }
 
@@ -280,7 +276,7 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
 
     override def findAndModify(query : BSONDocument, update : Option[BSONDocument], options : FindAndModifyOptions[BSONDocument]) : Future[Option[EntityType]] = {
         val f = newPromise[Option[EntityType]]
-        val handler = RequestFutures.command[EntityType](completeOptionalFromEither(f)(_))
+        val handler = RequestFutures.findAndModify[EntityType](completeOptionalFromEither(f)(_))
         // query, sort, remove, update, getNew, fields, upsert
         collection.findAndModify(query,
             if (options.sort.isDefined) { options.sort.get : BSONDocument } else { emptyQuery },

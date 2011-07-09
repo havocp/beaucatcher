@@ -62,30 +62,4 @@ private[hammersmith] trait ObjectBaseSerializer[ValueType <: BValue, Repr <: Map
     final override def _id(doc : DocType) : Option[AnyRef] = {
         doc.get("_id")
     }
-
-    final override def checkBooleanCommandResult(doc : DocType) : Option[String] = {
-        doc.get("ok") match {
-            case Some(BDouble(1.0)) =>
-                None
-            case Some(_) | None => {
-                val err = doc.get("errmsg") match {
-                    case Some(BString(s)) =>
-                        s
-                    case _ =>
-                        ""
-                }
-                Some("Bad Boolean Command Result: %s  / %s".format(doc, err))
-            }
-        }
-    }
-
-    final override def getValueField(doc : DocType)(implicit mf : Manifest[DocType]) : Option[DocType] = {
-        val maybeDoc = doc.get("value")
-        maybeDoc match {
-            case Some(o) if mf.erasure.isAssignableFrom(o.getClass) =>
-                Some(o.asInstanceOf[DocType])
-            case _ =>
-                None
-        }
-    }
 }

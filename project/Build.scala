@@ -49,7 +49,7 @@ object Dependencies {
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
     val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
-    val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.5"
+    val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.6"
 
     // Dependencies in "test" configuration
     object Test {
