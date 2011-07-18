@@ -93,4 +93,9 @@ object BeaucatcherBuild extends Build {
         file("hammersmith"),
         settings = projectSettings ++
             Seq(libraryDependencies := Seq(hammersmithLib))) dependsOn (async % "compile->compile;test->test")
+
+    lazy val benchmark = Project("beaucatcher-benchmark",
+        file("benchmark"),
+        settings = projectSettings ++
+            Seq(fork in run := true)) dependsOn (hammersmith, casbah)
 }
