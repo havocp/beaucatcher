@@ -119,9 +119,12 @@ private class Benchmarker {
     def runAll() : Unit = {
         benchmarks = benchmarks.sortBy({ _.name })
         for (b <- benchmarks) {
-            warmup(b.iterations, b.name, b.body)
+            warmup((b.iterations * 1.5).toInt, b.name, b.body)
         }
         for (b <- benchmarks) {
+            // warmup again a little bit, in case there's some effect
+            // caused by doing other stuff since the first warmup
+            warmup(b.iterations / 2, b.name, b.body)
             run(b.iterations, b.requestsPerIteration, b.name, b.body)
         }
     }
