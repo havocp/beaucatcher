@@ -22,8 +22,12 @@ object Main {
             new backends.PlainCasbahBenchmark,
             new backends.PlainHammersmithBenchmark) filter includeBenchmark
 
-        if (include.length > 0)
+        if (benchmarks.isEmpty) {
+            System.err.println("Unknown benchmark names")
+            System.exit(1)
+        } else {
             printf("Enabling benchmarks: %s\n", benchmarks map { _.name } mkString ("", ",", ""))
+        }
 
         val benchmarker = new MongoBenchmarker
 
