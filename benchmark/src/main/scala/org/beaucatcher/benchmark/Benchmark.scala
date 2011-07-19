@@ -127,17 +127,41 @@ private class Benchmarker {
     }
 
     def output() : Unit = {
-        // build (total time, total runs) per-name
-        val aggregated = results.foldLeft(Map.empty : Map[String, (Long, Int)])({ (sofar, result) =>
-            val prev = sofar.getOrElse(result.name, (0L, 0))
-            sofar + Pair(result.name, (prev._1 + result.timeNanosPerRequest, prev._2 + 1))
+        val splitByName = results.foldLeft(Map.empty : Map[String, List[BenchmarkResult]])({ (sofar, result) =>
+            val prev = sofar.getOrElse(result.name, Nil)
+            sofar + Pair(result.name, result :: prev)
         })
-        for (a <- aggregated.iterator.toSeq.sortBy(_._1)) {
-            val name = a._1
-            val iterations = a._2._2
-            val millisPerIteration = (a._2._1.toDouble / iterations) / TimeUnit.MILLISECONDS.toNanos(1)
-            printf("  %-35s %15.3f ms/request average over %s iterations\n",
-                name, millisPerIteration, iterations)
+        val sortedByName = splitByName.iterator.toSeq.sortBy(_._1)
+
+        for ((name, resultList) <- sortedByName) {
+            val iterations = resultList.length
+
+            val sortedTimes = resultList.map({ _.timeNanosPerRequest }).toSeq.sorted
+
+            /* First find the median */
+            val (firstHalf, secondHalf) = sortedTimes splitAt (iterations / 2)
+            val median = if (iterations % 2 == 0) {
+                (firstHalf.last + secondHalf.head) / 2
+            } else {
+                secondHalf.head
+            }
+
+            /* Second find a trimmed mean */
+            val toTrim = iterations / 8
+            val trimmedTimes = sortedTimes.drop(toTrim).dropRight(toTrim)
+            val numberAfterTrim = sortedTimes.length - toTrim * 2
+            require(trimmedTimes.length == numberAfterTrim)
+            val totalTrimmedTimes = trimmedTimes.reduceLeft(_ + _)
+
+            val untrimmedAverageTime = sortedTimes.reduceLeft(_ + _).toDouble / iterations
+            val trimmedAverageTime = totalTrimmedTimes.toDouble / numberAfterTrim
+
+            val untrimmedMillisPerIteration = untrimmedAverageTime / TimeUnit.MILLISECONDS.toNanos(1)
+            val trimmedMillisPerIteration = trimmedAverageTime / TimeUnit.MILLISECONDS.toNanos(1)
+            val medianMillisPerIteration = median.toDouble / TimeUnit.MILLISECONDS.toNanos(1)
+
+            printf("  %-35s %15.3f ms/request trimmed avg (%.3f median %.3f untrimmed) over %d iterations\n",
+                name, trimmedMillisPerIteration, medianMillisPerIteration, untrimmedMillisPerIteration, iterations)
         }
     }
 }
