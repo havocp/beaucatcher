@@ -97,5 +97,5 @@ object BeaucatcherBuild extends Build {
     lazy val benchmark = Project("beaucatcher-benchmark",
         file("benchmark"),
         settings = projectSettings ++
-            Seq(fork in run := true)) dependsOn (hammersmith, casbah)
+            Seq(fork in run := true, javaOptions in run := Seq("-Xmx1G"))) dependsOn (hammersmith, casbah)
 }

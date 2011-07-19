@@ -106,10 +106,12 @@ private class Benchmarker {
 
         printf("  running '%s' ", name)
         System.out.flush()
+        System.gc() // encourage GC to happen outside of our timed portion
         for (i <- 1 to iterations) {
             if ((i % tenth) == 0) {
                 printf(".")
                 System.out.flush()
+                System.gc()
             }
             recordIteration(name, requestsPerIteration, body)
         }
