@@ -88,7 +88,7 @@ private class Benchmarker {
     }
 
     private def warmup(iterations : Int, name : String, body : () => Unit) : Unit = {
-        val tenth = iterations / 10
+        val tenth = if (iterations >= 10) iterations / 10 else 1
         printf("  warming up '%s' ", name)
         System.out.flush()
         for (i <- 1 to iterations) {
@@ -102,7 +102,7 @@ private class Benchmarker {
     }
 
     private def run(iterations : Int, requestsPerIteration : Int, name : String, body : () => Unit) : Unit = {
-        val tenth = iterations / 10
+        val tenth = if (iterations >= 10) iterations / 10 else 1
 
         printf("  running '%s' ", name)
         System.out.flush()
@@ -235,7 +235,7 @@ class MongoBenchmarker {
         benchmarker.addBenchmark(100, 100, "one large async (%s)".format(b.name), {
             findOneHundred(b, collections.large)
         })
-        /*
+
         benchmarker.addBenchmark(50, 1, "all large       (%s)".format(b.name), {
             b.findAll(collections.large, NUMBER_IN_LARGE)
         })
@@ -248,7 +248,6 @@ class MongoBenchmarker {
                 f.await()
             }
         })
-        */
     }
 
     private def cleanupOne[T](b : MongoBenchmark[T]) : Unit = {

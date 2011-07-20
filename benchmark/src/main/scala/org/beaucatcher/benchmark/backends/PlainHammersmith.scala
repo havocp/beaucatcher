@@ -90,22 +90,33 @@ class PlainHammersmithBenchmark extends MongoBenchmark[Collection] {
         maybeOne.get
     }
 
+    private def consumeCursor(cursor : Cursor[Document]) : Int = {
+        var numFound = 0
+        var eof = false
+        while (!eof) {
+            cursor.next() match {
+                case Cursor.Entry(_) =>
+                    numFound += 1
+                case Cursor.Empty => {
+                    val batchLatch = new CountDownLatch(1)
+                    cursor.nextBatch({ () => batchLatch.countDown() })
+                    batchLatch.await()
+                }
+                case Cursor.EOF => {
+                    eof = true
+                }
+            }
+        }
+        cursor.close()
+        numFound
+    }
+
     override def findAll(collection : Collection, numberExpected : Int) = {
         var numFound = 0
         val latch = new CountDownLatch(1)
         collection.find()(RequestFutures.query[Document]({ either =>
             val cursor = either.right.get
-            while (cursor.hasMore) {
-                cursor.next() match {
-                    case Cursor.Entry(_) =>
-                        numFound += 1
-                    case Cursor.Empty => {
-                        val batchLatch = new CountDownLatch(1)
-                        cursor.nextBatch({ () => batchLatch.countDown() })
-                        batchLatch.countDown()
-                    }
-                }
-            }
+            numFound = consumeCursor(cursor)
             latch.countDown()
         }))
 
@@ -117,21 +128,8 @@ class PlainHammersmithBenchmark extends MongoBenchmark[Collection] {
     override def findAllAsync(collection : Collection, numberExpected : Int) : BenchmarkFuture = {
         val latch = new CountDownLatch(1)
         collection.find()(RequestFutures.query[Document]({ either =>
-            var numFound = 0
             val cursor = either.right.get
-            while (cursor.hasMore) {
-                cursor.next() match {
-                    case Cursor.Entry(_) =>
-                        numFound += 1
-                    case Cursor.Empty => {
-                        val batchLatch = new CountDownLatch(1)
-                        cursor.nextBatch({ () => batchLatch.countDown() })
-                        batchLatch.countDown()
-                    }
-                    case Cursor.EOF =>
-                        require(numberExpected == numFound)
-                }
-            }
+            val numFound = consumeCursor(cursor)
             require(numberExpected == numFound)
             latch.countDown()
         }))
