@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.beaucatcher</groupId>
+    <artifactId>beaucatcher-async_2.9.0-1</artifactId>
+    <packaging>jar</packaging>
+    <version>0.2</version>
+    <dependencies>
+        <dependency>
+            <groupId>org.beaucatcher</groupId>
+            <artifactId>beaucatcher-mongo_2.9.0-1</artifactId>
+            <version>0.2</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>se.scalablesolutions.akka</groupId>
+            <artifactId>akka-actor</artifactId>
+            <version>1.1</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+    <repositories>
+        <repository>
+            <id>ScalaToolsSnapshots</id>
+            <name>Scala Tools Snapshots</name>
+            <url>http://scala-tools.org/repo-snapshots/</url>
+        </repository>
+        <repository>
+            <id>AkkaRepo</id>
+            <name>Akka Repo</name>
+            <url>http://akka.io/repository/</url>
+        </repository>
+        <repository>
+            <id>TwitterPublicRepo</id>
+            <name>Twitter Public Repo</name>
+            <url>http://maven.twttr.com/</url>
+        </repository>
+        <repository>
+            <id>ScalaToolsMaven2Repository</id>
+            <name>Scala-Tools Maven2 Repository</name>
+            <url>http://scala-tools.org/repo-releases/</url>
+        </repository>
+    </repositories>
+</project>

@@ -1,0 +1,631 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+        <head>
+          <title>org.beaucatcher.mongo</title>
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link type="text/css" media="screen" rel="stylesheet" href="../../../lib/template.css" />
+      <script type="text/javascript" src="../../../lib/jquery.js"></script>
+      <script type="text/javascript" src="../../../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../../../lib/template.js"></script>
+      <script type="text/javascript" src="../../../lib/tools.tooltip.js"></script>
+    
+        </head>
+        <body class="value">
+      <div id="definition">
+        <img src="../../../lib/package_big.png" />
+        <p id="owner"><a name="org" class="extype" href="../../package.html">org</a>.<a name="org.beaucatcher" class="extype" href="../package.html">beaucatcher</a></p>
+        <h1>mongo</h1>
+      </div>
+
+      <h4 class="signature" id="signature">
+      <span class="kind">package</span>
+      <span class="symbol"> 
+        <span class="name">mongo</span>
+        
+        
+      </span>
+      </h4>
+      
+          <div class="fullcommenttop" id="comment"></div>
+        
+
+      <div id="template">
+
+        <div id="mbrsel">
+          <div id="textfilter"><span class="pre"></span><span class="input"><input accesskey="/" type="text" /></span><span class="post"></span></div>
+          
+          
+          <div id="visbl">
+              <span class="filtertype">Visibility</span>
+              <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+            </div>
+        </div>
+
+        
+
+        <div class="types members" id="types">
+              <h3>Type Members</h3>
+              <ol><li visbl="pub" name="org.beaucatcher.mongo.BObjectSyncDAO" data-isabs="true">
+      <a id="BObjectSyncDAO:BObjectSyncDAO[IdType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="BObjectSyncDAO.html"><span class="name">BObjectSyncDAO</span></a>
+        <span class="tparams">[<span name="IdType">IdType</span>]</span>
+        <span class="result"> extends SyncDAO[BObject, BObject, IdType, BValue]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">A Sync DAO parameterized to work with BObject
+</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CaseClassSyncDAO" data-isabs="true">
+      <a id="CaseClassSyncDAO:CaseClassSyncDAO[OuterQueryType, EntityType, IdType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CaseClassSyncDAO.html"><span class="name">CaseClassSyncDAO</span></a>
+        <span class="tparams">[<span name="OuterQueryType">OuterQueryType</span>, <span name="EntityType">EntityType &lt;: Product</span>, <span name="IdType">IdType</span>]</span>
+        <span class="result"> extends SyncDAO[OuterQueryType, EntityType, IdType, Any]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">A Sync DAO parameterized to support returning case class entities.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionOperations" data-isabs="true">
+      <a id="CollectionOperations:CollectionOperations[EntityType, IdType]"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="CollectionOperations.html"><span class="name">CollectionOperations</span></a>
+        <span class="tparams">[<span name="EntityType">EntityType &lt;: Product</span>, <span name="IdType">IdType</span>]</span>
+        <span class="result"> extends CollectionOperationsTrait[EntityType, IdType]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>abstract </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionOperationsTrait" data-isabs="true">
+      <a id="CollectionOperationsTrait:CollectionOperationsTrait[EntityType, IdType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionOperationsTrait.html"><span class="name">CollectionOperationsTrait</span></a>
+        <span class="tparams">[<span name="EntityType">EntityType &lt;: Product</span>, <span name="IdType">IdType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">You generally want <a name="org.beaucatcher.mongo.CollectionOperations" class="extype" href="CollectionOperations.html">CollectionOperations</a> class rather than
+this trait; the trait exists only for the rare case where you need to extend another
+class.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CountOptions" data-isabs="false">
+      <a id="CountOptions:CountOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="CountOptions.html"><span class="name">CountOptions</span></a>
+        
+        <span class="params">(<span name="fields">fields: Option[Fields]</span>, <span name="skip">skip: Option[Long]</span>, <span name="limit">limit: Option[Long]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.DistinctOptions" data-isabs="false">
+      <a id="DistinctOptions:DistinctOptions[QueryType]"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="DistinctOptions.html"><span class="name">DistinctOptions</span></a>
+        <span class="tparams">[<span name="QueryType">+QueryType</span>]</span>
+        <span class="params">(<span name="query">query: Option[QueryType]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.EntityComposer" data-isabs="true">
+      <a id="EntityComposer:EntityComposer[OuterEntityType, InnerEntityType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="EntityComposer.html"><span class="name">EntityComposer</span></a>
+        <span class="tparams">[<span name="OuterEntityType">OuterEntityType</span>, <span name="InnerEntityType">InnerEntityType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Object which converts entities (document representations) as they go from a DAO into or out of an &quot;underlying&quot; DAO.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ExcludedFields" data-isabs="false">
+      <a id="ExcludedFields:ExcludedFields"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="ExcludedFields.html"><span class="name">ExcludedFields</span></a>
+        
+        <span class="result"> extends Fields</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.Fields" data-isabs="true">
+      <a id="Fields:Fields"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="Fields.html"><span class="name">Fields</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyFlag" data-isabs="true">
+      <a id="FindAndModifyFlag:FindAndModifyFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyFlag.html"><span class="name">FindAndModifyFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyOptions" data-isabs="false">
+      <a id="FindAndModifyOptions:FindAndModifyOptions[QueryType]"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyOptions.html"><span class="name">FindAndModifyOptions</span></a>
+        <span class="tparams">[<span name="QueryType">+QueryType</span>]</span>
+        <span class="params">(<span name="sort">sort: Option[QueryType]</span>, <span name="fields">fields: Option[Fields]</span>, <span name="flags">flags: Set[FindAndModifyFlag]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOneByIdOptions" data-isabs="false">
+      <a id="FindOneByIdOptions:FindOneByIdOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="FindOneByIdOptions.html"><span class="name">FindOneByIdOptions</span></a>
+        
+        <span class="params">(<span name="fields">fields: Option[Fields]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOneOptions" data-isabs="false">
+      <a id="FindOneOptions:FindOneOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="FindOneOptions.html"><span class="name">FindOneOptions</span></a>
+        
+        <span class="params">(<span name="fields">fields: Option[Fields]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOptions" data-isabs="false">
+      <a id="FindOptions:FindOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="FindOptions.html"><span class="name">FindOptions</span></a>
+        
+        <span class="params">(<span name="fields">fields: Option[Fields]</span>, <span name="skip">skip: Option[Long]</span>, <span name="limit">limit: Option[Long]</span>, <span name="batchSize">batchSize: Option[Int]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IdComposer" data-isabs="true">
+      <a id="IdComposer:IdComposer[OuterIdType, InnerIdType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IdComposer.html"><span class="name">IdComposer</span></a>
+        <span class="tparams">[<span name="OuterIdType">OuterIdType</span>, <span name="InnerIdType">InnerIdType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Object which converts IDs (usually the &quot;_id&quot; field value) as they go from a DAO into or out of an &quot;underlying&quot; DAO.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IdentityEntityComposer" data-isabs="false">
+      <a id="IdentityEntityComposer:IdentityEntityComposer[EntityType]"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="IdentityEntityComposer.html"><span class="name">IdentityEntityComposer</span></a>
+        <span class="tparams">[<span name="EntityType">EntityType</span>]</span>
+        <span class="result"> extends EntityComposer[EntityType, EntityType]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IdentityIdComposer" data-isabs="false">
+      <a id="IdentityIdComposer:IdentityIdComposer[IdType]"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="IdentityIdComposer.html"><span class="name">IdentityIdComposer</span></a>
+        <span class="tparams">[<span name="IdType">IdType</span>]</span>
+        <span class="result"> extends IdComposer[IdType, IdType]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IdentityQueryComposer" data-isabs="false">
+      <a id="IdentityQueryComposer:IdentityQueryComposer[QueryType]"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="IdentityQueryComposer.html"><span class="name">IdentityQueryComposer</span></a>
+        <span class="tparams">[<span name="QueryType">QueryType</span>]</span>
+        <span class="result"> extends QueryComposer[QueryType, QueryType]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IdentityValueComposer" data-isabs="false">
+      <a id="IdentityValueComposer:IdentityValueComposer[ValueType]"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="IdentityValueComposer.html"><span class="name">IdentityValueComposer</span></a>
+        <span class="tparams">[<span name="ValueType">ValueType</span>]</span>
+        <span class="result"> extends ValueComposer[ValueType, ValueType]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IncludeIdFlag" data-isabs="true">
+      <a id="IncludeIdFlag:IncludeIdFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IncludeIdFlag.html"><span class="name">IncludeIdFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IncludedFields" data-isabs="false">
+      <a id="IncludedFields:IncludedFields"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="IncludedFields.html"><span class="name">IncludedFields</span></a>
+        
+        <span class="result"> extends Fields</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.JsonMethods" data-isabs="true">
+      <a id="JsonMethods:JsonMethods[SchemaType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="JsonMethods.html"><span class="name">JsonMethods</span></a>
+        <span class="tparams">[<span name="SchemaType">SchemaType &lt;: Product</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">The idea of this trait is to implement a backbone.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.MongoBackend" data-isabs="true">
+      <a id="MongoBackend:MongoBackend"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="MongoBackend.html"><span class="name">MongoBackend</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.MongoBackendProvider" data-isabs="true">
+      <a id="MongoBackendProvider:MongoBackendProvider"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="MongoBackendProvider.html"><span class="name">MongoBackendProvider</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.MongoConfig" data-isabs="true">
+      <a id="MongoConfig:MongoConfig"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="MongoConfig.html"><span class="name">MongoConfig</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.MongoConfigProvider" data-isabs="true">
+      <a id="MongoConfigProvider:MongoConfigProvider"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="MongoConfigProvider.html"><span class="name">MongoConfigProvider</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryComposer" data-isabs="true">
+      <a id="QueryComposer:QueryComposer[OuterQueryType, InnerQueryType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="QueryComposer.html"><span class="name">QueryComposer</span></a>
+        <span class="tparams">[<span name="OuterQueryType">OuterQueryType</span>, <span name="InnerQueryType">InnerQueryType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Object which converts queries as they go from a DAO into or out of an &quot;underlying&quot; DAO.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryFlag" data-isabs="true">
+      <a id="QueryFlag:QueryFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="QueryFlag.html"><span class="name">QueryFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.SimpleMongoConfig" data-isabs="false">
+      <a id="SimpleMongoConfig:SimpleMongoConfig"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="SimpleMongoConfig.html"><span class="name">SimpleMongoConfig</span></a>
+        
+        <span class="result"> extends MongoConfig</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.SyncDAO" data-isabs="true">
+      <a id="SyncDAO:SyncDAO[QueryType, EntityType, IdType, ValueType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="SyncDAO.html"><span class="name">SyncDAO</span></a>
+        <span class="tparams">[<span name="QueryType">QueryType</span>, <span name="EntityType">EntityType</span>, <span name="IdType">IdType</span>, <span name="ValueType">ValueType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Trait expressing all data-access operations on a collection in synchronous form.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.SyncDAOGroup" data-isabs="true">
+      <a id="SyncDAOGroup:SyncDAOGroup[CaseClassEntityType, CaseClassIdType, BObjectIdType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="SyncDAOGroup.html"><span class="name">SyncDAOGroup</span></a>
+        <span class="tparams">[<span name="CaseClassEntityType">CaseClassEntityType &lt;: Product</span>, <span name="CaseClassIdType">CaseClassIdType</span>, <span name="BObjectIdType">BObjectIdType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">An interface specifying a set of DAO flavors to be provided.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateFlag" data-isabs="true">
+      <a id="UpdateFlag:UpdateFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="UpdateFlag.html"><span class="name">UpdateFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateOptions" data-isabs="false">
+      <a id="UpdateOptions:UpdateOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="UpdateOptions.html"><span class="name">UpdateOptions</span></a>
+        
+        <span class="params">(<span name="flags">flags: Set[UpdateFlag]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ValueComposer" data-isabs="true">
+      <a id="ValueComposer:ValueComposer[OuterValueType, InnerValueType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="ValueComposer.html"><span class="name">ValueComposer</span></a>
+        <span class="tparams">[<span name="OuterValueType">OuterValueType</span>, <span name="InnerValueType">InnerValueType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Object which converts values (the value part of the key-value pairs of a BSON object) as they go from a DAO into or out of an &quot;underlying&quot; DAO.</p>
+    </li></ol>
+            </div>
+        
+        
+
+        <div class="values members" id="values">
+              <h3>Value Members</h3>
+              <ol><li visbl="pub" name="org.beaucatcher.mongo.AllFields" data-isabs="false">
+      <a id="AllFields:AllFields"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="AllFields$.html"><span class="name">AllFields</span></a>
+        
+        <span class="result"> extends Fields</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionOperationsTrait" data-isabs="false">
+      <a id="CollectionOperationsTrait:CollectionOperationsTrait"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="CollectionOperationsTrait$.html"><span class="name">CollectionOperationsTrait</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ExcludedFields" data-isabs="false">
+      <a id="ExcludedFields:ExcludedFields"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="ExcludedFields$.html"><span class="name">ExcludedFields</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyNew" data-isabs="false">
+      <a id="FindAndModifyNew:FindAndModifyNew"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyNew$.html"><span class="name">FindAndModifyNew</span></a>
+        
+        <span class="result"> extends FindAndModifyFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyRemove" data-isabs="false">
+      <a id="FindAndModifyRemove:FindAndModifyRemove"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyRemove$.html"><span class="name">FindAndModifyRemove</span></a>
+        
+        <span class="result"> extends FindAndModifyFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyUpsert" data-isabs="false">
+      <a id="FindAndModifyUpsert:FindAndModifyUpsert"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyUpsert$.html"><span class="name">FindAndModifyUpsert</span></a>
+        
+        <span class="result"> extends FindAndModifyFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IncludedFields" data-isabs="false">
+      <a id="IncludedFields:IncludedFields"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IncludedFields$.html"><span class="name">IncludedFields</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryAwaitData" data-isabs="false">
+      <a id="QueryAwaitData:QueryAwaitData"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryAwaitData$.html"><span class="name">QueryAwaitData</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryExhaust" data-isabs="false">
+      <a id="QueryExhaust:QueryExhaust"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryExhaust$.html"><span class="name">QueryExhaust</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryNoTimeout" data-isabs="false">
+      <a id="QueryNoTimeout:QueryNoTimeout"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryNoTimeout$.html"><span class="name">QueryNoTimeout</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryOpLogReplay" data-isabs="false">
+      <a id="QueryOpLogReplay:QueryOpLogReplay"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryOpLogReplay$.html"><span class="name">QueryOpLogReplay</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QuerySlaveOk" data-isabs="false">
+      <a id="QuerySlaveOk:QuerySlaveOk"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QuerySlaveOk$.html"><span class="name">QuerySlaveOk</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryTailable" data-isabs="false">
+      <a id="QueryTailable:QueryTailable"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryTailable$.html"><span class="name">QueryTailable</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateMulti" data-isabs="false">
+      <a id="UpdateMulti:UpdateMulti"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="UpdateMulti$.html"><span class="name">UpdateMulti</span></a>
+        
+        <span class="result"> extends UpdateFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateUpsert" data-isabs="false">
+      <a id="UpdateUpsert:UpdateUpsert"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="UpdateUpsert$.html"><span class="name">UpdateUpsert</span></a>
+        
+        <span class="result"> extends UpdateFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.WithId" data-isabs="false">
+      <a id="WithId:WithId"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="WithId$.html"><span class="name">WithId</span></a>
+        
+        <span class="result"> extends IncludeIdFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.WithoutId" data-isabs="false">
+      <a id="WithoutId:WithoutId"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="WithoutId$.html"><span class="name">WithoutId</span></a>
+        
+        <span class="result"> extends IncludeIdFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li></ol>
+            </div>
+
+        
+
+      </div>
+      
+      <div id="tooltip"></div>
+      
+    </body>
+      </html>
