@@ -11,6 +11,7 @@ object BuildSettings {
         version := buildVersion,
         scalaVersion := buildScalaVersion,
         shellPrompt := ShellPrompt.buildShellPrompt,
+        fork in test := true,
         resolvers := Seq(Resolvers.scalaToolsSnapshotsRepo, Resolvers.akkaRepo, Resolvers.twttrRepo))
 
     val projectSettings = Defaults.defaultSettings ++ globalSettings
