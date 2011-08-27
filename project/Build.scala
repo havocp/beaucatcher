@@ -2,8 +2,8 @@ import sbt._
 import Keys._
 
 object BuildSettings {
-    val buildOrganization = "Havoc Pennington"
-    val buildVersion = "0.1"
+    val buildOrganization = "org.beaucatcher"
+    val buildVersion = "0.2"
     val buildScalaVersion = "2.9.0-1"
 
     val globalSettings = Seq(
@@ -12,6 +12,10 @@ object BuildSettings {
         scalaVersion := buildScalaVersion,
         shellPrompt := ShellPrompt.buildShellPrompt,
         fork in test := true,
+        publishTo in Scope.GlobalScope <<= (thisProjectRef) { (ref) =>
+            val baseDir = new File(ref.build)
+            Some(Resolver.file("gh-pages", new File(baseDir, "../beaucatcher-web/repository")))
+        },
         resolvers := Seq(Resolvers.scalaToolsSnapshotsRepo, Resolvers.akkaRepo, Resolvers.twttrRepo))
 
     val projectSettings = Defaults.defaultSettings ++ globalSettings
@@ -68,7 +72,8 @@ object BeaucatcherBuild extends Build {
 
     lazy val root = Project("beaucatcher",
         file("."),
-        settings = projectSettings) aggregate (bson, mongo, casbah, async, hammersmith)
+        settings = projectSettings ++
+            Seq(publishArtifact := false)) aggregate (bson, mongo, casbah, async, hammersmith)
 
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),
