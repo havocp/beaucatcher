@@ -3,20 +3,26 @@ package org.beaucatcher.hammersmith
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import com.mongodb.async._
+import com.mongodb.async.util._
 
-private[hammersmith] class HammersmithBackend(private val databaseName : String,
-    private val host : String,
-    private val port : Int) extends MongoBackend {
+private[hammersmith] class HammersmithBackend(private val config : MongoConfig)
+    extends MongoBackend {
+
+    val hammersmithURI = new MongoURI(config.url)
+
+    if (!hammersmithURI.db.isDefined)
+        throw new IllegalArgumentException("Must specify the database name in mongodb URI")
 
     /**
      * Hammersmith's connection object used by this backend.
      */
-    lazy val connection = HammersmithBackend.connections.ensure(MongoConnectionAddress(host, port))
+    lazy val connection = HammersmithBackend.connections.ensure(MongoConnectionAddress(config.url))
 
     private def collection(name : String) : Collection = {
         if (name == null)
             throw new IllegalArgumentException("null collection name")
-        val db : DB = connection(databaseName)
+
+        val db : DB = connection(hammersmithURI.db.get)
         assert(db != null)
         val coll : Collection = db(name)
         assert(coll != null)
@@ -36,7 +42,7 @@ private[hammersmith] class HammersmithBackend(private val databaseName : String,
 private[hammersmith] object HammersmithBackend {
     val connections = new MongoConnectionStore[MongoConnection] {
         override def create(address : MongoConnectionAddress) = {
-            val c = MongoConnection(address.host, address.port)
+            val (c, _, _) = MongoConnection.fromURI(address.url)
             // things are awfully race-prone without Safe, and you
             // don't get constraint violations for example
             c.writeConcern = WriteConcern.Safe
@@ -54,6 +60,6 @@ trait HammersmithBackendProvider extends MongoBackendProvider {
 
     override lazy val backend : MongoBackend = {
         require(mongoConfig != null)
-        new HammersmithBackend(mongoConfig.databaseName, mongoConfig.host, mongoConfig.port)
+        new HammersmithBackend(mongoConfig)
     }
 }
