@@ -31,6 +31,11 @@ class JsonValidationException(message : String, cause : Throwable = null) extend
 private[bson] object BsonJson {
     import JsonToken._
 
+    private class RichScalaCompatLong(x: Long) {
+        def isValidInt   = x.toLong == x.toInt
+    }
+    private implicit def long2RichScalaCompatLong(x: Long): RichScalaCompatLong = new RichScalaCompatLong(x)
+
     object JsonFormatting extends Enumeration {
         type JsonFormatting = Value
         val Compact, Pretty = Value

@@ -241,8 +241,8 @@ class ClassAnalysis[X <: ClassAnalysis.CaseClass](private val clazz : Class[X]) 
 
     private def typeRefType(ms : MethodSymbol) : TypeRefType = ms.infoType match {
         // it looks like 2.8.1 used PolyType and 2.9.0 uses NullaryMethodType
-        //case PolyType(tr @ TypeRefType(_, _, _), _) => tr
-        case NullaryMethodType(tr @ TypeRefType(_, _, _)) => tr
+        case PolyType(tr @ TypeRefType(_, _, _), _) => tr
+        //case NullaryMethodType(tr @ TypeRefType(_, _, _)) => tr
         case _ => {
             throw new UnexpectedMethodSig(ms)
         }

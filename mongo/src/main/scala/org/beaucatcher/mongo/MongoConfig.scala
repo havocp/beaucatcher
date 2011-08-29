@@ -1,6 +1,6 @@
 package org.beaucatcher.mongo
 import java.util.concurrent.ConcurrentHashMap
-import scala.concurrent.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 trait MongoConfigProvider {
     val mongoConfig : MongoConfig
@@ -41,7 +41,7 @@ private[beaucatcher] case class MongoConnectionAddress(host : String, port : Int
 
 private[beaucatcher] abstract class MongoConnectionStore[ConnectionType] {
     private val map = new ConcurrentHashMap[MongoConnectionAddress, ConnectionType]
-    private val creationLock = new Lock
+    private val creationLock = new ReentrantLock
 
     protected def create(address : MongoConnectionAddress) : ConnectionType
 
@@ -50,7 +50,7 @@ private[beaucatcher] abstract class MongoConnectionStore[ConnectionType] {
         if (c != null) {
             c
         } else {
-            creationLock.acquire()
+            creationLock.lock()
             val result = {
                 val beatenToIt = map.get(address)
                 if (beatenToIt != null) {
@@ -61,7 +61,7 @@ private[beaucatcher] abstract class MongoConnectionStore[ConnectionType] {
                     created
                 }
             }
-            creationLock.release()
+            creationLock.unlock()
             result
         }
     }

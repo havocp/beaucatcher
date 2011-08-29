@@ -4,7 +4,7 @@ import Keys._
 object BuildSettings {
     val buildOrganization = "org.beaucatcher"
     val buildVersion = "0.2"
-    val buildScalaVersion = "2.9.0-1"
+    val buildScalaVersion = "2.8.1"
 
     val globalSettings = Seq(
         organization := buildOrganization,
@@ -50,7 +50,7 @@ object Resolvers {
 
 object Dependencies {
     val scalajCollection = "org.scalaj" %% "scalaj-collection" % "1.1"
-    val scalap = "org.scala-lang" % "scalap" % "2.9.0-1"
+    val scalap = "org.scala-lang" % "scalap" % BuildSettings.buildScalaVersion
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
     val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
@@ -73,7 +73,7 @@ object BeaucatcherBuild extends Build {
     lazy val root = Project("beaucatcher",
         file("."),
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (bson, mongo, casbah, async, hammersmith)
+            Seq(publishArtifact := false)) aggregate (bson, mongo, casbah)
 
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),
