@@ -2,19 +2,21 @@ package org.beaucatcher.casbah
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import com.mongodb.casbah.MongoURI
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.conversions.scala._
 import org.joda.time.DateTime
 
-private[casbah] class CasbahBackend(private val databaseName : String,
-    private val host : String, private val port : Int) extends MongoBackend {
+private[casbah] class CasbahBackend(private val config : MongoConfig)
+    extends MongoBackend {
 
-    private lazy val connection = CasbahBackend.connections.ensure(MongoConnectionAddress(host, port))
+    private lazy val casbahURI = MongoURI(config.url)
+    private lazy val connection = CasbahBackend.connections.ensure(MongoConnectionAddress(config.url))
 
     private def collection(name : String) : MongoCollection = {
         if (name == null)
             throw new IllegalArgumentException("null collection name")
-        val db : MongoDB = connection(databaseName)
+        val db : MongoDB = connection(casbahURI.database)
         assert(db != null)
         val coll : MongoCollection = db(name)
         assert(coll != null)
@@ -37,7 +39,7 @@ private[casbah] object CasbahBackend {
         override def create(address : MongoConnectionAddress) = {
             RegisterJodaTimeConversionHelpers()
 
-            val c = MongoConnection(address.host, address.port)
+            val c = MongoConnection(MongoURI(address.url))
             // things are awfully race-prone without Safe, and you
             // don't get constraint violations for example
             c.setWriteConcern(WriteConcern.Safe)
@@ -56,6 +58,6 @@ trait CasbahBackendProvider extends MongoBackendProvider {
 
     override lazy val backend : MongoBackend = {
         require(mongoConfig != null)
-        new CasbahBackend(mongoConfig.databaseName, mongoConfig.host, mongoConfig.port)
+        new CasbahBackend(mongoConfig)
     }
 }
