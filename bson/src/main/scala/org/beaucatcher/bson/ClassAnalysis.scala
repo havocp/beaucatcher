@@ -311,7 +311,19 @@ object ClassAnalysis {
     private def parseScalaSig0(clazz : Class[_]) : Option[ScalaSig] = {
         //println("parseScalaSig0 " + clazz)
         if (clazz != null) {
-            ScalaSigParser.parse(clazz) match {
+            val maybeSig = try {
+                // This throws an NPE if there's no class file with the
+                // bytecode in it. presumably a bug in ScalaSigParser.
+                // Then we recover and try the annotation instead.
+                // A class loader doesn't have to use a class file,
+                // that's why this can fail.
+                ScalaSigParser.parse(clazz)
+            } catch {
+                case npe: NullPointerException =>
+                    None
+            }
+
+            maybeSig match {
                 case Some(sig) if sig != null => Some(sig)
                 case _ => annotation[ScalaSignature](clazz) match {
                     case Some(sig) if sig != null => {
