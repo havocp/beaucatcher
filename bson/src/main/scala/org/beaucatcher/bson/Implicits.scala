@@ -1,8 +1,6 @@
 package org.beaucatcher.bson
 
 import java.util.Date
-import org.bson.types._
-import org.bson.BSONObject
 import org.joda.time._
 
 /**
@@ -31,9 +29,9 @@ trait Implicits {
     implicit def string2bvalue(x : String) = BString(x)
     implicit def date2bvalue(x : Date) = BISODate(new DateTime(x))
     implicit def datetime2bvalue(x : DateTime) = BISODate(x)
-    implicit def timestamp2bvalue(x : BSONTimestamp) = BTimestamp(x)
+    implicit def timestamp2bvalue(x : Timestamp) = BTimestamp(x)
     implicit def objectid2bvalue(x : ObjectId) = BObjectId(x)
-    implicit def binary2bvalue(x : Binary) = BBinData(x)
+    implicit def binary2bvalue(x : Binary) = BBinary(x)
     implicit def map2bvalue[K <: String, V <% BValue](x : Map[K, V]) = BObject(x)
     implicit def seq2bvalue[V <% BValue](x : Seq[V]) : BArray = BArray(x)
 }

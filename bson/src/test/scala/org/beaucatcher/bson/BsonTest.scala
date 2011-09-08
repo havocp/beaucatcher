@@ -3,9 +3,6 @@ package org.beaucatcher.bson
 import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
-import org.bson.types.Binary
-import org.bson.types.ObjectId
-import org.bson.types.BSONTimestamp
 import java.util.Date
 import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
@@ -32,9 +29,9 @@ class BsonTest extends TestUtils {
             "string" -> "quick brown fox",
             "date" -> someJavaDate,
             "datetime" -> someDateTime,
-            "timestamp" -> new BSONTimestamp((someJavaDate.getTime / 1000).toInt, 1),
+            "timestamp" -> new Timestamp((someJavaDate.getTime / 1000).toInt, 1),
             "objectid" -> new ObjectId("4dbf8ea93364e3bd9745723c"),
-            "binary" -> new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)),
+            "binary" -> new Binary(new Array[Byte](10), BsonSubtype.GENERAL),
             "map_int" -> Map[String, Int]("a" -> 20, "b" -> 21),
             "map_date" -> Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
             "seq_string" -> List("a", "b", "c", "d"),
@@ -56,9 +53,9 @@ class BsonTest extends TestUtils {
             "quick brown fox",
             someJavaDate,
             someDateTime,
-            new BSONTimestamp((someJavaDate.getTime / 1000).toInt, 1),
-            new ObjectId("4dbf8ea93364e3bd9745723c"),
-            new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)),
+            Timestamp((someJavaDate.getTime / 1000).toInt, 1),
+            ObjectId("4dbf8ea93364e3bd9745723c"),
+            Binary(new Array[Byte](10), BsonSubtype.GENERAL),
             Map[String, Int]("a" -> 20, "b" -> 21),
             Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
             List("a", "b", "c", "d"),
@@ -503,7 +500,8 @@ class BsonTest extends TestUtils {
     }
 
     // check that unwrappedAsJava behaves sensibly
-    @Test
+    // FIXME re-enable in a package that has org.bson conversions
+    //@Test
     def javaUnwrapWorks() = {
         val obj = makeObjectManyTypes()
         for {
@@ -647,24 +645,24 @@ class BsonTest extends TestUtils {
 
     @Test
     def binDataEqualsWorks() : Unit = {
-        val a1 = BBinData(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
-        val a2 = BBinData(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
-        val subDiffers = BBinData(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.UUID)
-        val dataDiffers = BBinData(Array[Byte](2, 2, 1, 0, 1, 127, -127, -1), BsonSubtype.GENERAL)
-        assertEquals("two identical BBinData are equal", a1, a2)
-        assertFalse("BBinData with different subtype not equal", a1 == subDiffers)
-        assertFalse("BBinData with different data not equal", a1 == dataDiffers)
-        assertEquals("two identical BBinData have same hashCode", a1.hashCode, a2.hashCode)
-        assertFalse("BBinData with different subtype have different hashCode", a1.hashCode == subDiffers.hashCode)
-        assertFalse("BBinData with different data have different hashCode", a1.hashCode == dataDiffers.hashCode)
+        val a1 = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
+        val a2 = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
+        val subDiffers = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.UUID)
+        val dataDiffers = BBinary(Array[Byte](2, 2, 1, 0, 1, 127, -127, -1), BsonSubtype.GENERAL)
+        assertEquals("two identical BBinary are equal", a1, a2)
+        assertFalse("BBinary with different subtype not equal", a1 == subDiffers)
+        assertFalse("BBinary with different data not equal", a1 == dataDiffers)
+        assertEquals("two identical BBinary have same hashCode", a1.hashCode, a2.hashCode)
+        assertFalse("BBinary with different subtype have different hashCode", a1.hashCode == subDiffers.hashCode)
+        assertFalse("BBinary with different data have different hashCode", a1.hashCode == dataDiffers.hashCode)
     }
 
     @Test
-    def binDataToStringWorks() : Unit = {
-        val short = BBinData(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
-        val longer = BBinData(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15), BsonSubtype.GENERAL)
-        assertEquals("BBinData(00010203047f81ff@8,GENERAL)", short.toString)
-        assertEquals("BBinData(00010203047f81ff0506...@19,GENERAL)", longer.toString)
+    def binaryToStringWorks() : Unit = {
+        val short = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
+        val longer = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15), BsonSubtype.GENERAL)
+        assertEquals("BBinary(Binary(00010203047f81ff@8,GENERAL))", short.toString)
+        assertEquals("BBinary(Binary(00010203047f81ff0506...@19,GENERAL))", longer.toString)
     }
 
     @Test
@@ -757,7 +755,7 @@ class BsonTest extends TestUtils {
         wrongType[Date]("datetime")
         wrongType[Long]("datetime")
 
-        rightType[BSONTimestamp]("timestamp", new BSONTimestamp((someJavaDate.getTime / 1000).toInt, 1))
+        rightType[Timestamp]("timestamp", Timestamp((someJavaDate.getTime / 1000).toInt, 1))
         wrongType[DateTime]("timestamp")
         wrongType[Long]("timestamp")
 

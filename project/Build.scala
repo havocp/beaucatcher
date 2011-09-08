@@ -55,11 +55,13 @@ object Dependencies {
     val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
     val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
     val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.7"
+    val scalaTime        = "org.scala-tools.time" % "time_2.8.0" % "0.2"
 
     // Dependencies in "test" configuration
     object Test {
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test"
         val liftJson = "net.liftweb" %% "lift-json" % "2.4-SNAPSHOT" % "test"
+        val slf4j = "org.slf4j" % "slf4j-api" % "1.6.0"
     }
 }
 
@@ -73,14 +75,14 @@ object BeaucatcherBuild extends Build {
     lazy val root = Project("beaucatcher",
         file("."),
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (bson, mongo, casbah, async, hammersmith)
+            Seq(publishArtifact := false)) aggregate (bson)
 
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),
         settings = projectSettings ++
             Seq(checksums := Nil, // lift-json sha1 is hosed at the moment
-                libraryDependencies := Seq(scalajCollection, scalap, commonsCodec, casbahCore,
-                    Test.junitInterface, Test.liftJson)))
+                libraryDependencies := Seq(scalajCollection, scalap, commonsCodec, scalaTime,
+                    Test.junitInterface, Test.liftJson, Test.slf4j)))
 
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
@@ -88,7 +90,8 @@ object BeaucatcherBuild extends Build {
 
     lazy val casbah = Project("beaucatcher-casbah",
         file("casbah"),
-        settings = projectSettings) dependsOn (mongo % "compile->compile;test->test")
+        settings = projectSettings ++
+            Seq(libraryDependencies += casbahCore)) dependsOn (mongo % "compile->compile;test->test")
 
     lazy val async = Project("beaucatcher-async",
         file("async"),

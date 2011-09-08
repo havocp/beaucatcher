@@ -2,7 +2,6 @@ package org.beaucatcher.bson
 
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
-import org.bson.types.{ BSONTimestamp, ObjectId, Binary }
 import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
 import org.junit._
@@ -14,7 +13,7 @@ package bar {
         aBoolean : Boolean,
         aString : String,
         aDateTime : DateTime,
-        aTimestamp : BSONTimestamp,
+        aTimestamp : Timestamp,
         anObjectId : ObjectId,
         aBinary : Binary,
         aMap : Map[String, Int],
@@ -44,9 +43,9 @@ class ValidationTest {
             "aBoolean" -> true,
             "aString" -> "lazy dog",
             "aDateTime" -> someDateTime,
-            "aTimestamp" -> new BSONTimestamp((someDateTime.getMillis / 1000).toInt, 1),
+            "aTimestamp" -> new Timestamp((someDateTime.getMillis / 1000).toInt, 1),
             "anObjectId" -> new ObjectId("4dbf8ea93364e3bd9745723c"),
-            "aBinary" -> new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)),
+            "aBinary" -> new Binary(new Array[Byte](10), BsonSubtype.GENERAL),
             "aMap" -> Map[String, Int]("a" -> 20, "b" -> 21),
             "aSeq" -> List(1, 2, 3, 4))
     }

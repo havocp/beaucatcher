@@ -30,7 +30,6 @@ import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable
 import java.util.Date
 import org.apache.commons.codec.binary.Base64
-import org.bson.types._
 import org.joda.time._
 import scalaj.collection.Implicits._
 import scala.io.Source
@@ -391,79 +390,34 @@ object JArray extends ArrayBaseCompanion[JValue, JArray] {
 }
 
 /**
- * A BSON binary data value, wrapping [[org.bson.types.Binary]].
+ * A BSON binary data value, wrapping [[org.beaucatcher.bson.Binary]].
  *
- * @param value the raw byte array of binary data
- * @param subtype the "type detail" of the binary data see [[org.beaucatcher.bson.BsonSubtype]]
+ * @param value the binary data
  */
-case class BBinData(val value : Array[Byte], val subtype : BsonSubtype.Value) extends BValue {
-    type WrappedType = Binary
-    override lazy val unwrapped = new Binary(BsonSubtype.toByte(subtype), value)
-    override val bsonType = BsonType.BINARY
+case class BBinary(override val value : Binary) extends BSingleValue(BsonType.BINARY, value) {
 
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
-                BString(Base64.encodeBase64String(value))
+                BString(Base64.encodeBase64String(value.data))
             case JsonFlavor.STRICT =>
-                JObject(List(("$binary", BString(Base64.encodeBase64String(value))),
-                    ("$type", BString("%02x".format("%02x", (BsonSubtype.toByte(subtype) : Int) & 0xff)))))
+                JObject(List(("$binary", BString(Base64.encodeBase64String(value.data))),
+                    ("$type", BString("%02x".format("%02x", (BsonSubtype.toByte(value.subtype) : Int) & 0xff)))))
             case _ =>
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
     }
-
-    // We have to fix equals() because default doesn't implement it
-    // correctly (does not consider the contents of the byte[])
-    override def equals(other : Any) : Boolean = {
-        other match {
-            case that : BBinData =>
-                (that canEqual this) &&
-                    (subtype == that.subtype) &&
-                    (value.length == that.value.length) &&
-                    (value sameElements that.value)
-            case _ => false
-        }
-    }
-
-    // have to make hashCode match equals (array hashCode doesn't
-    // look at elements, Seq hashCode does)
-    override def hashCode() : Int = {
-        41 * (41 + subtype.hashCode) + (value : Seq[Byte]).hashCode
-    }
-
-    private def bytesAsString(sb : StringBuilder, i : Traversable[Byte]) = {
-        for (b <- i) {
-            sb.append("%02x".format((b : Int) & 0xff))
-        }
-    }
-
-    // default toString just shows byte[] object id
-    override def toString() : String = {
-        val sb = new StringBuilder
-        sb.append("BBinData(")
-        val bytes = value.take(10)
-        bytesAsString(sb, bytes)
-        if (value.length > 10)
-            sb.append("...")
-        sb.append("@")
-        sb.append(value.length.toString)
-        sb.append(",")
-        sb.append(subtype.toString)
-        sb.append(")")
-        sb.toString
-    }
 }
 
-/** Companion object for [[org.beaucatcher.bson.BBinData]]. */
-object BBinData {
-    /** Construct a [[org.beaucatcher.bson.BBinData]] from a [[org.bson.types.Binary]] object */
-    def apply(b : Binary) : BBinData = {
-        BBinData(b.getData(), BsonSubtype.fromByte(b.getType()).get)
-    }
+/** Companion object for [[org.beaucatcher.bson.BBinary]]. */
+object BBinary {
+    def apply(data : Array[Byte], subtype : BsonSubtype.Value) : BBinary =
+        BBinary(Binary(data, subtype))
+
+    def apply(data : Array[Byte]) : BBinary = BBinary(Binary(data))
 }
 
-/** A BSON object ID value, wrapping [[org.bson.types.ObjectId]]. */
+/** A BSON object ID value, wrapping [[org.beaucatcher.bson.ObjectId]]. */
 case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonType.OID, value) {
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
@@ -475,6 +429,11 @@ case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonTyp
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
     }
+}
+
+object BObjectId {
+    def apply(string : String) : BObjectId =
+        BObjectId(ObjectId(string))
 }
 
 /** A BSON or JSON boolean value. */
@@ -495,20 +454,21 @@ case class BISODate(override val value : DateTime) extends BSingleValue(BsonType
     }
 }
 
-/** A BSON timestamp value, wrapping [[org.bson.types.BSONTimestamp]]. */
-case class BTimestamp(override val value : BSONTimestamp) extends BSingleValue(BsonType.TIMESTAMP, value) {
+/** A BSON timestamp value, wrapping [[org.beaucatcher.bson.Timestamp]]. */
+case class BTimestamp(override val value : Timestamp) extends BSingleValue(BsonType.TIMESTAMP, value) {
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
-                // convert to milliseconds and treat the "increment" as milliseconds after
-                // the round number of seconds.
-                val asInteger = (value.getTime * 1000L) | value.getInc
-                BInt64(asInteger)
+                BInt64(value.asLong)
             /* http://www.mongodb.org/display/DOCS/Mongo+Extended+JSON is missing how to do timestamp for now */
             case _ =>
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
     }
+}
+
+object BTimestamp {
+    def apply(time : Int, inc : Int) : BTimestamp = BTimestamp(Timestamp(time, inc))
 }
 
 /**
@@ -850,8 +810,8 @@ object BValue {
             case oid : ObjectId =>
                 BObjectId(oid)
             case b : Binary =>
-                BBinData(b)
-            case t : BSONTimestamp =>
+                BBinary(b)
+            case t : Timestamp =>
                 BTimestamp(t)
             case b : Boolean =>
                 BBoolean(b)
@@ -882,10 +842,10 @@ object BValue {
     /**
      * Parse a JSON string, validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
      * The JSON string must contain all the fields found in the case class (unless the fields have
-     * a [[scala.Option]] type). If the fields have a BSON type (such as [[org.bson.types.ObjectId]])
+     * a [[scala.Option]] type). If the fields have a BSON type (such as [[org.beaucatcher.bson.ObjectId]])
      * then the returned [[org.beaucatcher.bson.BValue]] will contain BSON-only types such as
      * [[org.beaucatcher.bson.BObjectId]]. The types of the case class fields are used to decide how
-     * to parse the JSON, for example if the `_id` field in the case class has type  [[org.bson.types.ObjectId]],
+     * to parse the JSON, for example if the `_id` field in the case class has type  [[org.beaucatcher.bson.ObjectId]],
      * then the parser knows to return a string in the JSON document as [[org.beaucatcher.bson.BObjectId]]
      * rather than [[org.beaucatcher.bson.BString]].
      *
