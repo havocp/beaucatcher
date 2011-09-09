@@ -3,9 +3,7 @@ package org.beaucatcher.casbah
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.bson.BSONObject
-import com.mongodb.WriteResult
 import com.mongodb.casbah.MongoCollection
-import com.mongodb.CommandResult
 import com.mongodb.DBObject
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.Bytes
@@ -169,18 +167,22 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
     }
 
     override def insert(o : DBObject) : WriteResult = {
+        import Implicits._
         collection.insert(o)
     }
 
     override def update(query : DBObject, modifier : DBObject, options : UpdateOptions) : WriteResult = {
+        import Implicits._
         collection.update(query, modifier, options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
     }
 
     override def remove(query : DBObject) : WriteResult = {
+        import Implicits._
         collection.remove(query)
     }
 
     override def removeById(id : IdType) : WriteResult = {
+        import Implicits._
         collection.remove(MongoDBObject("_id" -> id))
     }
 }

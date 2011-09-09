@@ -7,7 +7,6 @@ import org.beaucatcher.casbah._
 import org.beaucatcher.mongo._
 import org.beaucatcher.mongo.JsonMethods
 import org.beaucatcher.bson.ClassAnalysis
-import org.bson.types._
 import org.junit.Assert._
 import org.junit._
 import scala.util.Random

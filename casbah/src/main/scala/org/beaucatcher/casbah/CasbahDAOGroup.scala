@@ -4,7 +4,6 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import com.mongodb.DBObject
 import com.mongodb.casbah.MongoCollection
-import org.bson.types.ObjectId
 
 /**
  * A DAOGroup exposes the entire chain of DAO conversions; you can "tap in" and use the

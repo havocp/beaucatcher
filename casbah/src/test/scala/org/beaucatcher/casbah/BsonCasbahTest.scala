@@ -5,9 +5,6 @@ import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.casbah.Implicits._
 import com.mongodb.casbah.commons.MongoDBObject
-import org.bson.types.Binary
-import org.bson.types.ObjectId
-import org.bson.types.BSONTimestamp
 import java.util.Date
 import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._

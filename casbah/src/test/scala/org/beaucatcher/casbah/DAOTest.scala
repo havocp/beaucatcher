@@ -6,7 +6,6 @@ import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.casbah._
 import org.beaucatcher.mongo._
-import org.bson.types._
 import org.junit.Assert._
 import org.junit._
 
@@ -46,7 +45,7 @@ class DAOTest
     // factoring this up into AbstractDAOTest is just too annoying
     @Test
     def testCustomQueryReturnsVariousEntityTypes() {
-        val foo = Foo(new ObjectId(), 23, "woohoo")
+        val foo = Foo(ObjectId(), 23, "woohoo")
         Foo.syncDAO[Foo].save(foo)
 
         val objects = Foo.customQuery[BObject].toIndexedSeq
