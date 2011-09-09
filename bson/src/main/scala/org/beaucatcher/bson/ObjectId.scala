@@ -72,6 +72,10 @@ object ObjectId {
         ObjectId(assembleString(time, machine, inc))
     }
 
+    def apply(time : Int, machine : Int, inc : Int) : ObjectId = {
+        ObjectId(assembleString(time, machine, inc))
+    }
+
     def apply() : ObjectId = {
         val time = (System.currentTimeMillis / 1000).intValue
         ObjectId(assembleString(time, machine, nextInc))
