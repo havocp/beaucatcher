@@ -77,7 +77,7 @@ object BeaucatcherBuild extends Build {
     lazy val root = Project("beaucatcher",
         file("."),
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (bson)
+            Seq(publishArtifact := false)) aggregate (bson, bsonJava)
 
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),
@@ -86,6 +86,11 @@ object BeaucatcherBuild extends Build {
                 libraryDependencies := Seq(scalajCollection, scalap, commonsCodec, jodaTime,
                     Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver)))
 
+    lazy val bsonJava = Project("beaucatcher-bson-java",
+        file("bson-java"),
+        settings = projectSettings ++
+            Seq(libraryDependencies := Seq(mongoJavaDriver))) dependsOn (bson % "compile->compile;test->test")
+
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
         settings = projectSettings) dependsOn (bson % "compile->compile;test->test")
@@ -93,7 +98,7 @@ object BeaucatcherBuild extends Build {
     lazy val casbah = Project("beaucatcher-casbah",
         file("casbah"),
         settings = projectSettings ++
-            Seq(libraryDependencies += casbahCore)) dependsOn (mongo % "compile->compile;test->test")
+            Seq(libraryDependencies += casbahCore)) dependsOn (mongo % "compile->compile;test->test", bsonJava % "compile->compile;test->test")
 
     lazy val async = Project("beaucatcher-async",
         file("async"),
