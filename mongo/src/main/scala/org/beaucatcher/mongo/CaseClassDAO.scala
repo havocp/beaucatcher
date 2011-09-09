@@ -2,7 +2,6 @@ package org.beaucatcher.mongo
 
 import org.beaucatcher.bson.ClassAnalysis
 import org.beaucatcher.bson._
-import com.mongodb.WriteResult
 
 /**
  * A Sync DAO parameterized to support returning case class entities.

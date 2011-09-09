@@ -1,6 +1,5 @@
 package org.beaucatcher.mongo
 
-import com.mongodb.WriteResult
 import org.beaucatcher.bson._
 
 sealed trait Fields {

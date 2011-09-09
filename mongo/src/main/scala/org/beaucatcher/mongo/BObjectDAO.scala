@@ -1,7 +1,6 @@
 package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
-import com.mongodb.WriteResult
 
 /**
  * A Sync DAO parameterized to work with BObject

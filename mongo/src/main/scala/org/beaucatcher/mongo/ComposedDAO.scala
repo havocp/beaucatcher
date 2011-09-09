@@ -1,7 +1,5 @@
 package org.beaucatcher.mongo
 
-import com.mongodb.WriteResult
-
 /**
  * A DAO that backends to another DAO. The two may have different query, entity, and ID types.
  * This is an internal implementation class not exported from the library.
