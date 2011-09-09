@@ -140,7 +140,7 @@ object ObjectId {
                 case nfe : NumberFormatException =>
                     throw new IllegalArgumentException("BSON object ID string contains invalid hex: " + string)
             }
-            if (!parsed.isValidByte)
+            if (parsed < 0 || parsed > 255)
                 throw new IllegalArgumentException("BSON object ID contains invalid number: " + parsed)
             val b : Byte = parsed.byteValue
             bytes.update(i, b)
