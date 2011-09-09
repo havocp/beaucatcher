@@ -27,8 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.net.NetworkInterface
 import scala.collection.JavaConversions._
 
-case class ObjectIdParts(time : Int, machine : Int, inc : Int)
-
 /**
  * A globally unique identifier for objects.
  * <p>Consists of 12 bytes, divided as follows:
@@ -41,57 +39,40 @@ case class ObjectIdParts(time : Int, machine : Int, inc : Int)
  * </table>
  * </pre></blockquote>
  */
-case class ObjectId(string : String) {
-    if (!ObjectId.isValidString(string))
-        throw new IllegalArgumentException("Invalid BSON object ID string: " + string)
+case class ObjectId(time : Int, machine : Int, inc : Int) {
 
-    lazy val parts = ObjectId.disassembleString(string)
-
-    /** Time of the ID, in seconds */
-    def time = parts.time
-
-    def machine = parts.machine
-
-    def inc = parts.inc
-
-    /** Time of the ID in milliseconds */
+    /** Time of the ID in milliseconds (the regular time field is in seconds) */
     def timeMillis = time * 1000L
+
+    // we cache the generated string
+    private lazy val string = ObjectId.assembleString(time, machine, inc)
 
     // code definitely relies on this, e.g. when generating json
     override def toString = string
 }
 
 object ObjectId {
+
+    private[bson] case class ObjectIdParts(time : Int, machine : Int, inc : Int)
+
     def apply(date : Date, machine : Int, inc : Int) : ObjectId = {
         val time = (date.getTime() / 1000).intValue
-        ObjectId(assembleString(time, machine, inc))
+        ObjectId(time, machine, inc)
     }
 
     def apply(date : DateTime, machine : Int, inc : Int) : ObjectId = {
         val time = (date.getMillis / 1000).intValue
-        ObjectId(assembleString(time, machine, inc))
+        ObjectId(time, machine, inc)
     }
 
-    def apply(time : Int, machine : Int, inc : Int) : ObjectId = {
-        ObjectId(assembleString(time, machine, inc))
+    def apply(string : String) : ObjectId = {
+        val parts = disassembleString(string)
+        ObjectId(parts.time, parts.machine, parts.inc)
     }
 
     def apply() : ObjectId = {
         val time = (System.currentTimeMillis / 1000).intValue
-        ObjectId(assembleString(time, machine, nextInc))
-    }
-
-    protected[bson] def isValidString(string : String) = {
-        string != null &&
-            string.length == 24 &&
-            24 == string.count({ c =>
-                c match {
-                    case digit if c >= '0' && c <= '9' => true
-                    case lower if c >= 'a' && c <= 'f' => true
-                    case upper if c >= 'A' && c <= 'F' => true
-                    case _ => false
-                }
-            })
+        ObjectId(time, machine, nextInc)
     }
 
     protected[bson] def assembleBytes(time : Int, machine : Int, inc : Int) = {
@@ -128,8 +109,6 @@ object ObjectId {
     }
 
     protected[bson] def disassembleString(string : String) : ObjectIdParts = {
-        // no need to use isValidString here since we should find
-        // all the same problems while parsing
         if (string.length != 24)
             throw new IllegalArgumentException("BSON object ID string has length " + string.length + " should be 24")
         val bytes = new Array[Byte](12)

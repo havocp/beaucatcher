@@ -52,16 +52,18 @@ object Dependencies {
     val scalajCollection = "org.scalaj" %% "scalaj-collection" % "1.1"
     val scalap = "org.scala-lang" % "scalap" % "2.9.0-1"
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
+    val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.6.5"
     val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
     val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
     val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.7"
-    val scalaTime        = "org.scala-tools.time" % "time_2.8.0" % "0.2"
+    val jodaTime = "joda-time" % "joda-time" % "1.6.2"
 
     // Dependencies in "test" configuration
     object Test {
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test"
         val liftJson = "net.liftweb" %% "lift-json" % "2.4-SNAPSHOT" % "test"
         val slf4j = "org.slf4j" % "slf4j-api" % "1.6.0"
+        val mongoJavaDriver = Dependencies.mongoJavaDriver % "test"
     }
 }
 
@@ -81,8 +83,8 @@ object BeaucatcherBuild extends Build {
         file("bson"),
         settings = projectSettings ++
             Seq(checksums := Nil, // lift-json sha1 is hosed at the moment
-                libraryDependencies := Seq(scalajCollection, scalap, commonsCodec, scalaTime,
-                    Test.junitInterface, Test.liftJson, Test.slf4j)))
+                libraryDependencies := Seq(scalajCollection, scalap, commonsCodec, jodaTime,
+                    Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver)))
 
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
