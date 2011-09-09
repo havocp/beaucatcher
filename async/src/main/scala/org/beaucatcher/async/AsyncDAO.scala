@@ -1,6 +1,5 @@
 package org.beaucatcher.async
 
-import com.mongodb.WriteResult
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import akka.dispatch.Future
