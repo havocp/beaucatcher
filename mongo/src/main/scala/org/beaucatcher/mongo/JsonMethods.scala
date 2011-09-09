@@ -3,7 +3,6 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.ClassAnalysis
-import org.bson.types._
 
 /**
  * The idea of this trait is to implement a backbone.js-style set of methods
@@ -54,7 +53,7 @@ trait JsonMethods[SchemaType <: Product] {
      * To change that, override here.
      */
     protected def createQueryForObject(path : String) : BObject = {
-        BObject("_id" -> BObjectId(new ObjectId(path)))
+        BObject("_id" -> BObjectId(ObjectId(path)))
     }
 
     /**
@@ -80,7 +79,7 @@ trait JsonMethods[SchemaType <: Product] {
      */
     protected def parseJValueIdFromPath(path : String) : JValue = {
         try {
-            new ObjectId(path)
+            ObjectId(path)
         } catch {
             case _ => throw new JsonValidationException("not a valid id: " + path)
         }
@@ -93,7 +92,7 @@ trait JsonMethods[SchemaType <: Product] {
      * not ObjectId.
      */
     protected def generateJValueId() : JValue = {
-        BString(new ObjectId().toString)
+        BString(ObjectId().toString)
     }
 
     /**

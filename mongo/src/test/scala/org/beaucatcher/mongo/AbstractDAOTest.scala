@@ -3,7 +3,6 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import org.bson.types._
 import org.junit.Assert._
 import org.junit._
 
@@ -53,7 +52,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testSaveAndFindOneCaseClass() {
-        val foo = newFoo(new ObjectId(), 23, "woohoo")
+        val foo = newFoo(ObjectId(), 23, "woohoo")
         Foo.syncDAO[Foo].save(foo)
         val maybeFound = Foo.syncDAO[Foo].findOneById(foo._id)
         assertTrue(maybeFound.isDefined)
@@ -71,7 +70,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testFindByIDAllResultTypes() {
-        val foo = newFoo(new ObjectId(), 23, "woohoo")
+        val foo = newFoo(ObjectId(), 23, "woohoo")
         Foo.syncDAO[Foo].save(foo)
 
         val o = Foo.syncDAO[BObject].findOneById(foo._id).get
@@ -110,28 +109,28 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     private def create1234() {
         for (i <- 1 to 4) {
-            val foo = newFoo(new ObjectId(), i, i.toString)
+            val foo = newFoo(ObjectId(), i, i.toString)
             Foo.syncDAO[Foo].insert(foo)
         }
     }
 
     private def create2143() {
         for (i <- Seq(2, 1, 4, 3)) {
-            val foo = newFoo(new ObjectId(), i, i.toString)
+            val foo = newFoo(ObjectId(), i, i.toString)
             Foo.syncDAO[Foo].insert(foo)
         }
     }
 
     private def create1234Optional() {
         for (i <- 1 to 4) {
-            val foo = newFooWithOptionalField(new ObjectId(), i, Some(i.toString))
+            val foo = newFooWithOptionalField(ObjectId(), i, Some(i.toString))
             FooWithOptionalField.syncDAO[FooWithOptionalField].insert(foo)
         }
     }
 
     private def create1to50() {
         for (i <- 1 to 50) {
-            val foo = newFoo(new ObjectId(), i, i.toString)
+            val foo = newFoo(ObjectId(), i, i.toString)
             Foo.syncDAO[Foo].insert(foo)
         }
     }
@@ -543,8 +542,8 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
         // check we replace and return the old one
         val stillOld = Foo.syncDAO[Foo].findAndReplace(BObject("intField" -> 3),
-            // this new ObjectId() is the thing that needs to get ignored
-            newFoo(new ObjectId(), 42, "42"))
+            // this ObjectId() is the thing that needs to get ignored
+            newFoo(ObjectId(), 42, "42"))
         assertTrue(stillOld.isDefined)
         assertEquals(3, stillOld.get.intField)
         assertEquals(4, Foo.syncDAO.count())
@@ -563,7 +562,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(4, Foo.syncDAO.count())
 
         val notThere = Foo.syncDAO[Foo].findAndReplace(BObject("intField" -> 124334),
-            newFoo(new ObjectId(), 42, "42"))
+            newFoo(ObjectId(), 42, "42"))
         assertTrue(notThere.isEmpty)
     }
 
@@ -716,7 +715,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     @Test
     def testInsert() {
         assertEquals(0, Foo.syncDAO.count())
-        val f = newFoo(new ObjectId(), 14, "14")
+        val f = newFoo(ObjectId(), 14, "14")
         Foo.syncDAO[Foo].insert(f)
         assertEquals(1, Foo.syncDAO.count())
         val foundById = Foo.syncDAO[Foo].findOneById(f._id)
@@ -734,7 +733,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     @Test
     def testSave() {
         assertEquals(0, Foo.syncDAO.count())
-        val f = newFoo(new ObjectId(), 14, "14")
+        val f = newFoo(ObjectId(), 14, "14")
         Foo.syncDAO[Foo].save(f)
         assertEquals(1, Foo.syncDAO.count())
         val foundById = Foo.syncDAO[Foo].findOneById(f._id)
@@ -762,7 +761,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     def testUpdate() {
         // updating when there's nothing there should do nothing
         assertEquals(0, Foo.syncDAO.count())
-        val f = newFoo(new ObjectId(), 14, "14")
+        val f = newFoo(ObjectId(), 14, "14")
         Foo.syncDAO[Foo].update(BObject("_id" -> f._id), f)
         assertEquals(0, Foo.syncDAO.count())
         val foundById = Foo.syncDAO[Foo].findOneById(f._id)
@@ -832,7 +831,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     def testUpdateUpsert() {
         // upserting when there's nothing there should insert
         assertEquals(0, Foo.syncDAO.count())
-        val f = newFoo(new ObjectId(), 14, "14")
+        val f = newFoo(ObjectId(), 14, "14")
         Foo.syncDAO[Foo].updateUpsert(BObject("_id" -> f._id), f)
         assertEquals(1, Foo.syncDAO.count())
         val foundById = Foo.syncDAO[Foo].findOneById(f._id)

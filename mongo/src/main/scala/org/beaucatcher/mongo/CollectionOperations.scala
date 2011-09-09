@@ -2,7 +2,6 @@ package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
 import com.mongodb.DBObject
-import org.bson.types.ObjectId
 import scala.annotation.implicitNotFound
 
 /**
