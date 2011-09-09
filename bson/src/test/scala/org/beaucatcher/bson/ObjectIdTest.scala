@@ -111,4 +111,48 @@ class ObjectIdTest extends TestUtils {
         //assertEquals(one.inc + 1, two.inc)
         //assertEquals(one.inc + 2, three.inc)
     }
+
+    private def invalidObjectId(s : String) : Unit = {
+        val e = try {
+            intercept[IllegalArgumentException] {
+                ObjectId(s)
+            }
+        } catch {
+            case iae : IllegalArgumentException =>
+                throw new Exception("This should never happen, didn't intercept IllegalArgumentException")
+            case e : Throwable =>
+                // rewrite exception to show which string was the problem
+                throw new Exception("Object ID string was not detected as invalid: '" + s + "'", e)
+        }
+        // exception has to be something about BSON
+        assertTrue(e.getMessage.contains("BSON"))
+    }
+
+    @Test
+    def rejectsInvalidStrings : Unit = {
+        invalidObjectId("")
+        invalidObjectId("ff")
+        invalidObjectId("foo")
+        invalidObjectId("1234")
+        val valid = "4dbf8ea93364e3bd9745723c"
+
+        // change each char to an invalid one
+        for (i <- 0 to (valid.length - 1)) {
+            val invalid = valid.substring(0, i) + "z" + valid.substring(i + 1)
+            require(valid.length == invalid.length)
+            invalidObjectId(invalid)
+        }
+
+        // try chopping off the string
+        for (i <- 0 to (valid.length - 1)) {
+            val invalid = valid.substring(0, i)
+            require(valid.length != invalid.length)
+            invalidObjectId(invalid)
+        }
+
+        // try putting junk on the end
+        invalidObjectId(valid + "f")
+        invalidObjectId(valid + "ff")
+        invalidObjectId(valid + valid)
+    }
 }
