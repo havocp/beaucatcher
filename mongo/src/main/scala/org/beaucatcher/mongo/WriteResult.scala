@@ -3,7 +3,7 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 
-class WriteResult(raw : BObject) extends CommandResult(raw) {
+class WriteResult(lazyRaw : => BObject) extends CommandResult(lazyRaw) {
     def n : Int = getInt("n").getOrElse(0)
 
     def upserted : Option[Any] = raw.get("upserted") map { _.unwrapped }
@@ -12,7 +12,7 @@ class WriteResult(raw : BObject) extends CommandResult(raw) {
 }
 
 object WriteResult {
-    def apply(raw : BObject) : WriteResult = new WriteResult(raw)
+    def apply(lazyRaw : => BObject) : WriteResult = new WriteResult(lazyRaw)
 
     /** This constructor is basically for converting from a Hammersmith WriteResult */
     def apply(ok : Boolean, err : Option[String] = None, n : Int = 0,

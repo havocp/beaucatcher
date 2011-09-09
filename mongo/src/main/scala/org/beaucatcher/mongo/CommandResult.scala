@@ -3,7 +3,9 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 
-class CommandResult(val raw : BObject) {
+class CommandResult(lazyRaw : => BObject) {
+    lazy val raw = lazyRaw
+
     protected[beaucatcher] def getBoolean(key : String) : Option[Boolean] = {
         raw.get(key) match {
             case Some(BBoolean(v)) => Some(v)
@@ -44,7 +46,7 @@ class CommandResult(val raw : BObject) {
 }
 
 object CommandResult {
-    def apply(raw : BObject) : CommandResult = new CommandResult(raw)
+    def apply(lazyRaw : => BObject) : CommandResult = new CommandResult(lazyRaw)
 
     def apply(ok : Boolean) : CommandResult = new CommandResult(BObject("ok" -> ok))
 }
