@@ -191,7 +191,7 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
 
 /* Mutable BSONObject/DBObject implementation used to save to MongoDB API */
 private[casbah] class BObjectBSONObject extends BSONObject {
-    import scalaj.collection.Implicits._
+    import scala.collection.JavaConversions._
 
     private[this] var bvalue : BObject = BObject.empty
 
@@ -218,7 +218,7 @@ private[casbah] class BObjectBSONObject extends BSONObject {
     }
 
     override def keySet() : java.util.Set[String] = {
-        bvalue.keySet.asJava
+        bvalue.keySet
     }
 
     // returns previous value

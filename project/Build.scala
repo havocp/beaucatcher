@@ -49,7 +49,6 @@ object Resolvers {
 }
 
 object Dependencies {
-    val scalajCollection = "org.scalaj" %% "scalaj-collection" % "1.1"
     val scalap = "org.scala-lang" % "scalap" % "2.9.0-1"
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.6.5"
@@ -83,7 +82,7 @@ object BeaucatcherBuild extends Build {
         file("bson"),
         settings = projectSettings ++
             Seq(checksums := Nil, // lift-json sha1 is hosed at the moment
-                libraryDependencies := Seq(scalajCollection, scalap, commonsCodec, jodaTime,
+                libraryDependencies := Seq(scalap, commonsCodec, jodaTime,
                     Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver)))
 
     lazy val bsonJava = Project("beaucatcher-bson-java",
