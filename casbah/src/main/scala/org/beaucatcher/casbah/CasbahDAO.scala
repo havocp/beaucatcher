@@ -8,6 +8,8 @@ import com.mongodb.DBObject
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.Bytes
 
+import j.JavaConversions._
+
 /**
  * Base trait that chains SyncDAO methods to a Casbah collection, which must be provided
  * by a subclass of this trait.
@@ -222,18 +224,18 @@ private[casbah] class BObjectBSONObject extends BSONObject {
     // returns previous value
     override def put(key : String, v : AnyRef) : AnyRef = {
         val previous = get(key)
-        bvalue = bvalue + (key, BValue.wrap(v))
+        bvalue = bvalue + (key -> wrapJavaAsBValue(v))
         previous
     }
 
     override def putAll(bsonObj : BSONObject) : Unit = {
         for { key <- bsonObj.keySet() }
-            put(key, BValue.wrap(bsonObj.get(key)))
+            put(key, wrapJavaAsBValue(bsonObj.get(key)))
     }
 
     override def putAll(m : java.util.Map[_, _]) : Unit = {
         for { key <- m.keySet() }
-            put(key.asInstanceOf[String], BValue.wrap(m.get(key)))
+            put(key.asInstanceOf[String], wrapJavaAsBValue(m.get(key)))
     }
 
     override def removeField(key : String) : AnyRef = {

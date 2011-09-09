@@ -61,9 +61,7 @@ private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Man
 
     /**
      *  This DAO works with a traversable immutable BSON tree (BObject), which is probably
-     *  the best representation if you want to convert to JSON. You can also use
-     *  the unwrappedAsJava field on BObject to get a Java map, which may work
-     *  well with your HTML template system. This is intended to be the "raw"
+     *  the best representation if you want to convert to JSON. This is intended to be the "raw"
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */

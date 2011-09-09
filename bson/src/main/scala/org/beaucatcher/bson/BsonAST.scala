@@ -31,7 +31,6 @@ import scala.collection.immutable
 import java.util.Date
 import org.apache.commons.codec.binary.Base64
 import org.joda.time._
-import scalaj.collection.Implicits._
 import scala.io.Source
 
 /**
@@ -79,18 +78,6 @@ sealed abstract trait BValue {
      * The type "code" for this value's BSON type in the BSON/MongoDB wire protocol
      */
     val bsonType : BsonType.Value
-
-    /**
-     * The unwrapped version of the [[org.beaucatcher.bson.BValue]] as a plain Java type. For example,
-     * while the `unwrapped` method on a `BObject` returns a Scala `Map`, the
-     * `unwrappedAsJava` method returns a Java `Map`. This is useful for interoperating
-     * with Java APIs.
-     * @return the unwrapped value as a Java type
-     */
-    def unwrappedAsJava : AnyRef = {
-        // this default implementation works for say String where Java and Scala are the same
-        unwrapped.asInstanceOf[AnyRef]
-    }
 
     /**
      * The value converted to a [[org.beaucatcher.bson.JValue]]. For many primitive types,
@@ -256,7 +243,6 @@ sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
 
     type WrappedType = List[Any]
     override lazy val unwrapped = value.map(_.unwrapped)
-    override def unwrappedAsJava = value.map(_.unwrappedAsJava).asJava
 
     // SeqLike: length
     override def length = value.length
@@ -492,7 +478,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     // but the only ordered map in standard collections is mutable, so
     // it isn't 100% no-brainer to use that.
     override lazy val unwrapped = Map() ++ value.map(field => (field._1, field._2.unwrapped : Any))
-    override def unwrappedAsJava = (Map() ++ value.map(field => (field._1, field._2.unwrappedAsJava))).asJava
+
     override val bsonType = BsonType.OBJECT
 
     protected[this] def construct(list : List[Field[ValueType]]) : Repr
@@ -829,13 +815,9 @@ object BValue {
                 BObject(m.iterator.map(kv => (kv._1.asInstanceOf[String], BValue.wrap(kv._2))).toList)
             case seq : Seq[_] =>
                 BArray(seq.map(BValue.wrap(_)).toList)
-            // we can wrap Java types too, so unwrappedAsJava can be undone
-            case m : java.util.Map[_, _] =>
-                wrap(m.asScala)
-            case l : java.util.List[_] =>
-                wrap(l.asScala)
             case _ =>
-                throw new UnsupportedOperationException("Cannot convert to BValue: " + value)
+                val failedClassName = value.asInstanceOf[AnyRef].getClass.getName
+                throw new UnsupportedOperationException("Cannot convert to BValue: " + failedClassName + ": " + value)
         }
     }
 

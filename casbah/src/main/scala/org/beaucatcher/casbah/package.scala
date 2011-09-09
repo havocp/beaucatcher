@@ -8,11 +8,13 @@ import com.mongodb.{ WriteResult => JavaWriteResult }
 import com.mongodb.{ CommandResult => JavaCommandResult }
 
 package object casbah {
+    import j.JavaConversions._
+
     object Implicits {
         implicit def asScalaBObject(bsonObj : BSONObject) = {
             val keys = bsonObj.keySet().iterator().asScala
             val fields = for { key <- keys }
-                yield (key, BValue.wrap(bsonObj.get(key)))
+                yield (key, wrapJavaAsBValue(bsonObj.get(key)))
             BObject(fields.toList)
         }
 

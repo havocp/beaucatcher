@@ -14,54 +14,7 @@ class BsonTest extends TestUtils {
     def setup() {
     }
 
-    val someDateTime = new DateTime(1996, 7, 10, 16, 50, 00, 00, DateTimeZone.UTC)
-    val someJavaDate = someDateTime.toDate()
-
-    protected def makeObjectManyTypes() = {
-        BObject("null" -> null,
-            "int" -> 42,
-            "long" -> 37L,
-            "bigint" -> BigInt(42),
-            "double" -> 3.14159,
-            "float" -> 3.14159f,
-            "bigdecimal" -> BigDecimal(23.49),
-            "boolean" -> true,
-            "string" -> "quick brown fox",
-            "date" -> someJavaDate,
-            "datetime" -> someDateTime,
-            "timestamp" -> Timestamp((someJavaDate.getTime / 1000).toInt, 1),
-            "objectid" -> ObjectId("4dbf8ea93364e3bd9745723c"),
-            "binary" -> Binary(new Array[Byte](10), BsonSubtype.GENERAL),
-            "map_int" -> Map[String, Int]("a" -> 20, "b" -> 21),
-            "map_date" -> Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
-            "seq_string" -> List("a", "b", "c", "d"),
-            "seq_int" -> List(1, 2, 3, 4),
-            "bobj" -> BObject("foo" -> 6789, "bar" -> 4321))
-    }
-
-    protected def makeArrayManyTypes() = {
-        // a non-homogeneous-typed array is pretty much nonsense, but JavaScript
-        // lets you do whatever, so we let you do whatever.
-        BArray(null,
-            42,
-            37L,
-            BigInt(42),
-            3.14159,
-            3.14159f,
-            BigDecimal(23.49),
-            true,
-            "quick brown fox",
-            someJavaDate,
-            someDateTime,
-            Timestamp((someJavaDate.getTime / 1000).toInt, 1),
-            ObjectId("4dbf8ea93364e3bd9745723c"),
-            Binary(new Array[Byte](10), BsonSubtype.GENERAL),
-            Map[String, Int]("a" -> 20, "b" -> 21),
-            Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
-            List("a", "b", "c", "d"),
-            List(1, 2, 3, 4),
-            BObject("foo" -> 6789, "bar" -> 4321))
-    }
+    import BsonTest._
 
     @Test
     def numericValuesBasicallyBehave() : Unit = {
@@ -475,44 +428,6 @@ class BsonTest extends TestUtils {
         assertEquals(obj, rewrapped)
     }
 
-    private def assertJavaValue(j : AnyRef) : Unit = {
-        if (j != null) {
-            val klassName = j.getClass.getName
-            //System.out.println(k + "=" + klassName)
-            assertFalse("found a scala type in unwrappedAsJava " + klassName,
-                klassName.startsWith("scala."))
-            assertTrue("found unexpected type in unwrappedAsJava " + klassName,
-                klassName.contains("java") ||
-                    klassName == "org.joda.time.DateTime" ||
-                    klassName == "scalaj.collection.s2j.MapWrapper" ||
-                    klassName == "scalaj.collection.s2j.SeqWrapper" ||
-                    klassName.startsWith("org.bson.types."))
-
-            // recurse
-            j match {
-                case c : java.util.Collection[_] =>
-                    val i = c.iterator()
-                    while (i.hasNext())
-                        assertJavaValue(i.next().asInstanceOf[AnyRef])
-                case _ =>
-            }
-        }
-    }
-
-    // check that unwrappedAsJava behaves sensibly
-    // FIXME re-enable in a package that has org.bson conversions
-    //@Test
-    def javaUnwrapWorks() = {
-        val obj = makeObjectManyTypes()
-        for {
-            (k, v) <- obj
-        } {
-            val j = v.unwrappedAsJava
-            assertJavaValue(j)
-            assertEquals(v, BValue.wrap(j))
-        }
-    }
-
     private def assertIsScalaMap(m : AnyRef) = {
         assertTrue("is a scala immutable map type: " + m.getClass.getName,
             m.getClass.getName.startsWith("scala.collection.immutable."))
@@ -772,5 +687,57 @@ class BsonTest extends TestUtils {
         // "seq_string"
         // "seq_int"
         // "bobj"
+    }
+}
+
+object BsonTest {
+
+    val someDateTime = new DateTime(1996, 7, 10, 16, 50, 00, 00, DateTimeZone.UTC)
+    val someJavaDate = someDateTime.toDate()
+
+    def makeObjectManyTypes() = {
+        BObject("null" -> null,
+            "int" -> 42,
+            "long" -> 37L,
+            "bigint" -> BigInt(42),
+            "double" -> 3.14159,
+            "float" -> 3.14159f,
+            "bigdecimal" -> BigDecimal(23.49),
+            "boolean" -> true,
+            "string" -> "quick brown fox",
+            "date" -> someJavaDate,
+            "datetime" -> someDateTime,
+            "timestamp" -> Timestamp((someJavaDate.getTime / 1000).toInt, 1),
+            "objectid" -> ObjectId("4dbf8ea93364e3bd9745723c"),
+            "binary" -> Binary(new Array[Byte](10), BsonSubtype.GENERAL),
+            "map_int" -> Map[String, Int]("a" -> 20, "b" -> 21),
+            "map_date" -> Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
+            "seq_string" -> List("a", "b", "c", "d"),
+            "seq_int" -> List(1, 2, 3, 4),
+            "bobj" -> BObject("foo" -> 6789, "bar" -> 4321))
+    }
+
+    def makeArrayManyTypes() = {
+        // a non-homogeneous-typed array is pretty much nonsense, but JavaScript
+        // lets you do whatever, so we let you do whatever.
+        BArray(null,
+            42,
+            37L,
+            BigInt(42),
+            3.14159,
+            3.14159f,
+            BigDecimal(23.49),
+            true,
+            "quick brown fox",
+            someJavaDate,
+            someDateTime,
+            Timestamp((someJavaDate.getTime / 1000).toInt, 1),
+            ObjectId("4dbf8ea93364e3bd9745723c"),
+            Binary(new Array[Byte](10), BsonSubtype.GENERAL),
+            Map[String, Int]("a" -> 20, "b" -> 21),
+            Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
+            List("a", "b", "c", "d"),
+            List(1, 2, 3, 4),
+            BObject("foo" -> 6789, "bar" -> 4321))
     }
 }
