@@ -43,9 +43,9 @@ class ValidationTest {
             "aBoolean" -> true,
             "aString" -> "lazy dog",
             "aDateTime" -> someDateTime,
-            "aTimestamp" -> new Timestamp((someDateTime.getMillis / 1000).toInt, 1),
-            "anObjectId" -> new ObjectId("4dbf8ea93364e3bd9745723c"),
-            "aBinary" -> new Binary(new Array[Byte](10), BsonSubtype.GENERAL),
+            "aTimestamp" -> Timestamp((someDateTime.getMillis / 1000).toInt, 1),
+            "anObjectId" -> ObjectId("4dbf8ea93364e3bd9745723c"),
+            "aBinary" -> Binary(new Array[Byte](10), BsonSubtype.GENERAL),
             "aMap" -> Map[String, Int]("a" -> 20, "b" -> 21),
             "aSeq" -> List(1, 2, 3, 4))
     }

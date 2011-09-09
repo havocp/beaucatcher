@@ -26,7 +26,7 @@ private[bson] object BsonValidation {
 
     private def bStringToObjectId(fieldName : String, s : BString) : ObjectId = {
         try {
-            new ObjectId(s.value)
+            ObjectId(s.value)
         } catch {
             case e : Exception =>
                 throw new BadValueException(fieldName, "ObjectId", s)

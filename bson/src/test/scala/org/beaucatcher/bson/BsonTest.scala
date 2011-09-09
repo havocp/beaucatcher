@@ -29,9 +29,9 @@ class BsonTest extends TestUtils {
             "string" -> "quick brown fox",
             "date" -> someJavaDate,
             "datetime" -> someDateTime,
-            "timestamp" -> new Timestamp((someJavaDate.getTime / 1000).toInt, 1),
-            "objectid" -> new ObjectId("4dbf8ea93364e3bd9745723c"),
-            "binary" -> new Binary(new Array[Byte](10), BsonSubtype.GENERAL),
+            "timestamp" -> Timestamp((someJavaDate.getTime / 1000).toInt, 1),
+            "objectid" -> ObjectId("4dbf8ea93364e3bd9745723c"),
+            "binary" -> Binary(new Array[Byte](10), BsonSubtype.GENERAL),
             "map_int" -> Map[String, Int]("a" -> 20, "b" -> 21),
             "map_date" -> Map[String, Date]("a" -> someJavaDate, "b" -> someJavaDate),
             "seq_string" -> List("a", "b", "c", "d"),
@@ -759,12 +759,11 @@ class BsonTest extends TestUtils {
         wrongType[DateTime]("timestamp")
         wrongType[Long]("timestamp")
 
-        rightType[ObjectId]("objectid", new ObjectId("4dbf8ea93364e3bd9745723c"))
-        rightType[AnyRef]("objectid", new ObjectId("4dbf8ea93364e3bd9745723c"))
+        rightType[ObjectId]("objectid", ObjectId("4dbf8ea93364e3bd9745723c"))
+        rightType[AnyRef]("objectid", ObjectId("4dbf8ea93364e3bd9745723c"))
         wrongType[String]("objectid")
 
-        // FIXME maybe equality on Binary isn't by value?
-        //rightType[Binary]("binary", new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), new Array[Byte](10)))
+        rightType[Binary]("binary", Binary(new Array[Byte](10), BsonSubtype.GENERAL))
         wrongType[String]("binary")
 
         // FIXME add these
