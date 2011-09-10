@@ -57,7 +57,7 @@ private[beaucatcher] abstract class MongoConnectionStore[ConnectionType] {
             c
         } else {
             creationLock.acquire()
-            val result = {
+            try {
                 val beatenToIt = map.get(address)
                 if (beatenToIt != null) {
                     beatenToIt
@@ -66,9 +66,9 @@ private[beaucatcher] abstract class MongoConnectionStore[ConnectionType] {
                     map.put(address, created)
                     created
                 }
+            } finally {
+                creationLock.release()
             }
-            creationLock.release()
-            result
         }
     }
 }
