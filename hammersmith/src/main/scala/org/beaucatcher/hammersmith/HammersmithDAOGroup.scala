@@ -4,24 +4,37 @@ import com.mongodb.async.Collection
 import org.beaucatcher.async._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import org.bson.types.ObjectId
 import org.bson.collection._
 
-private[hammersmith] class CaseClassBObjectHammersmithDAOGroup[EntityType <: Product : Manifest, CaseClassIdType, BObjectIdType](
+private[hammersmith] class InnerBValueValueComposer
+    extends ValueComposer[Any, BValue] {
+
+    import j.JavaConversions._
+
+    override def valueIn(v : Any) : BValue = wrapJavaAsBValue(v)
+    override def valueOut(v : BValue) : Any = v.unwrappedAsJava
+}
+
+private[hammersmith] class OuterBValueValueComposer
+    extends ValueComposer[BValue, Any] {
+
+    import j.JavaConversions._
+
+    override def valueIn(v : BValue) : Any = v.unwrappedAsJava
+    override def valueOut(v : Any) : BValue = wrapJavaAsBValue(v)
+}
+
+private[hammersmith] class CaseClassBObjectHammersmithDAOGroup[EntityType <: Product : Manifest, CaseClassIdType, BObjectIdType, HammersmithIdType <: AnyRef](
     val collection : Collection,
     val caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
     val caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject],
-    val caseClassBObjectIdComposer : IdComposer[CaseClassIdType, BObjectIdType])
+    val caseClassBObjectIdComposer : IdComposer[CaseClassIdType, BObjectIdType],
+    private val bobjectHammersmithIdComposer : IdComposer[BObjectIdType, HammersmithIdType])
     extends SyncDAOGroup[EntityType, CaseClassIdType, BObjectIdType] {
     require(collection != null)
     require(caseClassBObjectQueryComposer != null)
     require(caseClassBObjectEntityComposer != null)
     require(caseClassBObjectIdComposer != null)
-
-    /* Is there a way to make this "BObjectIdType as a boxed ref type" rather than
-     * just dropping all type information?
-     */
-    final private type HammersmithIdType = AnyRef
 
     /* Let's not allow changing the BObject-to-Hammersmith mapping since we want to
      * get rid of Hammersmith's BSONDocument. That's why these are private.
@@ -30,11 +43,7 @@ private[hammersmith] class CaseClassBObjectHammersmithDAOGroup[EntityType <: Pro
         new BObjectHammersmithQueryComposer()
     private lazy val bobjectHammersmithEntityComposer : EntityComposer[BObject, BObject] =
         new IdentityEntityComposer[BObject]()
-    private lazy val bobjectHammersmithIdComposer : IdComposer[BObjectIdType, HammersmithIdType] =
-        new IdComposer[BObjectIdType, HammersmithIdType] {
-            override def idOut(id : HammersmithIdType) : BObjectIdType = id.asInstanceOf[BObjectIdType]
-            override def idIn(id : BObjectIdType) : HammersmithIdType = id.asInstanceOf[AnyRef]
-        }
+
     private lazy val bobjectHammersmithValueComposer : ValueComposer[BValue, Any] =
         new OuterBValueValueComposer()
 

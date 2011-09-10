@@ -4,6 +4,7 @@ import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import com.mongodb.async._
 import com.mongodb.async.util._
+import org.bson.types.{ ObjectId => JavaObjectId }
 
 private[hammersmith] class HammersmithBackend(private val config : MongoConfig)
     extends MongoBackend {
@@ -29,17 +30,38 @@ private[hammersmith] class HammersmithBackend(private val config : MongoConfig)
         coll
     }
 
-    override final def createDAOGroup[EntityType <: Product : Manifest, IdType](collectionName : String,
+    override final def createDAOGroup[EntityType <: Product : Manifest, IdType : Manifest](collectionName : String,
         caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
         caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType] = {
-        new CaseClassBObjectHammersmithDAOGroup[EntityType, IdType, IdType](collection(collectionName),
-            caseClassBObjectQueryComposer,
-            caseClassBObjectEntityComposer,
-            new IdentityIdComposer[IdType])
+        val identityIdComposer = new IdentityIdComposer[IdType]
+        val idManifest = manifest[IdType]
+        if (idManifest <:< manifest[ObjectId]) {
+            new CaseClassBObjectHammersmithDAOGroup[EntityType, IdType, IdType, JavaObjectId](collection(collectionName),
+                caseClassBObjectQueryComposer,
+                caseClassBObjectEntityComposer,
+                identityIdComposer,
+                HammersmithBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
+        } else {
+            val hammersmithIdComposer = new IdComposer[IdType, AnyRef] {
+                override def idOut(id : AnyRef) : IdType = id.asInstanceOf[IdType]
+                override def idIn(id : IdType) : AnyRef = id.asInstanceOf[AnyRef]
+            }
+            new CaseClassBObjectHammersmithDAOGroup[EntityType, IdType, IdType, AnyRef](collection(collectionName),
+                caseClassBObjectQueryComposer,
+                caseClassBObjectEntityComposer,
+                identityIdComposer,
+                hammersmithIdComposer)
+        }
     }
 }
 
 private[hammersmith] object HammersmithBackend {
+    lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
+        import j.JavaConversions._
+        override def idIn(id : ObjectId) : JavaObjectId = id
+        override def idOut(id : JavaObjectId) : ObjectId = id
+    }
+
     val connections = new MongoConnectionStore[MongoConnection] {
         override def create(address : MongoConnectionAddress) = {
             val (c, _, _) = MongoConnection.fromURI(address.url)
