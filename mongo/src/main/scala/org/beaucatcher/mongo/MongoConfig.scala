@@ -7,7 +7,7 @@ trait MongoConfigProvider {
 }
 
 trait MongoConfig {
-    val url: String
+    val url : String
 
     override def equals(other : Any) : Boolean =
         other match {
@@ -34,7 +34,8 @@ case class SimpleMongoConfig(val databaseName : String,
     override val url = "mongodb://%s:%d/%s".format(host, port, databaseName)
 }
 
-/** the most general config can express anything found in the Mongo URL
+/**
+ * the most general config can express anything found in the Mongo URL
  * http://www.mongodb.org/display/DOCS/Connections
  */
 case class UrlMongoConfig(override val url : String)
@@ -43,7 +44,7 @@ case class UrlMongoConfig(override val url : String)
 
 // FIXME this url really has to be normalized to strip out database and collection
 // so it represents only a set of hosts and potentially any connection-wide options
-private[beaucatcher] case class MongoConnectionAddress(url: String)
+private[beaucatcher] case class MongoConnectionAddress(url : String)
 
 private[beaucatcher] abstract class MongoConnectionStore[ConnectionType] {
     private val map = new ConcurrentHashMap[MongoConnectionAddress, ConnectionType]
