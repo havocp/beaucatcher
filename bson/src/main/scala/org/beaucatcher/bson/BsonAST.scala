@@ -108,6 +108,53 @@ sealed abstract trait BValue {
      */
     def toPrettyJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
         BsonJson.toPrettyJson(this, flavor)
+
+    final private val unboxedClasses : Map[Class[_], Class[_]] = Map(
+        classOf[java.lang.Integer] -> classOf[Int],
+        classOf[java.lang.Double] -> classOf[Double],
+        classOf[java.lang.Boolean] -> classOf[Boolean],
+        classOf[java.lang.Long] -> classOf[Long],
+        classOf[java.lang.Short] -> classOf[Short],
+        classOf[java.lang.Character] -> classOf[Char],
+        classOf[java.lang.Byte] -> classOf[Byte],
+        classOf[java.lang.Float] -> classOf[Float],
+        classOf[scala.runtime.BoxedUnit] -> classOf[Unit])
+
+    // The trickiness here is that asInstanceOf[A] doesn't use the
+    // manifest and thus doesn't do anything (no runtime type
+    // check). So we have to do it by hand, special-casing
+    // AnyVal primitives because Java Class.cast won't work
+    // on them as desired.
+    private def checkedCast[A <: Any : ClassManifest](value : Any) : A = {
+        if (value == null) {
+            if (classManifest[A] <:< classManifest[AnyVal]) {
+                throw new ClassCastException("null can't be converted to AnyVal type " + classManifest[A])
+            } else {
+                null.asInstanceOf[A]
+            }
+        } else {
+            val klass = value.asInstanceOf[AnyRef].getClass
+            val unboxedClass = unboxedClasses.getOrElse(klass, klass)
+
+            /* value and the return value are always boxed because that's how
+             * an Any is passed around; type A we're casting to may be boxed or
+             * unboxed. For example, value is always java.lang.Integer for
+             * ints, but A could be java.lang.Integer OR scala Int. But
+             * even if A is Int, the return value is really always a
+             * java.lang.Integer, so we can leave the value boxed.
+             */
+
+            if (classManifest[A].erasure.isAssignableFrom(unboxedClass) ||
+                classManifest[A].erasure.isAssignableFrom(klass)) {
+                value.asInstanceOf[A]
+            } else {
+                throw new ClassCastException("Requested " + classManifest[A] + " but value is " + value + " with type " +
+                    klass.getName)
+            }
+        }
+    }
+
+    def unwrappedAs[A : Manifest] = checkedCast[A](unwrapped)
 }
 
 /**
@@ -122,7 +169,7 @@ sealed abstract trait JValue extends BValue {
 }
 
 private[bson] sealed abstract class BSingleValue[T](override val bsonType : BsonType.Value, val value : T) extends BValue {
-    type WrappedType = T
+    override type WrappedType = T
     override def unwrapped = value
 }
 
@@ -130,7 +177,7 @@ private[bson] sealed abstract class BSingleValue[T](override val bsonType : Bson
  * The value `null` in BSON and JSON.
  */
 case object BNull extends JValue {
-    type WrappedType = Null
+    override type WrappedType = Null
     override val unwrapped = null
     override val bsonType = BsonType.NULL
 }
@@ -151,7 +198,7 @@ case class BString(override val value : String) extends BSingleValue(BsonType.ST
 sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, val value : T)
     extends ScalaNumber
     with ScalaNumericConversions with JValue {
-    type WrappedType = T
+    override type WrappedType = T
     override def unwrapped = value
 
     override def underlying = value.asInstanceOf[Number]
@@ -241,7 +288,7 @@ sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
      */
     val value : List[ElementType]
 
-    type WrappedType = List[Any]
+    override type WrappedType = List[Any]
     override lazy val unwrapped = value.map(_.unwrapped)
 
     // SeqLike: length
@@ -470,7 +517,7 @@ object BTimestamp {
 abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     extends BValue
     with immutable.Map[String, ValueType] {
-    type WrappedType = Map[String, Any]
+    override type WrappedType = Map[String, Any]
 
     val value : List[Field[ValueType]]
 
@@ -528,51 +575,6 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
         value.map(field => (field._1, field._2)).iterator
     }
 
-    final private val unboxedClasses : Map[Class[_], Class[_]] = Map(
-        classOf[java.lang.Integer] -> classOf[Int],
-        classOf[java.lang.Double] -> classOf[Double],
-        classOf[java.lang.Boolean] -> classOf[Boolean],
-        classOf[java.lang.Long] -> classOf[Long],
-        classOf[java.lang.Short] -> classOf[Short],
-        classOf[java.lang.Character] -> classOf[Char],
-        classOf[java.lang.Byte] -> classOf[Byte],
-        classOf[java.lang.Float] -> classOf[Float],
-        classOf[scala.runtime.BoxedUnit] -> classOf[Unit])
-
-    // The trickiness here is that asInstanceOf[A] doesn't use the
-    // manifest and thus doesn't do anything (no runtime type
-    // check). So we have to do it by hand, special-casing
-    // AnyVal primitives because Java Class.cast won't work
-    // on them as desired.
-    private def checkedCast[A <: Any : ClassManifest](value : Any) : A = {
-        if (value == null) {
-            if (classManifest[A] <:< classManifest[AnyVal]) {
-                throw new ClassCastException("null can't be converted to AnyVal type " + classManifest[A])
-            } else {
-                null.asInstanceOf[A]
-            }
-        } else {
-            val klass = value.asInstanceOf[AnyRef].getClass
-            val unboxedClass = unboxedClasses.getOrElse(klass, klass)
-
-            /* value and the return value are always boxed because that's how
-             * an Any is passed around; type A we're casting to may be boxed or
-             * unboxed. For example, value is always java.lang.Integer for
-             * ints, but A could be java.lang.Integer OR scala Int. But
-             * even if A is Int, the return value is really always a
-             * java.lang.Integer, so we can leave the value boxed.
-             */
-
-            if (classManifest[A].erasure.isAssignableFrom(unboxedClass) ||
-                classManifest[A].erasure.isAssignableFrom(klass)) {
-                value.asInstanceOf[A]
-            } else {
-                throw new ClassCastException("Requested " + classManifest[A] + " but value is " + value + " with type " +
-                    klass.getName)
-            }
-        }
-    }
-
     /**
      * Gets an unwrapped value from the map, or throws [[java.util.NoSuchElementException]].
      * A more-convenient alternative to `obj.get(key).get.unwrapped.asInstanceOf[A]`.
@@ -583,7 +585,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     def getUnwrappedAs[A : Manifest](key : String) : A = {
         get(key) match {
             case Some(bvalue) =>
-                checkedCast[A](bvalue.unwrapped)
+                bvalue.unwrappedAs[A]
             case None =>
                 throw new NoSuchElementException("Key not found in BSON object: " + key)
         }

@@ -688,6 +688,22 @@ class BsonTest extends TestUtils {
         // "seq_int"
         // "bobj"
     }
+
+    @Test
+    def unwrappedAsWorks() : Unit = {
+        // This test isn't very thorough because getAsWorks() above should
+        // be exercising the same code
+        val i = BInt32(42)
+        val v : BValue = i
+        assertEquals(42, i.unwrappedAs[Int])
+        assertEquals(42, v.unwrappedAs[Int])
+        intercept[ClassCastException] {
+            i.unwrappedAs[String]
+        }
+        intercept[ClassCastException] {
+            v.unwrappedAs[String]
+        }
+    }
 }
 
 object BsonTest {
