@@ -53,12 +53,13 @@ object JavaConversions {
     implicit def asJavaConvertibleBValue(bvalue : BValue) : JavaConvertibleBValue[BValue, AnyRef] =
         new JavaConvertibleBValue[BValue, AnyRef](bvalue)
 
-    // These additional overloads are so unwrappedAsJava returns the proper static type.
-    // FIXME add overloads for the rest of BValue subclasses (maybe one overload can do
+    // These additional variants are so unwrappedAsJava returns the proper static type.
+    // FIXME add variants for the rest of BValue subclasses (maybe one overload can do
     // all of BSingleValue though?)
-    implicit def asJavaConvertibleBValue(bobj : BObject) : JavaConvertibleBValue[BObject, java.util.Map[String, _]] =
+    // each variant needs its own name because overloading confuses view bounds
+    implicit def bobjectAsJavaConvertibleBValue(bobj : BObject) : JavaConvertibleBValue[BObject, java.util.Map[String, _]] =
         new JavaConvertibleBValue[BObject, java.util.Map[String, _]](bobj)
-    implicit def asJavaConvertibleBValue(barray : BArray) : JavaConvertibleBValue[BArray, java.util.List[_]] =
+    implicit def barrayAsJavaConvertibleBValue(barray : BArray) : JavaConvertibleBValue[BArray, java.util.List[_]] =
         new JavaConvertibleBValue[BArray, java.util.List[_]](barray)
 
     /**
