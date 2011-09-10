@@ -111,11 +111,6 @@ You can convert a `BValue` (or `JValue`) to plain Scala values using `unwrapped`
 
     val scalaMap = bobject.unwrapped
 
-or to plain Java values (maybe handy for template languages that
-aren't Scala-aware, or for Java APIs):
-
-    val javaMap = bobject.unwrappedAsJava
-
 And you can convert to JSON:
 
     val jsonString = bobject.toJson()
@@ -133,6 +128,15 @@ is really supported.
 
 I find immutable trees a lot nicer to work with in Scala than the
 Java-ish `DBObject` interface.
+
+There's also an XPath-inspired `select()` method for BSON and JSON:
+
+    bobject.select("foo/bar")
+    bobject.select(".//bar")
+    bobject.select("foo/*")
+    bobject.selectAs[Int](".//bar")
+
+See the API documentation for more details on the syntax.
 
 ## Case class conversion
 

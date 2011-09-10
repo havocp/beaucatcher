@@ -154,7 +154,71 @@ sealed abstract trait BValue {
         }
     }
 
+    /**
+     * Unwraps as with the `unwrapped` method but additionally casts to
+     * the requested type (throws `ClassCastException` if the node has the
+     * wrong type).
+     *
+     * @return the unwrapped value
+     * @tparam A the type that the value must have
+     */
     def unwrappedAs[A : Manifest] = checkedCast[A](unwrapped)
+
+    /**
+     * Select a list of matching child nodes using an XPath-inspired syntax.
+     * The special characters are `/` to separate nodes, `//` to mean "any number
+     * of intermediate nodes," `.` to mean this node, and `*` to mean "all children."
+     * Other characters are taken as field names (numbers are interpreted as indices
+     * on array nodes and field names on object nodes).
+     *
+     *  - `select(".")` returns the node itself
+     *  - `select("foo")` returns a child field named `foo` if one exists (does not match grandchildren named `foo`)
+     *  - `select(".//foo")` returns any descendant named `foo`
+     *  - `select("*")` returns all children of the node
+     *  - `select(".//*")` returns all descendants of the node
+     *  - `select("foo//bar")` returns any descendant of `foo` named `bar`
+     *  - `select("3")` returns either field named `3` or array element at index `3`
+     *  - `select("foo/3")` returns field or array element `3` inside the node `foo`
+     *
+     * @param selector the selector expression
+     * @return list of matching nodes
+     */
+    def select(selector : String) : List[BValue] = {
+        Selector.select(this, selector)
+    }
+
+    /**
+     * Performs a `select()` then filters the resulting selected nodes by the
+     * type parameter and unwraps each value as with `unwrappedAs`.
+     *
+     * @param selector the selector expression
+     * @return list of matching unwrapped values
+     * @tparam A type of values to return (nodes with the wrong type are filtered out)
+     */
+    def selectAs[A : Manifest](selector : String) : List[A] = {
+        Selector.selectAs(this, selector)
+    }
+
+    /**
+     * Equivalent to `select(selector).headOption`.
+     *
+     * @param selector the selector expression
+     * @return first matching node or None
+     */
+    def selectOne(selector : String) : Option[BValue] = {
+        select(selector).headOption
+    }
+
+    /**
+     * Equivalent to `selectAs(selector).headOption`.
+     *
+     * @param selector the selector expression
+     * @return first value with the requested type that matches the selector
+     * @tparam A type of values to return (nodes with the wrong type are filtered out)
+     */
+    def selectOneAs[A : Manifest](selector : String) : Option[A] = {
+        selectAs(selector).headOption
+    }
 }
 
 /**
