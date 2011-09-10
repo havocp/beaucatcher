@@ -76,7 +76,7 @@ object BeaucatcherBuild extends Build {
     lazy val root = Project("beaucatcher",
         file("."),
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (bson, bsonJava, mongo, async)
+            Seq(publishArtifact := false)) aggregate (bson, bsonJava, mongo, async, casbah)
 
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),

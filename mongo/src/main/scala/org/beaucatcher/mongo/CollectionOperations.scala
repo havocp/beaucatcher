@@ -31,6 +31,9 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
      */
     implicit protected def entityTypeManifest : Manifest[EntityType]
 
+    /** as with `entityTypeManifest` this is needed because traits can't have context bounds */
+    implicit protected def idTypeManifest : Manifest[IdType]
+
     /**
      * The name of the collection. Defaults to the unqualified (no package) name of the object,
      * with the first character made lowercase. So "object FooBar" gets collection name "fooBar" for
@@ -157,8 +160,9 @@ object CollectionOperationsTrait {
     }
 }
 
-abstract class CollectionOperations[EntityType <: Product : Manifest, IdType]
+abstract class CollectionOperations[EntityType <: Product : Manifest, IdType : Manifest]
     extends CollectionOperationsTrait[EntityType, IdType] {
     self : MongoBackendProvider with MongoConfigProvider =>
     override final val entityTypeManifest = manifest[EntityType]
+    override final val idTypeManifest = manifest[IdType]
 }

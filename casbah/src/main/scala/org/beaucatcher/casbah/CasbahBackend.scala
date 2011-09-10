@@ -3,7 +3,7 @@ package org.beaucatcher.casbah
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import com.mongodb.casbah.MongoURI
-import com.mongodb.casbah.Imports._
+import com.mongodb.casbah.Imports.{ ObjectId => JavaObjectId, _ }
 import com.mongodb.casbah.commons.conversions.scala._
 import org.joda.time.DateTime
 
@@ -23,17 +23,35 @@ private[casbah] class CasbahBackend(private val config : MongoConfig)
         coll
     }
 
-    override final def createDAOGroup[EntityType <: Product : Manifest, IdType](collectionName : String,
+    override final def createDAOGroup[EntityType <: Product : Manifest, IdType : Manifest](collectionName : String,
         caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
         caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType] = {
-        new CaseClassBObjectCasbahDAOGroup[EntityType, IdType, IdType](collection(collectionName),
-            caseClassBObjectQueryComposer,
-            caseClassBObjectEntityComposer,
-            new IdentityIdComposer[IdType])
+        val identityIdComposer = new IdentityIdComposer[IdType]
+        val idManifest = manifest[IdType]
+        if (idManifest <:< manifest[ObjectId]) {
+            // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
+            new CaseClassBObjectCasbahDAOGroup[EntityType, IdType, IdType, JavaObjectId](collection(collectionName),
+                caseClassBObjectQueryComposer,
+                caseClassBObjectEntityComposer,
+                identityIdComposer,
+                CasbahBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
+        } else {
+            new CaseClassBObjectCasbahDAOGroup[EntityType, IdType, IdType, IdType](collection(collectionName),
+                caseClassBObjectQueryComposer,
+                caseClassBObjectEntityComposer,
+                identityIdComposer,
+                identityIdComposer)
+        }
     }
 }
 
 private[casbah] object CasbahBackend {
+
+    lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
+        import j.JavaConversions._
+        override def idIn(id : ObjectId) : JavaObjectId = id
+        override def idOut(id : JavaObjectId) : ObjectId = id
+    }
 
     val connections = new MongoConnectionStore[MongoConnection] {
         override def create(address : MongoConnectionAddress) = {

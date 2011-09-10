@@ -5,6 +5,24 @@ import org.beaucatcher.bson._
 import com.mongodb.DBObject
 import com.mongodb.casbah.MongoCollection
 
+private[casbah] class InnerBValueValueComposer
+    extends ValueComposer[Any, BValue] {
+
+    import j.JavaConversions._
+
+    override def valueIn(v : Any) : BValue = wrapJavaAsBValue(v)
+    override def valueOut(v : BValue) : Any = v.unwrappedAsJava
+}
+
+private[casbah] class OuterBValueValueComposer
+    extends ValueComposer[BValue, Any] {
+
+    import j.JavaConversions._
+
+    override def valueIn(v : BValue) : Any = v.unwrappedAsJava
+    override def valueOut(v : Any) : BValue = wrapJavaAsBValue(v)
+}
+
 /**
  * A DAOGroup exposes the entire chain of DAO conversions; you can "tap in" and use the
  * nicest DAO at whatever level is convenient for whatever you're doing. You can also
@@ -18,22 +36,17 @@ import com.mongodb.casbah.MongoCollection
  * "composer" objects and do things like validation or dealing with legacy
  * object formats in there.
  */
-private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Manifest, CaseClassIdType, BObjectIdType](
+private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Manifest, CaseClassIdType, BObjectIdType, CasbahIdType](
     val collection : MongoCollection,
     val caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
     val caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject],
-    val caseClassBObjectIdComposer : IdComposer[CaseClassIdType, BObjectIdType])
+    val caseClassBObjectIdComposer : IdComposer[CaseClassIdType, BObjectIdType],
+    private val bobjectCasbahIdComposer : IdComposer[BObjectIdType, CasbahIdType])
     extends SyncDAOGroup[EntityType, CaseClassIdType, BObjectIdType] {
     require(collection != null)
     require(caseClassBObjectQueryComposer != null)
     require(caseClassBObjectEntityComposer != null)
     require(caseClassBObjectIdComposer != null)
-
-    /* this is not a type parameter because we don't want people to transform ID
-     * type between BObject and Casbah; transformations should be done on
-     * the case-class-to-bobject layer because we want to keep that layer.
-     */
-    final private type CasbahIdType = BObjectIdType
 
     /* Let's not allow changing the BObject-to-Casbah mapping since we want to
      * get rid of Casbah's DBObject. That's why these are private.
@@ -42,8 +55,6 @@ private[casbah] class CaseClassBObjectCasbahDAOGroup[EntityType <: Product : Man
         new BObjectCasbahQueryComposer()
     private lazy val bobjectCasbahEntityComposer : EntityComposer[BObject, DBObject] =
         new BObjectCasbahEntityComposer()
-    private lazy val bobjectCasbahIdComposer : IdComposer[BObjectIdType, CasbahIdType] =
-        new IdentityIdComposer()
     private lazy val bobjectCasbahValueComposer : ValueComposer[BValue, Any] =
         new OuterBValueValueComposer()
 
