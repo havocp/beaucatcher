@@ -159,7 +159,7 @@ object BeaucatcherBuild extends Build {
                 replaceAll("""package org\.beaucatcher\.bson""",
                            "package " + packageName + ".j\n" +
                        "import org.beaucatcher.bson._\n").
-                replaceAll("""object""", "private[" + lastPackageComponent + "] object")
+                replaceAll("""object """, "private[" + lastPackageComponent + "] object ")
             val oldContent = IO.read(target asFile)
             if (newContent != oldContent) {
                 streams.log.info("Generated " + target)
