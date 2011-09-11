@@ -30,15 +30,15 @@ private[hammersmith] class HammersmithBackend(private val config : MongoConfig)
         coll
     }
 
-    override final def createDAOGroup[EntityType <: Product : Manifest, IdType : Manifest](collectionName : String,
-        caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
-        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType] = {
+    override final def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
+        entityBObjectQueryComposer : QueryComposer[BObject, BObject],
+        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType] = {
         val identityIdComposer = new IdentityIdComposer[IdType]
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
-            new CaseClassBObjectHammersmithDAOGroup[EntityType, IdType, IdType, JavaObjectId](collection(collectionName),
-                caseClassBObjectQueryComposer,
-                caseClassBObjectEntityComposer,
+            new EntityBObjectHammersmithDAOGroup[EntityType, IdType, IdType, JavaObjectId](collection(collectionName),
+                entityBObjectQueryComposer,
+                entityBObjectEntityComposer,
                 identityIdComposer,
                 HammersmithBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
@@ -46,9 +46,9 @@ private[hammersmith] class HammersmithBackend(private val config : MongoConfig)
                 override def idOut(id : AnyRef) : IdType = id.asInstanceOf[IdType]
                 override def idIn(id : IdType) : AnyRef = id.asInstanceOf[AnyRef]
             }
-            new CaseClassBObjectHammersmithDAOGroup[EntityType, IdType, IdType, AnyRef](collection(collectionName),
-                caseClassBObjectQueryComposer,
-                caseClassBObjectEntityComposer,
+            new EntityBObjectHammersmithDAOGroup[EntityType, IdType, IdType, AnyRef](collection(collectionName),
+                entityBObjectQueryComposer,
+                entityBObjectEntityComposer,
                 identityIdComposer,
                 hammersmithIdComposer)
         }

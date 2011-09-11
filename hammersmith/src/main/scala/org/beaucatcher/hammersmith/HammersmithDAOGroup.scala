@@ -24,17 +24,17 @@ private[hammersmith] class OuterBValueValueComposer
     override def valueOut(v : Any) : BValue = wrapJavaAsBValue(v)
 }
 
-private[hammersmith] class CaseClassBObjectHammersmithDAOGroup[EntityType <: Product : Manifest, CaseClassIdType, BObjectIdType, HammersmithIdType <: AnyRef](
+private[hammersmith] class EntityBObjectHammersmithDAOGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, HammersmithIdType <: AnyRef](
     val collection : Collection,
-    val caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
-    val caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject],
-    val caseClassBObjectIdComposer : IdComposer[CaseClassIdType, BObjectIdType],
+    val entityBObjectQueryComposer : QueryComposer[BObject, BObject],
+    val entityBObjectEntityComposer : EntityComposer[EntityType, BObject],
+    val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],
     private val bobjectHammersmithIdComposer : IdComposer[BObjectIdType, HammersmithIdType])
-    extends SyncDAOGroup[EntityType, CaseClassIdType, BObjectIdType] {
+    extends SyncDAOGroup[EntityType, EntityIdType, BObjectIdType] {
     require(collection != null)
-    require(caseClassBObjectQueryComposer != null)
-    require(caseClassBObjectEntityComposer != null)
-    require(caseClassBObjectIdComposer != null)
+    require(entityBObjectQueryComposer != null)
+    require(entityBObjectEntityComposer != null)
+    require(entityBObjectIdComposer != null)
 
     /* Let's not allow changing the BObject-to-Hammersmith mapping since we want to
      * get rid of Hammersmith's BSONDocument. That's why these are private.
@@ -66,12 +66,12 @@ private[hammersmith] class CaseClassBObjectHammersmithDAOGroup[EntityType <: Pro
         }
     }
 
-    override lazy val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, CaseClassIdType] = {
-        new CaseClassBObjectSyncDAO[EntityType, CaseClassIdType, BObjectIdType] {
+    override lazy val entitySyncDAO : EntitySyncDAO[BObject, EntityType, EntityIdType] = {
+        new EntityBObjectSyncDAO[EntityType, EntityIdType, BObjectIdType] {
             override val backend = bobjectSyncDAO
-            override val queryComposer = caseClassBObjectQueryComposer
-            override val entityComposer = caseClassBObjectEntityComposer
-            override val idComposer = caseClassBObjectIdComposer
+            override val queryComposer = entityBObjectQueryComposer
+            override val entityComposer = entityBObjectEntityComposer
+            override val idComposer = entityBObjectIdComposer
             override val valueComposer = new InnerBValueValueComposer()
         }
     }

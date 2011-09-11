@@ -19,8 +19,8 @@ import scala.annotation.implicitNotFound
  * Implementation note: many values in this class are lazy, because otherwise class and object
  * initialization has a lot of trouble (due to circular dependencies, or order of initialization anyway).
  */
-trait CollectionOperationsTrait[EntityType <: Product, IdType] {
-    this : MongoBackendProvider with MongoConfigProvider =>
+trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] {
+    self : MongoBackendProvider with MongoConfigProvider =>
 
     import CollectionOperationsTrait._
 
@@ -61,8 +61,8 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
 
     private lazy val daoGroup : SyncDAOGroup[EntityType, IdType, IdType] = {
         require(entityTypeManifest != null)
-        backend.createDAOGroup(collectionName, caseClassBObjectQueryComposer,
-            caseClassBObjectEntityComposer)
+        backend.createDAOGroup(collectionName, entityBObjectQueryComposer,
+            entityBObjectEntityComposer)
     }
 
     /** Synchronous DAO returning BObject values from the collection */
@@ -70,8 +70,8 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
         daoGroup.bobjectSyncDAO
 
     /** Synchronous DAO returning case class entity values from the collection */
-    private[mongo] final lazy val caseClassSyncDAO : CaseClassSyncDAO[BObject, EntityType, IdType] =
-        daoGroup.caseClassSyncDAO
+    private[mongo] final lazy val entitySyncDAO : EntitySyncDAO[BObject, EntityType, IdType] =
+        daoGroup.entitySyncDAO
 
     /**
      * The type of a DAO chooser that will select the proper DAO for result type E and value type V on this
@@ -80,7 +80,7 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
     type SyncDAOChooser[E, V] = GenericSyncDAOChooser[E, IdType, V, CollectionOperationsTrait[EntityType, IdType]]
 
     /**
-     * This lets you write a function that generically works for either the case class or
+     * This lets you write a function that generically works for either the entity (often case class) or
      * BObject results. So for example you can implement query logic that supports
      * both kinds of result.
      * {{{
@@ -125,7 +125,7 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
      * There probably isn't a reason to override this, but it would modify a query
      * as it went from the case class DAO to the BObject DAO.
      */
-    protected lazy val caseClassBObjectQueryComposer : QueryComposer[BObject, BObject] =
+    protected lazy val entityBObjectQueryComposer : QueryComposer[BObject, BObject] =
         new IdentityQueryComposer()
 
     /**
@@ -136,8 +136,7 @@ trait CollectionOperationsTrait[EntityType <: Product, IdType] {
      * here. Many things you might do with an annotation in something like JPA
      * could instead be done by subclassing CaseClassBObjectEntityComposer, in theory.
      */
-    protected lazy val caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject] =
-        new CaseClassBObjectEntityComposer[EntityType]
+    protected def entityBObjectEntityComposer : EntityComposer[EntityType, BObject]
 }
 
 object CollectionOperationsTrait {
@@ -153,16 +152,31 @@ object CollectionOperationsTrait {
         }
     }
 
-    implicit def createDAOChooserForCaseClass[E <: Product, I] : GenericSyncDAOChooser[E, I, Any, CollectionOperationsTrait[E, I]] = {
+    implicit def createDAOChooserForEntity[E <: AnyRef, I] : GenericSyncDAOChooser[E, I, Any, CollectionOperationsTrait[E, I]] = {
         new GenericSyncDAOChooser[E, I, Any, CollectionOperationsTrait[E, I]] {
-            def choose(ops : CollectionOperationsTrait[E, I]) = ops.caseClassSyncDAO
+            def choose(ops : CollectionOperationsTrait[E, I]) = ops.entitySyncDAO
         }
     }
 }
 
-abstract class CollectionOperations[EntityType <: Product : Manifest, IdType : Manifest]
+trait CollectionOperationsWithCaseClassTrait[EntityType <: Product, IdType]
+    extends CollectionOperationsTrait[EntityType, IdType] {
+    self : MongoBackendProvider with MongoConfigProvider =>
+
+    override protected lazy val entityBObjectEntityComposer : EntityComposer[EntityType, BObject] =
+        new CaseClassBObjectEntityComposer[EntityType]
+}
+
+abstract class CollectionOperations[EntityType <: AnyRef : Manifest, IdType : Manifest]
     extends CollectionOperationsTrait[EntityType, IdType] {
     self : MongoBackendProvider with MongoConfigProvider =>
     override final val entityTypeManifest = manifest[EntityType]
     override final val idTypeManifest = manifest[IdType]
+}
+
+abstract class CollectionOperationsWithCaseClass[EntityType <: Product : Manifest, IdType : Manifest]
+    extends CollectionOperations[EntityType, IdType]
+    with CollectionOperationsWithCaseClassTrait[EntityType, IdType] {
+    self : MongoBackendProvider with MongoConfigProvider =>
+
 }

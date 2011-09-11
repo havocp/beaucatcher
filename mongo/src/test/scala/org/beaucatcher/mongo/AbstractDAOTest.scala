@@ -28,9 +28,9 @@ package abstractfoo {
 
 import abstractfoo._
 
-abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionOperations[Foo, ObjectId],
-    FooWithIntId : CollectionOperations[FooWithIntId, Int],
-    FooWithOptionalField : CollectionOperations[FooWithOptionalField, ObjectId])
+abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionOperationsTrait[Foo, ObjectId],
+    FooWithIntId : CollectionOperationsTrait[FooWithIntId, Int],
+    FooWithOptionalField : CollectionOperationsTrait[FooWithOptionalField, ObjectId])
     extends TestUtils {
 
     protected def newFoo(id : ObjectId, i : Int, s : String) : Foo

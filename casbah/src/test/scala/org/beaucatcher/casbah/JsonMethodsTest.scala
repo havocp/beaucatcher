@@ -15,7 +15,7 @@ package restdemo {
     case class Foo(_id : ObjectId, aString : String, anInt : Int)
 
     object Foo
-        extends CollectionOperations[Foo, ObjectId]
+        extends CollectionOperationsWithCaseClass[Foo, ObjectId]
         with CasbahTestProvider
         with JsonMethods[Foo] {
         // the default collection name would conflict with the Foo
@@ -34,7 +34,7 @@ package restdemo {
 
     case class FooWithIntId(_id : Int, aString : String, anInt : Int)
     object FooWithIntId
-        extends CollectionOperations[FooWithIntId, Int]
+        extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
         with CasbahTestProvider
         with JsonMethods[FooWithIntId] {
         // the default collection name would conflict with the FooWithIntId

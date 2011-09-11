@@ -12,7 +12,7 @@ import org.junit._
 package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
 
-    object Foo extends CollectionOperations[Foo, ObjectId]
+    object Foo extends CollectionOperationsWithCaseClass[Foo, ObjectId]
         with CasbahTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
             syncDAO[E].find(BObject("intField" -> 23))
@@ -21,7 +21,7 @@ package foo {
 
     case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
 
-    object FooWithIntId extends CollectionOperations[FooWithIntId, Int]
+    object FooWithIntId extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
         with CasbahTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
             syncDAO[E].find(BObject("intField" -> 23))
@@ -30,7 +30,7 @@ package foo {
 
     case class FooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) extends abstractfoo.AbstractFooWithOptionalField
 
-    object FooWithOptionalField extends CollectionOperations[FooWithOptionalField, ObjectId]
+    object FooWithOptionalField extends CollectionOperationsWithCaseClass[FooWithOptionalField, ObjectId]
         with CasbahTestProvider {
     }
 }

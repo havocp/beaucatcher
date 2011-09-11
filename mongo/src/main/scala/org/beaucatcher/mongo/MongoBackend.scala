@@ -7,7 +7,7 @@ trait MongoBackendProvider {
 
 trait MongoBackend {
 
-    def createDAOGroup[EntityType <: Product : Manifest, IdType : Manifest](collectionName : String,
-        caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
-        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType]
+    def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
+        entityBObjectQueryComposer : QueryComposer[BObject, BObject],
+        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType]
 }
