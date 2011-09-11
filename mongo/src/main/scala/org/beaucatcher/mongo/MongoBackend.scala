@@ -6,6 +6,13 @@ trait MongoBackendProvider {
 }
 
 trait MongoBackend {
+    type ConnectionType
+    type DatabaseType
+    type CollectionType
+
+    def underlyingConnection : ConnectionType
+    def underlyingDatabase(name : String) : DatabaseType
+    def underlyingCollection(name : String) : CollectionType
 
     def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         entityBObjectQueryComposer : QueryComposer[BObject, BObject],
