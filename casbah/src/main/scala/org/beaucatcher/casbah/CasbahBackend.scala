@@ -34,7 +34,7 @@ final class CasbahBackend private[casbah] (private val config : MongoConfig)
     override type CollectionType = MongoCollection
 
     override def underlyingConnection : MongoConnection = connection
-    override def underlyingDatabase(name : String) : MongoDB = connection(name)
+    override def underlyingDatabase : MongoDB = connection(casbahURI.database)
     override def underlyingCollection(name : String) : MongoCollection = collection(name)
 
     override final def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,

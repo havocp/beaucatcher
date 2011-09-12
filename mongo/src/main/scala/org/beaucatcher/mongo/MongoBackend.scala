@@ -11,7 +11,7 @@ trait MongoBackend {
     type CollectionType
 
     def underlyingConnection : ConnectionType
-    def underlyingDatabase(name : String) : DatabaseType
+    def underlyingDatabase : DatabaseType
     def underlyingCollection(name : String) : CollectionType
 
     def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,

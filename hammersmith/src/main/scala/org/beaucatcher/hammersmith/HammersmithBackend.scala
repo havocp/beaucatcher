@@ -42,7 +42,7 @@ final class HammersmithBackend private[hammersmith] (private val config : MongoC
     override type CollectionType = Collection
 
     override def underlyingConnection : MongoConnection = connection
-    override def underlyingDatabase(name : String) : DB = connection(name)
+    override def underlyingDatabase : DB = connection(hammersmithURI.db.get)
     override def underlyingCollection(name : String) : Collection = collection(name)
 
     override final def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
