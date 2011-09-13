@@ -55,7 +55,7 @@ package object hammersmith {
         }
     }
 
-    implicit def asBeaucatcherWriteResult(h : HammersmithWriteResult) : WriteResult = {
+    private[hammersmith] implicit def asBeaucatcherWriteResult(h : HammersmithWriteResult) : WriteResult = {
         WriteResult(ok = h.ok,
             err = h.error,
             n = h.n,
