@@ -13,6 +13,12 @@ package object async {
         // in the messages.
         private val actor = Actor.actorOf(new DAOActor[QueryType, EntityType, IdType, ValueType](underlying)).start
 
+        override def backend =
+            underlying.backend
+        override def name =
+            underlying.name
+        override def fullName =
+            underlying.fullName
         override def emptyQuery : QueryType =
             underlying.emptyQuery
         override def count(query : QueryType, options : CountOptions) : Future[Long] =
@@ -47,6 +53,12 @@ package object async {
 
     private class SyncDAOWrappingAsync[QueryType, EntityType, IdType, ValueType](private[async] val underlying : AsyncDAO[QueryType, EntityType, IdType, ValueType])
         extends SyncDAO[QueryType, EntityType, IdType, ValueType] {
+        override def backend =
+            underlying.backend
+        override def name =
+            underlying.name
+        override def fullName =
+            underlying.fullName
         override def emptyQuery : QueryType =
             underlying.emptyQuery
         override def count(query : QueryType, options : CountOptions) : Long =
@@ -75,6 +87,10 @@ package object async {
             underlying.remove(query).get
         override def removeById(id : IdType) : WriteResult =
             underlying.removeById(id).get
+        override def ensureIndex(keys : QueryType, options : IndexOptions) : WriteResult =
+            throw new UnsupportedOperationException("Implement me") // FIXME
+        override def dropIndex(name : String) : CommandResult =
+            throw new UnsupportedOperationException("Implement me") // FIXME
     }
 
     def makeAsync[QueryType, EntityType, IdType, ValueType](sync : SyncDAO[QueryType, EntityType, IdType, ValueType]) : AsyncDAO[QueryType, EntityType, IdType, ValueType] = {

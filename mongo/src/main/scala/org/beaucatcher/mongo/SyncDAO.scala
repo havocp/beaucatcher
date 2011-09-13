@@ -179,7 +179,7 @@ private[beaucatcher] object IndexOptions {
  *   returned in the old (or new) object returned from the method.
  */
 abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
-    protected def backend : MongoBackend
+    private[beaucatcher] def backend : MongoBackend
 
     /** The database containing the collection */
     final def database : Database = backend.database

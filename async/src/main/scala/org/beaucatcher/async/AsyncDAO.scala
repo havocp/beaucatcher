@@ -5,7 +5,18 @@ import org.beaucatcher.mongo._
 import akka.dispatch.Future
 
 abstract trait AsyncDAO[QueryType, EntityType, IdType, ValueType] {
+    private[beaucatcher] def backend : MongoBackend
+
+    /** The database containing the collection */
+    final def database : Database = backend.database
+
+    def name : String
+
+    def fullName : String
+
     def emptyQuery : QueryType
+
+    // FIXME use keywords and default args for all the *Options case classes
 
     final def count() : Future[Long] =
         count(emptyQuery)
@@ -122,6 +133,8 @@ abstract trait AsyncDAO[QueryType, EntityType, IdType, ValueType] {
     def remove(query : QueryType) : Future[WriteResult]
 
     def removeById(id : IdType) : Future[WriteResult]
+
+    // FIXME add the index-related commands
 }
 
 object AsyncDAO {
