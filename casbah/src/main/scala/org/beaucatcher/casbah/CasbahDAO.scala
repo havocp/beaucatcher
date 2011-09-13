@@ -2,11 +2,11 @@ package org.beaucatcher.casbah
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import org.beaucatcher.mongo.wire._
 import org.bson.BSONObject
 import com.mongodb.casbah.MongoCollection
 import com.mongodb.DBObject
 import com.mongodb.casbah.commons.MongoDBObject
-import com.mongodb.Bytes
 
 import j.JavaConversions._
 
@@ -41,22 +41,6 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
         entityToUpsertableObject(entity)
     }
 
-    private def queryFlagsAsInt(flags : Set[QueryFlag]) : Int = {
-        var i = 0
-        for (f <- flags) {
-            val o = f match {
-                case QueryAwaitData => Bytes.QUERYOPTION_AWAITDATA
-                case QueryExhaust => Bytes.QUERYOPTION_EXHAUST
-                case QueryNoTimeout => Bytes.QUERYOPTION_NOTIMEOUT
-                case QueryOpLogReplay => Bytes.QUERYOPTION_OPLOGREPLAY
-                case QuerySlaveOk => Bytes.QUERYOPTION_SLAVEOK
-                case QueryTailable => Bytes.QUERYOPTION_TAILABLE
-            }
-            i |= o
-        }
-        i
-    }
-
     private def withQueryFlags[R](maybeOverrideFlags : Option[Set[QueryFlag]])(body : => R) : R = {
         if (maybeOverrideFlags.isDefined) {
             // FIXME this is outrageously unthreadsafe but I'm not sure how to
@@ -65,7 +49,7 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
             // so for now just always throw an exception
             val saved = collection.getOptions()
             collection.resetOptions()
-            collection.addOption(queryFlagsAsInt(maybeOverrideFlags.get))
+            collection.addOption(maybeOverrideFlags.get)
 
             val result = body
 
@@ -118,7 +102,7 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
         if (options.batchSize.isDefined)
             cursor.batchSize(options.batchSize.get.intValue)
         if (options.overrideQueryFlags.isDefined) {
-            cursor.options = queryFlagsAsInt(options.overrideQueryFlags.get)
+            cursor.options = options.overrideQueryFlags.get
         }
 
         cursor
