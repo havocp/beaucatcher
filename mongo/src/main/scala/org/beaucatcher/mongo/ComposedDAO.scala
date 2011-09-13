@@ -14,6 +14,9 @@ private[beaucatcher] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityT
     protected val idComposer : IdComposer[OuterIdType, InnerIdType]
     protected val valueComposer : ValueComposer[OuterValueType, InnerValueType]
 
+    override def name : String =
+        inner.name
+
     override def emptyQuery : OuterQueryType =
         queryOut(inner.emptyQuery)
 
@@ -46,6 +49,12 @@ private[beaucatcher] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityT
 
     override def removeById(id : OuterIdType) : WriteResult =
         inner.removeById(idIn(id))
+
+    def ensureIndex(keys : OuterQueryType, options : IndexOptions) : WriteResult =
+        inner.ensureIndex(queryIn(keys), options)
+
+    def dropIndex(name : String) : CommandResult =
+        inner.dropIndex(name)
 
     /* These are all final because you should override the composers instead, these are
      * just here to save typing

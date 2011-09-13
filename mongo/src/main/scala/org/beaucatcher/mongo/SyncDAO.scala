@@ -1,6 +1,7 @@
 package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
+import org.beaucatcher.bson.Implicits._
 
 sealed trait Fields {
     val included : Set[String]
@@ -124,6 +125,18 @@ private[beaucatcher] object UpdateOptions {
     final val multi = UpdateOptions(Set(UpdateMulti))
 }
 
+sealed trait IndexFlag
+case object IndexUnique extends IndexFlag
+case object IndexBackground extends IndexFlag
+case object IndexDropDups extends IndexFlag
+case object IndexSparse extends IndexFlag
+
+case class IndexOptions(name : Option[String] = None, flags : Set[IndexFlag] = Set.empty, v : Option[Int] = None)
+
+private[beaucatcher] object IndexOptions {
+    val empty = IndexOptions()
+}
+
 /**
  * Trait expressing all data-access operations on a collection in synchronous form.
  * This trait does not include setup and teardown operations such as creating or
@@ -168,8 +181,19 @@ private[beaucatcher] object UpdateOptions {
 abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
     protected def backend : MongoBackend
 
+    /** The database containing the collection */
     final def database : Database = backend.database
 
+    /** The name of the collection */
+    def name : String
+
+    /**
+     * The name of the collection with database included, like "databaseName.collectionName"
+     *
+     */
+    def fullName : String = database.name + "." + name
+
+    /** Construct an empty query object */
     def emptyQuery : QueryType
 
     final def count() : Long =
@@ -403,4 +427,30 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
      * Deletes the object with the given ID, if any.
      */
     def removeById(id : IdType) : WriteResult
+
+    /**
+     * Creates the given index on the collection (if it hasn't already been created),
+     * using default options.
+     */
+    final def ensureIndex(keys : QueryType) : WriteResult =
+        ensureIndex(keys, IndexOptions.empty)
+
+    /**
+     * Creates the given index on the collection, using custom options.
+     */
+    def ensureIndex(keys : QueryType, options : IndexOptions) : WriteResult
+
+    final def dropIndexes() : CommandResult = dropIndex("*")
+
+    /**
+     * Removes the given index from the collection.
+     */
+    def dropIndex(name : String) : CommandResult
+
+    /**
+     * Queries mongod for the indexes on this collection.
+     */
+    final def findIndexes() : Iterator[CollectionIndex] = {
+        database.system.indexes.syncDAO[CollectionIndex].find(BObject("ns" -> fullName))
+    }
 }

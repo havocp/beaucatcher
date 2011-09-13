@@ -42,12 +42,22 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         Foo.syncDAO.remove(BObject())
         FooWithIntId.syncDAO.remove(BObject())
         FooWithOptionalField.syncDAO.remove(BObject())
+        Foo.syncDAO.dropIndexes()
+        FooWithIntId.syncDAO.dropIndexes()
+        FooWithOptionalField.syncDAO.dropIndexes()
     }
 
     @Test
     def haveProperCollectionNames() = {
         assertEquals("foo", Foo.collectionName)
         assertEquals("fooWithIntId", FooWithIntId.collectionName)
+        assertEquals(Foo.collectionName, Foo.syncDAO.name)
+        assertEquals(FooWithIntId.collectionName, FooWithIntId.syncDAO.name)
+    }
+
+    @Test
+    def testFullName() = {
+        assertEquals(Foo.database.name + "." + Foo.collectionName, Foo.syncDAO.fullName)
     }
 
     @Test
@@ -914,5 +924,60 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         for (a <- all) {
             assertFalse(f._id == a._id)
         }
+    }
+
+    @Test
+    def testEnsureIndex() {
+        val result = Foo.syncDAO.ensureIndex(BObject("intField" -> 1))
+        assertTrue(result.ok)
+        val indexes = Foo.syncDAO.findIndexes().toList
+        val idIndex = indexes.find({ i => i.name == "_id_" })
+        val intFieldIndex = indexes.find({ i => i.name == "intField_1" })
+        assertTrue(idIndex.isDefined)
+        assertTrue(intFieldIndex.isDefined)
+        assertEquals(2, indexes.length)
+        Foo.syncDAO.dropIndex("intField_1")
+        assertEquals(1, Foo.syncDAO.findIndexes().length)
+    }
+
+    @Test
+    def testEnsureIndexWithOptions() {
+        val result = Foo.syncDAO.ensureIndex(BObject("intField" -> 1),
+            IndexOptions(Some("intFieldCustomName"), Set(IndexUnique, IndexBackground, IndexDropDups, IndexSparse), Some(1)))
+        assertTrue(result.ok)
+        val indexes = Foo.syncDAO.findIndexes().toList
+        val intFieldIndex = indexes.find({ i => i.name == "intFieldCustomName" }).get
+        assertEquals(2, indexes.length)
+        assertEquals(Foo.syncDAO.fullName, intFieldIndex.ns)
+        assertEquals(Some(true), intFieldIndex.unique)
+        assertEquals(Some(true), intFieldIndex.background)
+        assertEquals(Some(true), intFieldIndex.dropDups)
+        assertEquals(Some(true), intFieldIndex.sparse)
+        assertEquals(Some(1), intFieldIndex.v)
+        Foo.syncDAO.dropIndexes()
+        assertEquals(1, Foo.syncDAO.findIndexes().length)
+    }
+
+    @Test
+    def testDropIndex() {
+        val result = Foo.syncDAO.ensureIndex(BObject("intField" -> 1))
+        assertTrue(result.ok)
+        val indexes = Foo.syncDAO.findIndexes().toList
+        assertEquals(2, indexes.length)
+        Foo.syncDAO.dropIndex("intField_1")
+        assertEquals(1, Foo.syncDAO.findIndexes().length)
+    }
+
+    @Test
+    def testDropIndexes() {
+        val result = Foo.syncDAO.ensureIndex(BObject("intField" -> 1))
+        assertTrue(result.ok)
+        val result2 = Foo.syncDAO.ensureIndex(BObject("stringField" -> -1))
+        assertTrue(result2.ok)
+        val indexes = Foo.syncDAO.findIndexes().toList
+        assertEquals(3, indexes.length)
+        Foo.syncDAO.dropIndexes()
+        // the _id_ index doesn't drop so there's always 1
+        assertEquals(1, Foo.syncDAO.findIndexes().length)
     }
 }

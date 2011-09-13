@@ -88,6 +88,8 @@ trait SyncDatabase {
 trait Database {
     protected def backend : MongoBackend
 
+    def name : String
+
     lazy val system : SystemCollections = new SystemCollections(backend)
 
     def sync : SyncDatabase

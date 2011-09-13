@@ -29,6 +29,8 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
         builder.result
     }
 
+    override def name : String = collection.name
+
     override def emptyQuery : DBObject = MongoDBObject() // not immutable, so we always make a new one
 
     override def entityToUpsertableObject(entity : DBObject) : DBObject = {
@@ -171,6 +173,14 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
     override def removeById(id : IdType) : WriteResult = {
         import Implicits._
         collection.remove(MongoDBObject("_id" -> id))
+    }
+
+    override def ensureIndex(keys : DBObject, options : IndexOptions) : WriteResult = {
+        throw new BugInSomethingMongoException("ensureIndex() should be implemented on an outer wrapper DAO and not make it here")
+    }
+
+    override def dropIndex(indexName : String) : CommandResult = {
+        throw new BugInSomethingMongoException("dropIndex() should be implemented on an outer wrapper DAO and not make it here")
     }
 }
 
