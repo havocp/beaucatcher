@@ -27,7 +27,7 @@ private[beaucatcher] abstract trait EntityComposedSyncDAO[OuterQueryType, Entity
  */
 private[beaucatcher] abstract trait EntityBObjectSyncDAO[EntityType <: AnyRef, OuterIdType, InnerIdType]
     extends EntityComposedSyncDAO[BObject, EntityType, OuterIdType, BObject, BObject, InnerIdType, BValue] {
-    override protected val backend : BObjectSyncDAO[InnerIdType]
+    override protected val inner : BObjectSyncDAO[InnerIdType]
 
     override def entityToUpsertableObject(entity : EntityType) : BObject = {
         entityIn(entity)

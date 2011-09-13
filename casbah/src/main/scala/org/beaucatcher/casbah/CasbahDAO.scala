@@ -15,6 +15,7 @@ import j.JavaConversions._
  * by a subclass of this trait.
  */
 abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType, Any] {
+    override protected def backend : CasbahBackend
     protected def collection : MongoCollection
 
     private implicit def fields2dbobject(fields : Fields) : DBObject = {
@@ -193,7 +194,7 @@ private[casbah] class BObjectCasbahEntityComposer extends EntityComposer[BObject
  */
 private[casbah] abstract trait BObjectCasbahSyncDAO[OuterIdType, InnerIdType]
     extends BObjectComposedSyncDAO[OuterIdType, DBObject, DBObject, InnerIdType, Any] {
-    override protected val backend : CasbahSyncDAO[InnerIdType]
+    override protected val inner : CasbahSyncDAO[InnerIdType]
 
     override protected val queryComposer : QueryComposer[BObject, DBObject]
     override protected val entityComposer : EntityComposer[BObject, DBObject]

@@ -44,13 +44,15 @@ final class CasbahBackend private[casbah] (override val config : MongoConfig)
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
             // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
-            new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, JavaObjectId](collection(collectionName),
+            new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, JavaObjectId](this,
+                collection(collectionName),
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,
                 CasbahBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
-            new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, IdType](collection(collectionName),
+            new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, IdType](this,
+                collection(collectionName),
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,

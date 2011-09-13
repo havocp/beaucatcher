@@ -166,6 +166,10 @@ private[beaucatcher] object UpdateOptions {
  *   returned in the old (or new) object returned from the method.
  */
 abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
+    protected def backend : MongoBackend
+
+    final def database : Database = backend.database
+
     def emptyQuery : QueryType
 
     final def count() : Long =

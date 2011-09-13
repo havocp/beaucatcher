@@ -37,12 +37,14 @@ private[casbah] class OuterBValueValueComposer
  * object formats in there.
  */
 private[casbah] class EntityBObjectCasbahDAOGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, CasbahIdType](
+    val backend : CasbahBackend,
     val collection : MongoCollection,
     val entityBObjectQueryComposer : QueryComposer[BObject, BObject],
     val entityBObjectEntityComposer : EntityComposer[EntityType, BObject],
     val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],
     private val bobjectCasbahIdComposer : IdComposer[BObjectIdType, CasbahIdType])
     extends SyncDAOGroup[EntityType, EntityIdType, BObjectIdType] {
+    require(backend != null)
     require(collection != null)
     require(entityBObjectQueryComposer != null)
     require(entityBObjectEntityComposer != null)
@@ -65,8 +67,10 @@ private[casbah] class EntityBObjectCasbahDAOGroup[EntityType <: AnyRef : Manifes
      */
     private lazy val casbahSyncDAO : CasbahSyncDAO[CasbahIdType] = {
         val outerCollection = collection
+        val outerBackend = backend
         new CasbahSyncDAO[CasbahIdType] {
             override val collection = outerCollection
+            override val backend = outerBackend
         }
     }
 
@@ -77,8 +81,10 @@ private[casbah] class EntityBObjectCasbahDAOGroup[EntityType <: AnyRef : Manifes
      *  because it's easier to work with and immutable.
      */
     override lazy val bobjectSyncDAO : BObjectSyncDAO[BObjectIdType] = {
+        val outerBackend = backend
         new BObjectCasbahSyncDAO[BObjectIdType, CasbahIdType] {
-            override val backend = casbahSyncDAO
+            override val inner = casbahSyncDAO
+            override val backend = outerBackend
             override val queryComposer = bobjectCasbahQueryComposer
             override val entityComposer = bobjectCasbahEntityComposer
             override val idComposer = bobjectCasbahIdComposer
@@ -92,8 +98,10 @@ private[casbah] class EntityBObjectCasbahDAOGroup[EntityType <: AnyRef : Manifes
      *  if the case class was successfully constructed.
      */
     override lazy val entitySyncDAO : EntitySyncDAO[BObject, EntityType, EntityIdType] = {
+        val outerBackend = backend
         new EntityBObjectSyncDAO[EntityType, EntityIdType, BObjectIdType] {
-            override val backend = bobjectSyncDAO
+            override val inner = bobjectSyncDAO
+            override val backend = outerBackend
             override val queryComposer = entityBObjectQueryComposer
             override val entityComposer = entityBObjectEntityComposer
             override val idComposer = entityBObjectIdComposer
