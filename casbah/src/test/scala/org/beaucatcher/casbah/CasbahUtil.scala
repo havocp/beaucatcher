@@ -14,3 +14,9 @@ trait CasbahTestProvider
     with CasbahBackendProvider {
     override val mongoConfig = new SimpleMongoConfig("beaucatchercasbah", "localhost", 27017)
 }
+
+trait CasbahDatabaseTestProvider
+    extends MongoConfigProvider
+    with CasbahBackendProvider {
+    override val mongoConfig = new SimpleMongoConfig("beaucatchercasbahdb", "localhost", 27017)
+}

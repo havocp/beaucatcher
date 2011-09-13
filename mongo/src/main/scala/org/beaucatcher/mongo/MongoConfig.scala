@@ -2,10 +2,18 @@ package org.beaucatcher.mongo
 import java.util.concurrent.ConcurrentHashMap
 import scala.concurrent.Lock
 
+/**
+ * A mixin trait that provides a [[org.beaucatcher.mongo.MongoConfig]] to the class
+ * you mix it into.
+ */
 trait MongoConfigProvider {
     val mongoConfig : MongoConfig
 }
 
+/**
+ * A configuration for connecting to a specific database, through one or more servers.
+ * The configuration expected in most of Beaucatcher should not specify a collection, but must specify a database.
+ */
 trait MongoConfig {
     val url : String
 
@@ -35,7 +43,7 @@ case class SimpleMongoConfig(val databaseName : String,
 }
 
 /**
- * the most general config can express anything found in the Mongo URL
+ * The most general config can express anything found in the Mongo URL
  * http://www.mongodb.org/display/DOCS/Connections
  */
 case class UrlMongoConfig(override val url : String)

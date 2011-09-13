@@ -13,7 +13,7 @@ import org.joda.time.DateTime
  * you may want to use `provider.backend.underlyingConnection`, `underlyingDB`, or `underlyingCollection`
  * to get at Casbah methods directly.
  */
-final class CasbahBackend private[casbah] (private val config : MongoConfig)
+final class CasbahBackend private[casbah] (override val config : MongoConfig)
     extends MongoBackend {
 
     private lazy val casbahURI = MongoURI(config.url)
@@ -56,6 +56,10 @@ final class CasbahBackend private[casbah] (private val config : MongoConfig)
                 identityIdComposer,
                 identityIdComposer)
         }
+    }
+
+    override final lazy val database = {
+        new CasbahDatabase(this)
     }
 }
 

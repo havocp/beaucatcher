@@ -59,6 +59,8 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] {
      */
     def migrate() : Unit = {}
 
+    final def database = backend.database
+
     private lazy val daoGroup : SyncDAOGroup[EntityType, IdType, IdType] = {
         require(entityTypeManifest != null)
         backend.createDAOGroup(collectionName, entityBObjectQueryComposer,
