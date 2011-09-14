@@ -49,6 +49,14 @@ package object async {
             actor !!! RemoveRequest(query)
         override def removeById(id : IdType) : Future[WriteResult] =
             actor !!! RemoveByIdRequest(id)
+        override def ensureIndex(keys : QueryType, options : IndexOptions) : Future[WriteResult] =
+            actor !!! EnsureIndexRequest(keys, options)
+        override def dropIndex(name : String) : Future[CommandResult] =
+            actor !!! DropIndexRequest(name)
+        override def findIndexes() : Future[Iterator[Future[CollectionIndex]]] = {
+            val futureIterator : Future[Iterator[CollectionIndex]] = actor !!! FindIndexesRequest
+            futureIterator map { _ map { Future(_) } }
+        }
     }
 
     private class SyncDAOWrappingAsync[QueryType, EntityType, IdType, ValueType](private[async] val underlying : AsyncDAO[QueryType, EntityType, IdType, ValueType])
@@ -88,9 +96,9 @@ package object async {
         override def removeById(id : IdType) : WriteResult =
             underlying.removeById(id).get
         override def ensureIndex(keys : QueryType, options : IndexOptions) : WriteResult =
-            throw new UnsupportedOperationException("Implement me") // FIXME
+            underlying.ensureIndex(keys, options).get
         override def dropIndex(name : String) : CommandResult =
-            throw new UnsupportedOperationException("Implement me") // FIXME
+            underlying.dropIndex(name).get
     }
 
     def makeAsync[QueryType, EntityType, IdType, ValueType](sync : SyncDAO[QueryType, EntityType, IdType, ValueType]) : AsyncDAO[QueryType, EntityType, IdType, ValueType] = {

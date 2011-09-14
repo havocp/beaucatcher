@@ -1,6 +1,7 @@
 package org.beaucatcher.async
 
 import org.beaucatcher.bson._
+import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.mongo._
 import akka.dispatch.Future
 
@@ -132,7 +133,29 @@ abstract trait AsyncDAO[QueryType, EntityType, IdType, ValueType] {
 
     def removeById(id : IdType) : Future[WriteResult]
 
-    // FIXME add the index-related commands
+    /**
+     * Creates the given index on the collection (if it hasn't already been created),
+     * using default options.
+     */
+    final def ensureIndex(keys : QueryType) : Future[WriteResult] =
+        ensureIndex(keys, IndexOptions.empty)
+
+    /**
+     * Creates the given index on the collection, using custom options.
+     */
+    def ensureIndex(keys : QueryType, options : IndexOptions) : Future[WriteResult]
+
+    final def dropIndexes() : Future[CommandResult] = dropIndex("*")
+
+    /**
+     * Removes the given index from the collection.
+     */
+    def dropIndex(name : String) : Future[CommandResult]
+
+    /**
+     * Queries mongod for the indexes on this collection.
+     */
+    def findIndexes() : Future[Iterator[Future[CollectionIndex]]]
 }
 
 object AsyncDAO {
