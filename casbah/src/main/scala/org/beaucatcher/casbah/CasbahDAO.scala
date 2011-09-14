@@ -15,7 +15,7 @@ import j.JavaConversions._
  * by a subclass of this trait.
  */
 abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType, Any] {
-    override protected def backend : CasbahBackend
+    override private[beaucatcher] def backend : CasbahBackend
     protected def collection : MongoCollection
 
     private implicit def fields2dbobject(fields : Fields) : DBObject = {
