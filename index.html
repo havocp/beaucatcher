@@ -122,18 +122,12 @@ Hammersmith too.</p>
 <p>Here's some stuff that needs doing, much of it simple, if you need a
 particular thing then let me know:
 <ul>
-<li>A binary release. I have to figure out how to do this and where to put
-it.</li>
-<li>More docs, though there are some. Need an SBT target to publish them.</li>
 <li>A nice example app using akka-mist to illustrate (and test) a JSON API.</li>
 <li>Implement AsyncDAO for Casbah, not just Hammersmith.</li>
 <li>Add asyncDAO[T] to CollectionOperations.</li>
 <li>There's no control over flags such as Tailable, AwaitData.</li>
 <li>There's no support for setting a WriteConcern (Safe mode is hardcoded).</li>
 <li>There's no way to explicitly close a cursor.</li>
-<li>DAO type should probably support ensureIndex(), no point making people use Casbah or Hammersmith directly just to create an index.</li>
-<li>The WriteResult type in the DAO API is really Casbah-specific and needs to be replaced with a Beaucatcher-specific type abstracting the backends.</li>
-<li>ObjectId is mutable, technically, because it has an "isNew" flag. In practice, Beaucatcher ignores that flag and doesn't call the Casbah method that uses it. The flag is used to decide whether save() means insert() or update(), which may be an optimization. Not sure what to do here, doesn't seem worth forking ObjectId over a purely theoretical issue.</li>
 <li>Optimization: clean up intermediate representations. This includes a custom serializer in Hammersmith, or perhaps two (one to go to BObject, one to go straight to case class).</li>
 <li>Optimization: chill out thread handoffs. Right now library boundaries are creating threads in the async case, i.e. there are threads in Hammersmith and then Akka threads in Beaucatcher itself and then probably web threads. In principle we only need one thread per request.</li>
 <li>Optimization: profile and see what actually needs optimizing.</li>
@@ -162,6 +156,7 @@ enough code written that I don't expect big gratuitous changes.
 </p>
 
 <h2>Documentation</h2>
+<p><a href="https://github.com/havocp/beaucatcher#readme">README</a></p>
 <p>
 API references:
 <ul>
