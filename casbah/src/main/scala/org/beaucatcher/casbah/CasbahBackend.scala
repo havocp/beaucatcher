@@ -3,11 +3,17 @@ package org.beaucatcher.casbah
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import com.mongodb.casbah.MongoURI
-import com.mongodb.casbah.Imports._
+import com.mongodb.casbah.Imports.{ ObjectId => JavaObjectId, _ }
 import com.mongodb.casbah.commons.conversions.scala._
 import org.joda.time.DateTime
 
-private[casbah] class CasbahBackend(private val config : MongoConfig)
+/**
+ * [[org.beaucatcher.casbah.CasbahBackend]] is final with a private constructor - there's no way to create one
+ * directly. However, a [[org.beaucatcher.casbah.CasbahBackendProvider]] exposes a [[org.beaucatcher.casbah.CasbahBackend]] and
+ * you may want to use `provider.backend.underlyingConnection`, `underlyingDB`, or `underlyingCollection`
+ * to get at Casbah methods directly.
+ */
+final class CasbahBackend private[casbah] (override val config : MongoConfig)
     extends MongoBackend {
 
     private lazy val casbahURI = MongoURI(config.url)
@@ -23,17 +29,49 @@ private[casbah] class CasbahBackend(private val config : MongoConfig)
         coll
     }
 
-    override final def createDAOGroup[EntityType <: Product : Manifest, IdType](collectionName : String,
+    override type ConnectionType = MongoConnection
+    override type DatabaseType = MongoDB
+    override type CollectionType = MongoCollection
+
+    override def underlyingConnection : MongoConnection = connection
+    override def underlyingDatabase : MongoDB = connection(casbahURI.database)
+    override def underlyingCollection(name : String) : MongoCollection = collection(name)
+
+    override final def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
         caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType] = {
-        new CaseClassBObjectCasbahDAOGroup[EntityType, IdType, IdType](collection(collectionName),
-            caseClassBObjectQueryComposer,
-            caseClassBObjectEntityComposer,
-            new IdentityIdComposer[IdType])
+        val identityIdComposer = new IdentityIdComposer[IdType]
+        val idManifest = manifest[IdType]
+        if (idManifest <:< manifest[ObjectId]) {
+            // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
+            new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, JavaObjectId](this,
+                collection(collectionName),
+                caseClassBObjectQueryComposer,
+                caseClassBObjectEntityComposer,
+                identityIdComposer,
+                CasbahBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
+        } else {
+            new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, IdType](this,
+                collection(collectionName),
+                caseClassBObjectQueryComposer,
+                caseClassBObjectEntityComposer,
+                identityIdComposer,
+                identityIdComposer)
+        }
+    }
+
+    override final lazy val database = {
+        new CasbahDatabase(this)
     }
 }
 
 private[casbah] object CasbahBackend {
+
+    lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
+        import j.JavaConversions._
+        override def idIn(id : ObjectId) : JavaObjectId = id
+        override def idOut(id : JavaObjectId) : ObjectId = id
+    }
 
     val connections = new MongoConnectionStore[MongoConnection] {
         override def create(address : MongoConnectionAddress) = {
@@ -56,7 +94,7 @@ private[casbah] object CasbahBackend {
 trait CasbahBackendProvider extends MongoBackendProvider {
     self : MongoConfigProvider =>
 
-    override lazy val backend : MongoBackend = {
+    override lazy val backend : CasbahBackend = {
         require(mongoConfig != null)
         new CasbahBackend(mongoConfig)
     }

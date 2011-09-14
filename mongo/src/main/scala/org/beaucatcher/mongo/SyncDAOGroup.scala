@@ -7,7 +7,7 @@ import org.beaucatcher.bson._
  * For now, the two flavors are one that returns [[org.beaucatcher.bson.BObject]] results
  * and another that returns an application-specified case class.
  */
-trait SyncDAOGroup[CaseClassEntityType <: Product, CaseClassIdType, BObjectIdType] {
+trait SyncDAOGroup[EntityType <: AnyRef, EntityIdType, BObjectIdType] {
     /**
      *  This DAO works with a traversable immutable BSON tree (BObject), which is probably
      *  the best representation if you want to convert to JSON. You can also use
@@ -19,9 +19,8 @@ trait SyncDAOGroup[CaseClassEntityType <: Product, CaseClassIdType, BObjectIdTyp
     def bobjectSyncDAO : BObjectSyncDAO[BObjectIdType]
 
     /**
-     *  This DAO works with a specified case class, for typesafe access to fields
-     *  from within Scala code. You also know that all the fields are present
-     *  if the case class was successfully constructed.
+     *  This DAO works with a specified entity class, for typesafe access to fields
+     *  from within Scala code.
      */
-    def caseClassSyncDAO : CaseClassSyncDAO[BObject, CaseClassEntityType, CaseClassIdType]
+    def entitySyncDAO : EntitySyncDAO[BObject, EntityType, EntityIdType]
 }

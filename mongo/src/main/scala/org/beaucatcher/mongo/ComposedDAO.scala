@@ -1,7 +1,5 @@
 package org.beaucatcher.mongo
 
-import com.mongodb.WriteResult
-
 /**
  * A DAO that backends to another DAO. The two may have different query, entity, and ID types.
  * This is an internal implementation class not exported from the library.
@@ -9,45 +7,54 @@ import com.mongodb.WriteResult
 private[beaucatcher] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityType, OuterIdType, OuterValueType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
     extends SyncDAO[OuterQueryType, OuterEntityType, OuterIdType, OuterValueType] {
 
-    protected val backend : SyncDAO[InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
+    protected val inner : SyncDAO[InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
 
     protected val queryComposer : QueryComposer[OuterQueryType, InnerQueryType]
     protected val entityComposer : EntityComposer[OuterEntityType, InnerEntityType]
     protected val idComposer : IdComposer[OuterIdType, InnerIdType]
     protected val valueComposer : ValueComposer[OuterValueType, InnerValueType]
 
+    override def name : String =
+        inner.name
+
     override def emptyQuery : OuterQueryType =
-        queryOut(backend.emptyQuery)
+        queryOut(inner.emptyQuery)
 
     override def count(query : OuterQueryType, options : CountOptions) : Long =
-        backend.count(queryIn(query), options)
+        inner.count(queryIn(query), options)
 
     override def distinct(key : String, options : DistinctOptions[OuterQueryType]) : Seq[OuterValueType] =
-        backend.distinct(key, options.convert(queryIn(_))) map { valueOut(_) }
+        inner.distinct(key, options.convert(queryIn(_))) map { valueOut(_) }
 
     override def find(query : OuterQueryType, options : FindOptions) : Iterator[OuterEntityType] =
-        backend.find(queryIn(query), options).map(entityOut(_))
+        inner.find(queryIn(query), options).map(entityOut(_))
 
     override def findOne(query : OuterQueryType, options : FindOneOptions) : Option[OuterEntityType] =
-        entityOut(backend.findOne(queryIn(query), options))
+        entityOut(inner.findOne(queryIn(query), options))
 
     override def findOneById(id : OuterIdType, options : FindOneByIdOptions) : Option[OuterEntityType] =
-        backend.findOneById(idIn(id), options) flatMap { e => Some(entityOut(e)) }
+        inner.findOneById(idIn(id), options) flatMap { e => Some(entityOut(e)) }
 
     override def findAndModify(query : OuterQueryType, update : Option[OuterQueryType], options : FindAndModifyOptions[OuterQueryType]) : Option[OuterEntityType] =
-        entityOut(backend.findAndModify(queryIn(query), queryIn(update), options.convert(queryIn(_))))
+        entityOut(inner.findAndModify(queryIn(query), queryIn(update), options.convert(queryIn(_))))
 
     override def insert(o : OuterEntityType) : WriteResult =
-        backend.insert(entityIn(o))
+        inner.insert(entityIn(o))
 
     override def update(query : OuterQueryType, modifier : OuterQueryType, options : UpdateOptions) : WriteResult =
-        backend.update(queryIn(query), queryIn(modifier), options)
+        inner.update(queryIn(query), queryIn(modifier), options)
 
     override def remove(query : OuterQueryType) : WriteResult =
-        backend.remove(queryIn(query))
+        inner.remove(queryIn(query))
 
     override def removeById(id : OuterIdType) : WriteResult =
-        backend.removeById(idIn(id))
+        inner.removeById(idIn(id))
+
+    def ensureIndex(keys : OuterQueryType, options : IndexOptions) : WriteResult =
+        inner.ensureIndex(queryIn(keys), options)
+
+    def dropIndex(name : String) : CommandResult =
+        inner.dropIndex(name)
 
     /* These are all final because you should override the composers instead, these are
      * just here to save typing

@@ -1,7 +1,6 @@
 package org.beaucatcher.bson
 
 import org.apache.commons.codec.binary.Base64
-import org.bson.types._
 import org.joda.time.{ DateTime, DateTimeZone }
 import scala.tools.scalap.scalax.rules.scalasig.{ Type, TypeRefType, Symbol }
 
@@ -18,7 +17,7 @@ private[bson] object BsonValidation {
     private def bStringToBinary(fieldName : String, s : BString) : Binary = {
         try {
             val decoded = Base64.decodeBase64(s.value)
-            new Binary(BsonSubtype.toByte(BsonSubtype.GENERAL), decoded)
+            Binary(decoded)
         } catch {
             case e : Exception =>
                 throw new BadValueException(fieldName, "Binary", s)
@@ -27,7 +26,7 @@ private[bson] object BsonValidation {
 
     private def bStringToObjectId(fieldName : String, s : BString) : ObjectId = {
         try {
-            new ObjectId(s.value)
+            ObjectId(s.value)
         } catch {
             case e : Exception =>
                 throw new BadValueException(fieldName, "ObjectId", s)
@@ -81,21 +80,21 @@ private[bson] object BsonValidation {
 
             /* Now match types that require conversion to BValue */
 
-            case "org.bson.types.Binary" => value match {
+            case "org.beaucatcher.bson.Binary" => value match {
                 case s : BString =>
-                    BBinData(bStringToBinary(fieldName, s))
+                    BBinary(bStringToBinary(fieldName, s))
                 case _ =>
                     throw new BadValueException(fieldName, "Binary", value)
             }
-            case "org.bson.types.ObjectId" => value match {
+            case "org.beaucatcher.bson.ObjectId" => value match {
                 case s : BString =>
                     BObjectId(bStringToObjectId(fieldName, s))
                 case _ =>
                     throw new BadValueException(fieldName, "ObjectId", value)
             }
-            case "org.bson.types.BSONTimestamp" => value match {
+            case "org.beaucatcher.bson.Timestamp" => value match {
                 case n : BNumericValue[_] =>
-                    BTimestamp(new BSONTimestamp((n.longValue / 1000).intValue, (n.longValue % 1000).intValue))
+                    BTimestamp(Timestamp.fromNumber(n))
                 case _ =>
                     throw new UnhandledTypeException(fieldName, symbol.path)
             }

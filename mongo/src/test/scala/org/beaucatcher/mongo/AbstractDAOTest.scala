@@ -3,7 +3,6 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import org.bson.types._
 import org.junit.Assert._
 import org.junit._
 
@@ -29,9 +28,9 @@ package abstractfoo {
 
 import abstractfoo._
 
-abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionOperations[Foo, ObjectId],
-    FooWithIntId : CollectionOperations[FooWithIntId, Int],
-    FooWithOptionalField : CollectionOperations[FooWithOptionalField, ObjectId])
+abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionOperationsTrait[Foo, ObjectId],
+    FooWithIntId : CollectionOperationsTrait[FooWithIntId, Int],
+    FooWithOptionalField : CollectionOperationsTrait[FooWithOptionalField, ObjectId])
     extends TestUtils {
 
     protected def newFoo(id : ObjectId, i : Int, s : String) : Foo
@@ -43,17 +42,27 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         Foo.syncDAO.remove(BObject())
         FooWithIntId.syncDAO.remove(BObject())
         FooWithOptionalField.syncDAO.remove(BObject())
+        Foo.syncDAO.dropIndexes()
+        FooWithIntId.syncDAO.dropIndexes()
+        FooWithOptionalField.syncDAO.dropIndexes()
     }
 
     @Test
     def haveProperCollectionNames() = {
         assertEquals("foo", Foo.collectionName)
         assertEquals("fooWithIntId", FooWithIntId.collectionName)
+        assertEquals(Foo.collectionName, Foo.syncDAO.name)
+        assertEquals(FooWithIntId.collectionName, FooWithIntId.syncDAO.name)
+    }
+
+    @Test
+    def testFullName() = {
+        assertEquals(Foo.database.name + "." + Foo.collectionName, Foo.syncDAO.fullName)
     }
 
     @Test
     def testSaveAndFindOneCaseClass() {
-        val foo = newFoo(new ObjectId(), 23, "woohoo")
+        val foo = newFoo(ObjectId(), 23, "woohoo")
         Foo.syncDAO[Foo].save(foo)
         val maybeFound = Foo.syncDAO[Foo].findOneById(foo._id)
         assertTrue(maybeFound.isDefined)
@@ -71,7 +80,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @Test
     def testFindByIDAllResultTypes() {
-        val foo = newFoo(new ObjectId(), 23, "woohoo")
+        val foo = newFoo(ObjectId(), 23, "woohoo")
         Foo.syncDAO[Foo].save(foo)
 
         val o = Foo.syncDAO[BObject].findOneById(foo._id).get
@@ -110,28 +119,28 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     private def create1234() {
         for (i <- 1 to 4) {
-            val foo = newFoo(new ObjectId(), i, i.toString)
+            val foo = newFoo(ObjectId(), i, i.toString)
             Foo.syncDAO[Foo].insert(foo)
         }
     }
 
     private def create2143() {
         for (i <- Seq(2, 1, 4, 3)) {
-            val foo = newFoo(new ObjectId(), i, i.toString)
+            val foo = newFoo(ObjectId(), i, i.toString)
             Foo.syncDAO[Foo].insert(foo)
         }
     }
 
     private def create1234Optional() {
         for (i <- 1 to 4) {
-            val foo = newFooWithOptionalField(new ObjectId(), i, Some(i.toString))
+            val foo = newFooWithOptionalField(ObjectId(), i, Some(i.toString))
             FooWithOptionalField.syncDAO[FooWithOptionalField].insert(foo)
         }
     }
 
     private def create1to50() {
         for (i <- 1 to 50) {
-            val foo = newFoo(new ObjectId(), i, i.toString)
+            val foo = newFoo(ObjectId(), i, i.toString)
             Foo.syncDAO[Foo].insert(foo)
         }
     }
@@ -543,8 +552,8 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
         // check we replace and return the old one
         val stillOld = Foo.syncDAO[Foo].findAndReplace(BObject("intField" -> 3),
-            // this new ObjectId() is the thing that needs to get ignored
-            newFoo(new ObjectId(), 42, "42"))
+            // this ObjectId() is the thing that needs to get ignored
+            newFoo(ObjectId(), 42, "42"))
         assertTrue(stillOld.isDefined)
         assertEquals(3, stillOld.get.intField)
         assertEquals(4, Foo.syncDAO.count())
@@ -563,7 +572,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(4, Foo.syncDAO.count())
 
         val notThere = Foo.syncDAO[Foo].findAndReplace(BObject("intField" -> 124334),
-            newFoo(new ObjectId(), 42, "42"))
+            newFoo(ObjectId(), 42, "42"))
         assertTrue(notThere.isEmpty)
     }
 
@@ -716,7 +725,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     @Test
     def testInsert() {
         assertEquals(0, Foo.syncDAO.count())
-        val f = newFoo(new ObjectId(), 14, "14")
+        val f = newFoo(ObjectId(), 14, "14")
         Foo.syncDAO[Foo].insert(f)
         assertEquals(1, Foo.syncDAO.count())
         val foundById = Foo.syncDAO[Foo].findOneById(f._id)
@@ -734,7 +743,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     @Test
     def testSave() {
         assertEquals(0, Foo.syncDAO.count())
-        val f = newFoo(new ObjectId(), 14, "14")
+        val f = newFoo(ObjectId(), 14, "14")
         Foo.syncDAO[Foo].save(f)
         assertEquals(1, Foo.syncDAO.count())
         val foundById = Foo.syncDAO[Foo].findOneById(f._id)
@@ -762,7 +771,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     def testUpdate() {
         // updating when there's nothing there should do nothing
         assertEquals(0, Foo.syncDAO.count())
-        val f = newFoo(new ObjectId(), 14, "14")
+        val f = newFoo(ObjectId(), 14, "14")
         Foo.syncDAO[Foo].update(BObject("_id" -> f._id), f)
         assertEquals(0, Foo.syncDAO.count())
         val foundById = Foo.syncDAO[Foo].findOneById(f._id)
@@ -832,7 +841,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
     def testUpdateUpsert() {
         // upserting when there's nothing there should insert
         assertEquals(0, Foo.syncDAO.count())
-        val f = newFoo(new ObjectId(), 14, "14")
+        val f = newFoo(ObjectId(), 14, "14")
         Foo.syncDAO[Foo].updateUpsert(BObject("_id" -> f._id), f)
         assertEquals(1, Foo.syncDAO.count())
         val foundById = Foo.syncDAO[Foo].findOneById(f._id)
@@ -915,5 +924,60 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         for (a <- all) {
             assertFalse(f._id == a._id)
         }
+    }
+
+    @Test
+    def testEnsureIndex() {
+        val result = Foo.syncDAO.ensureIndex(BObject("intField" -> 1))
+        assertTrue(result.ok)
+        val indexes = Foo.syncDAO.findIndexes().toList
+        val idIndex = indexes.find({ i => i.name == "_id_" })
+        val intFieldIndex = indexes.find({ i => i.name == "intField_1" })
+        assertTrue(idIndex.isDefined)
+        assertTrue(intFieldIndex.isDefined)
+        assertEquals(2, indexes.length)
+        Foo.syncDAO.dropIndex("intField_1")
+        assertEquals(1, Foo.syncDAO.findIndexes().length)
+    }
+
+    @Test
+    def testEnsureIndexWithOptions() {
+        val result = Foo.syncDAO.ensureIndex(BObject("intField" -> 1),
+            IndexOptions(Some("intFieldCustomName"), Set(IndexUnique, IndexBackground, IndexDropDups, IndexSparse), Some(1)))
+        assertTrue(result.ok)
+        val indexes = Foo.syncDAO.findIndexes().toList
+        val intFieldIndex = indexes.find({ i => i.name == "intFieldCustomName" }).get
+        assertEquals(2, indexes.length)
+        assertEquals(Foo.syncDAO.fullName, intFieldIndex.ns)
+        assertEquals(Some(true), intFieldIndex.unique)
+        assertEquals(Some(true), intFieldIndex.background)
+        assertEquals(Some(true), intFieldIndex.dropDups)
+        assertEquals(Some(true), intFieldIndex.sparse)
+        assertEquals(Some(1), intFieldIndex.v)
+        Foo.syncDAO.dropIndexes()
+        assertEquals(1, Foo.syncDAO.findIndexes().length)
+    }
+
+    @Test
+    def testDropIndex() {
+        val result = Foo.syncDAO.ensureIndex(BObject("intField" -> 1))
+        assertTrue(result.ok)
+        val indexes = Foo.syncDAO.findIndexes().toList
+        assertEquals(2, indexes.length)
+        Foo.syncDAO.dropIndex("intField_1")
+        assertEquals(1, Foo.syncDAO.findIndexes().length)
+    }
+
+    @Test
+    def testDropIndexes() {
+        val result = Foo.syncDAO.ensureIndex(BObject("intField" -> 1))
+        assertTrue(result.ok)
+        val result2 = Foo.syncDAO.ensureIndex(BObject("stringField" -> -1))
+        assertTrue(result2.ok)
+        val indexes = Foo.syncDAO.findIndexes().toList
+        assertEquals(3, indexes.length)
+        Foo.syncDAO.dropIndexes()
+        // the _id_ index doesn't drop so there's always 1
+        assertEquals(1, Foo.syncDAO.findIndexes().length)
     }
 }

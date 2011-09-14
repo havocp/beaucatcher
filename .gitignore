@@ -2,6 +2,7 @@
 /*/.project
 /*/.scala_dependencies
 /*/.settings
+/*/.target
 /bin/
 /.history
 /project/build/target/
@@ -16,3 +17,5 @@
 /*/project/build/target/
 /*/lib_managed
 /*/target/
+/casbah/src/main/scala/org/beaucatcher/casbah/j
+/hammersmith/src/main/scala/org/beaucatcher/hammersmith/j

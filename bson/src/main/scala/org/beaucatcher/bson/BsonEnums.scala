@@ -1,7 +1,5 @@
 package org.beaucatcher.bson
 
-import org.bson.BSON
-
 /**
  * A representation of BSON in JSON format.
  * Only the `CLEAN` flavor is currently implemented.
@@ -25,16 +23,16 @@ object JsonFlavor extends Enumeration {
     val CLEAN, STRICT, JS, TEN_GEN = Value
 }
 
-/** A detailed type tag for binary data in BSON. */
+/** A detailed type tag for binary data in wire. */
 object BsonSubtype extends Enumeration {
     type BsonSubtype = Value
     val GENERAL, FUNC, BINARY, UUID = Value
 
     private val fromBytes =
-        Map(BSON.B_GENERAL -> GENERAL,
-            BSON.B_FUNC -> FUNC,
-            BSON.B_BINARY -> BINARY,
-            BSON.B_UUID -> UUID)
+        Map(wire.B_GENERAL -> GENERAL,
+            wire.B_FUNC -> FUNC,
+            wire.B_BINARY -> BINARY,
+            wire.B_UUID -> UUID)
 
     private val toBytes = fromBytes map { _.swap }
 
@@ -55,27 +53,27 @@ object BsonType extends Enumeration {
     val EOO, NUMBER, STRING, OBJECT, ARRAY, BINARY, UNDEFINED, OID, BOOLEAN, DATE, NULL, REGEX, REF, CODE, SYMBOL, CODE_W_SCOPE, NUMBER_INT, TIMESTAMP, NUMBER_LONG, MINKEY, MAXKEY = Value
 
     private val fromBytes =
-        Map(BSON.EOO -> EOO,
-            BSON.NUMBER -> NUMBER,
-            BSON.STRING -> STRING,
-            BSON.OBJECT -> OBJECT,
-            BSON.ARRAY -> ARRAY,
-            BSON.BINARY -> BINARY,
-            BSON.UNDEFINED -> UNDEFINED,
-            BSON.OID -> OID,
-            BSON.BOOLEAN -> BOOLEAN,
-            BSON.DATE -> DATE,
-            BSON.NULL -> NULL,
-            BSON.REGEX -> REGEX,
-            BSON.REF -> REF,
-            BSON.CODE -> CODE,
-            BSON.SYMBOL -> SYMBOL,
-            BSON.CODE_W_SCOPE -> CODE_W_SCOPE,
-            BSON.NUMBER_INT -> NUMBER_INT,
-            BSON.TIMESTAMP -> TIMESTAMP,
-            BSON.NUMBER_LONG -> NUMBER_LONG,
-            BSON.MINKEY -> MINKEY,
-            BSON.MAXKEY -> MAXKEY)
+        Map(wire.EOO -> EOO,
+            wire.NUMBER -> NUMBER,
+            wire.STRING -> STRING,
+            wire.OBJECT -> OBJECT,
+            wire.ARRAY -> ARRAY,
+            wire.BINARY -> BINARY,
+            wire.UNDEFINED -> UNDEFINED,
+            wire.OID -> OID,
+            wire.BOOLEAN -> BOOLEAN,
+            wire.DATE -> DATE,
+            wire.NULL -> NULL,
+            wire.REGEX -> REGEX,
+            wire.REF -> REF,
+            wire.CODE -> CODE,
+            wire.SYMBOL -> SYMBOL,
+            wire.CODE_W_SCOPE -> CODE_W_SCOPE,
+            wire.NUMBER_INT -> NUMBER_INT,
+            wire.TIMESTAMP -> TIMESTAMP,
+            wire.NUMBER_LONG -> NUMBER_LONG,
+            wire.MINKEY -> MINKEY,
+            wire.MAXKEY -> MAXKEY)
 
     private val toBytes = fromBytes map { _.swap }
 

@@ -1,6 +1,5 @@
 package org.beaucatcher.async
 
-import com.mongodb.WriteResult
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 
@@ -35,6 +34,12 @@ private[async] case class UpdateRequest[QueryType](query : QueryType, modifier :
 private[async] case class RemoveRequest[QueryType](query : QueryType) extends DAORequest
 private[async] case class RemoveByIdRequest[IdType](id : IdType) extends DAORequest
 
+private[async] case class CommandReply(override val result : CommandResult) extends DAOReply
+
+private[async] case class EnsureIndexRequest[QueryType](keys : QueryType, options : IndexOptions) extends DAORequest
+private[async] case class DropIndexRequest(name : String) extends DAORequest
+private[async] case object FindIndexesRequest extends DAORequest
+
 // This could be implemented with typed actors, but not sure it's worth the dependency for now I guess
 // This actor blocks on a synchronous DAO for each request. So, usually you want more than
 // one of these in a pool.
@@ -67,6 +72,12 @@ private class BlockingDAOActor[QueryType, EntityType, IdType, ValueType](val und
                 WriteReply(underlying.remove(query.asInstanceOf[QueryType]))
             case RemoveByIdRequest(id) =>
                 WriteReply(underlying.removeById(id.asInstanceOf[IdType]))
+            case EnsureIndexRequest(keys, options) =>
+                CommandReply(underlying.ensureIndex(keys.asInstanceOf[QueryType], options))
+            case DropIndexRequest(name) =>
+                CommandReply(underlying.dropIndex(name))
+            case FindIndexesRequest =>
+                FindReply(underlying.findIndexes())
         }
     }
 

@@ -2,19 +2,20 @@ package org.beaucatcher.casbah
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import org.beaucatcher.mongo.wire._
 import org.bson.BSONObject
-import com.mongodb.WriteResult
 import com.mongodb.casbah.MongoCollection
-import com.mongodb.CommandResult
 import com.mongodb.DBObject
 import com.mongodb.casbah.commons.MongoDBObject
-import com.mongodb.Bytes
+
+import j.JavaConversions._
 
 /**
  * Base trait that chains SyncDAO methods to a Casbah collection, which must be provided
  * by a subclass of this trait.
  */
 abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType, Any] {
+    override private[beaucatcher] def backend : CasbahBackend
     protected def collection : MongoCollection
 
     private implicit def fields2dbobject(fields : Fields) : DBObject = {
@@ -27,6 +28,8 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
         }
         builder.result
     }
+
+    override def name : String = collection.name
 
     override def emptyQuery : DBObject = MongoDBObject() // not immutable, so we always make a new one
 
@@ -41,22 +44,6 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
         entityToUpsertableObject(entity)
     }
 
-    private def queryFlagsAsInt(flags : Set[QueryFlag]) : Int = {
-        var i = 0
-        for (f <- flags) {
-            val o = f match {
-                case QueryAwaitData => Bytes.QUERYOPTION_AWAITDATA
-                case QueryExhaust => Bytes.QUERYOPTION_EXHAUST
-                case QueryNoTimeout => Bytes.QUERYOPTION_NOTIMEOUT
-                case QueryOpLogReplay => Bytes.QUERYOPTION_OPLOGREPLAY
-                case QuerySlaveOk => Bytes.QUERYOPTION_SLAVEOK
-                case QueryTailable => Bytes.QUERYOPTION_TAILABLE
-            }
-            i |= o
-        }
-        i
-    }
-
     private def withQueryFlags[R](maybeOverrideFlags : Option[Set[QueryFlag]])(body : => R) : R = {
         if (maybeOverrideFlags.isDefined) {
             // FIXME this is outrageously unthreadsafe but I'm not sure how to
@@ -65,7 +52,7 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
             // so for now just always throw an exception
             val saved = collection.getOptions()
             collection.resetOptions()
-            collection.addOption(queryFlagsAsInt(maybeOverrideFlags.get))
+            collection.addOption(maybeOverrideFlags.get)
 
             val result = body
 
@@ -118,7 +105,7 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
         if (options.batchSize.isDefined)
             cursor.batchSize(options.batchSize.get.intValue)
         if (options.overrideQueryFlags.isDefined) {
-            cursor.options = queryFlagsAsInt(options.overrideQueryFlags.get)
+            cursor.options = options.overrideQueryFlags.get
         }
 
         cursor
@@ -169,100 +156,32 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
     }
 
     override def insert(o : DBObject) : WriteResult = {
+        import Implicits._
         collection.insert(o)
     }
 
     override def update(query : DBObject, modifier : DBObject, options : UpdateOptions) : WriteResult = {
+        import Implicits._
         collection.update(query, modifier, options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
     }
 
     override def remove(query : DBObject) : WriteResult = {
+        import Implicits._
         collection.remove(query)
     }
 
     override def removeById(id : IdType) : WriteResult = {
+        import Implicits._
         collection.remove(MongoDBObject("_id" -> id))
     }
-}
 
-/* Mutable BSONObject/DBObject implementation used to save to MongoDB API */
-private[casbah] class BObjectBSONObject extends BSONObject {
-    import scalaj.collection.Implicits._
-
-    private[this] var bvalue : BObject = BObject.empty
-
-    def this(b : BObject) = {
-        this()
-        bvalue = b
+    override def ensureIndex(keys : DBObject, options : IndexOptions) : WriteResult = {
+        throw new BugInSomethingMongoException("ensureIndex() should be implemented on an outer wrapper DAO and not make it here")
     }
 
-    override def toString = "BObjectBSONObject(%s)".format(bvalue)
-
-    /* BSONObject interface */
-    override def containsField(s : String) : Boolean = {
-        bvalue.contains(s)
+    override def dropIndex(indexName : String) : CommandResult = {
+        throw new BugInSomethingMongoException("dropIndex() should be implemented on an outer wrapper DAO and not make it here")
     }
-    override def containsKey(s : String) : Boolean = containsField(s)
-
-    override def get(key : String) : AnyRef = {
-        bvalue.get(key) match {
-            case Some(bvalue) =>
-                bvalue.unwrappedAsJava
-            case None =>
-                null
-        }
-    }
-
-    override def keySet() : java.util.Set[String] = {
-        bvalue.keySet.asJava
-    }
-
-    // returns previous value
-    override def put(key : String, v : AnyRef) : AnyRef = {
-        val previous = get(key)
-        bvalue = bvalue + (key, BValue.wrap(v))
-        previous
-    }
-
-    override def putAll(bsonObj : BSONObject) : Unit = {
-        for { key <- bsonObj.keySet() }
-            put(key, BValue.wrap(bsonObj.get(key)))
-    }
-
-    override def putAll(m : java.util.Map[_, _]) : Unit = {
-        for { key <- m.keySet() }
-            put(key.asInstanceOf[String], BValue.wrap(m.get(key)))
-    }
-
-    override def removeField(key : String) : AnyRef = {
-        val previous = get(key)
-        bvalue = bvalue - key
-        previous
-    }
-
-    override def toMap() : java.util.Map[_, _] = {
-        bvalue.unwrappedAsJava
-    }
-}
-
-/**
- * adds DBObject extensions to BSONObject.
- * This is an internal implementation class not exported by the library.
- */
-private[casbah] class BObjectDBObject(b : BObject) extends BObjectBSONObject(b) with DBObject {
-    private[this] var isPartial : Boolean = false
-
-    def this() = {
-        this(BObject.empty)
-    }
-
-    override def isPartialObject() : Boolean = isPartial
-
-    override def markAsPartialObject() : Unit = {
-        isPartial = true
-    }
-
-    override def toString = "BObjectDBObject(%s)".format(b)
 }
 
 private[casbah] class BObjectCasbahQueryComposer extends QueryComposer[BObject, DBObject] {
@@ -285,7 +204,7 @@ private[casbah] class BObjectCasbahEntityComposer extends EntityComposer[BObject
  */
 private[casbah] abstract trait BObjectCasbahSyncDAO[OuterIdType, InnerIdType]
     extends BObjectComposedSyncDAO[OuterIdType, DBObject, DBObject, InnerIdType, Any] {
-    override protected val backend : CasbahSyncDAO[InnerIdType]
+    override protected val inner : CasbahSyncDAO[InnerIdType]
 
     override protected val queryComposer : QueryComposer[BObject, DBObject]
     override protected val entityComposer : EntityComposer[BObject, DBObject]

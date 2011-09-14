@@ -5,18 +5,15 @@ import akka.dispatch._
 import org.beaucatcher.bson._
 import org.beaucatcher.async._
 import org.beaucatcher.mongo._
-import com.mongodb.WriteResult
-import com.mongodb.CommandResult
 import com.mongodb.async.Collection
 import com.mongodb.async.futures._
 import org.bson.collection._
-import org.bson._
+import org.bson.SerializableBSONObject
 import com.mongodb.async.Cursor
 import com.mongodb.async.{ WriteResult => HammersmithWriteResult }
 import akka.actor.Actor
 import akka.actor.ActorRef
 import org.bson.DefaultBSONSerializer
-import org.bson.collection.Document
 import java.util.concurrent.TimeUnit
 
 private object CursorActor {
@@ -125,18 +122,13 @@ private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObje
         }
     }
 
-    private def translateWriteResult(h : HammersmithWriteResult) : WriteResult = {
-        // FIXME
-        null
-    }
-
     private def completeWriteFromEither(f : DefaultCompletableFuture[WriteResult])(result : Either[Throwable, (Option[AnyRef], HammersmithWriteResult)]) : Unit = {
         result match {
             case Left(e) =>
                 f.completeWithException(e)
             case Right(valueAndResult) =>
                 val result = valueAndResult._2
-                f.completeWithResult(translateWriteResult(result))
+                f.completeWithResult(result)
         }
     }
 

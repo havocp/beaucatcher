@@ -1,6 +1,5 @@
 package org.beaucatcher
 
-import com.mongodb.WriteResult
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import akka.actor.Actor
@@ -14,6 +13,12 @@ package object async {
         // in the messages.
         private val actor = Actor.actorOf(new DAOActor[QueryType, EntityType, IdType, ValueType](underlying)).start
 
+        override def backend =
+            underlying.backend
+        override def name =
+            underlying.name
+        override def fullName =
+            underlying.fullName
         override def emptyQuery : QueryType =
             underlying.emptyQuery
         override def count(query : QueryType, options : CountOptions) : Future[Long] =
@@ -44,10 +49,24 @@ package object async {
             actor !!! RemoveRequest(query)
         override def removeById(id : IdType) : Future[WriteResult] =
             actor !!! RemoveByIdRequest(id)
+        override def ensureIndex(keys : QueryType, options : IndexOptions) : Future[WriteResult] =
+            actor !!! EnsureIndexRequest(keys, options)
+        override def dropIndex(name : String) : Future[CommandResult] =
+            actor !!! DropIndexRequest(name)
+        override def findIndexes() : Future[Iterator[Future[CollectionIndex]]] = {
+            val futureIterator : Future[Iterator[CollectionIndex]] = actor !!! FindIndexesRequest
+            futureIterator map { _ map { Future(_) } }
+        }
     }
 
     private class SyncDAOWrappingAsync[QueryType, EntityType, IdType, ValueType](private[async] val underlying : AsyncDAO[QueryType, EntityType, IdType, ValueType])
         extends SyncDAO[QueryType, EntityType, IdType, ValueType] {
+        override def backend =
+            underlying.backend
+        override def name =
+            underlying.name
+        override def fullName =
+            underlying.fullName
         override def emptyQuery : QueryType =
             underlying.emptyQuery
         override def count(query : QueryType, options : CountOptions) : Long =
@@ -76,6 +95,10 @@ package object async {
             underlying.remove(query).get
         override def removeById(id : IdType) : WriteResult =
             underlying.removeById(id).get
+        override def ensureIndex(keys : QueryType, options : IndexOptions) : WriteResult =
+            underlying.ensureIndex(keys, options).get
+        override def dropIndex(name : String) : CommandResult =
+            underlying.dropIndex(name).get
     }
 
     def makeAsync[QueryType, EntityType, IdType, ValueType](sync : SyncDAO[QueryType, EntityType, IdType, ValueType]) : AsyncDAO[QueryType, EntityType, IdType, ValueType] = {

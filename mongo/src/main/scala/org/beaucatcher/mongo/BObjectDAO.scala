@@ -1,7 +1,7 @@
 package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
-import com.mongodb.WriteResult
+import org.beaucatcher.bson.Implicits._
 
 /**
  * A Sync DAO parameterized to work with BObject
@@ -25,5 +25,28 @@ private[beaucatcher] abstract trait BObjectComposedSyncDAO[OuterIdType, InnerQue
 
     override def entityToUpdateQuery(entity : BObject) : BObject = {
         BObject("_id" -> entity.getOrElse("_id", throw new IllegalArgumentException("only objects with an _id field work here")))
+    }
+
+    override def ensureIndex(keys : BObject, options : IndexOptions) : WriteResult = {
+        val builder = BObject.newBuilder
+        val indexName = options.name.getOrElse(defaultIndexName(keys))
+        builder += ("name" -> indexName)
+        builder += ("ns" -> fullName)
+        options.v foreach { v => builder += ("v" -> v) }
+        for (flag <- options.flags) {
+            flag match {
+                case IndexUnique => builder += ("unique" -> true)
+                case IndexBackground => builder += ("background" -> true)
+                case IndexDropDups => builder += ("dropDups" -> true)
+                case IndexSparse => builder += ("sparse" -> true)
+            }
+        }
+        builder += ("key" -> keys)
+        val query = builder.result
+        database.system.indexes.syncDAO[BObject].insert(query)
+    }
+
+    override def dropIndex(indexName : String) : CommandResult = {
+        database.sync.command(BObject("deleteIndexes" -> name, "index" -> indexName))
     }
 }

@@ -57,17 +57,3 @@ class IdentityValueComposer[ValueType]
     override def valueIn(id : ValueType) = id
     override def valueOut(id : ValueType) = id
 }
-
-private[beaucatcher] class InnerBValueValueComposer
-    extends ValueComposer[Any, BValue] {
-
-    override def valueIn(v : Any) : BValue = BValue.wrap(v)
-    override def valueOut(v : BValue) : Any = v.unwrapped
-}
-
-private[beaucatcher] class OuterBValueValueComposer
-    extends ValueComposer[BValue, Any] {
-
-    override def valueIn(v : BValue) : Any = v.unwrapped
-    override def valueOut(v : Any) : BValue = BValue.wrap(v)
-}

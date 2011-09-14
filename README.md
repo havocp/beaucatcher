@@ -25,6 +25,9 @@ shipped to an HTTP client, typically). On a per-call basis, you can
 make the choice of desired datatype (BSON, JSON, case class) for
 results, and choose synchronous or asynchronous for the call.
 
+(You can use any custom class, not just a case class, by implementing the
+conversion to/from BSON for that class.)
+
 (In principle, though not yet, Beaucatcher could convert directly from
 the MongoDB wire protocol to your desired format and thus be extra
 fast.)
@@ -47,7 +50,7 @@ essentially these things:
  - a `CollectionOperations` trait that's essentially a set of DAOs,
    matrix of (result-type x asyncness). The idea is that for a
    collection, you define a case class with its schema, and have its
-   companion object extend `CollectionOperations`
+   companion object extend `CollectionOperationsWithCaseClass`
  - a `JsonMethods` trait that implements CRUD operations based on
    JSON strings for the collection; you might hook this up to your
    incoming HTTP requests. You could have a companion object extend
@@ -60,9 +63,9 @@ cluttered than your app will.)
 
 Beaucatcher builds on Casbah or Hammersmith, and only implements
 collection operations (find, save, remove, etc.). You still need to
-use those libraries directly to operate on the MongoDB connection or
-db, and Beaucatcher is not a "MongoDB driver" (i.e. it doesn't
-implement any wire protocol stuff, it's a layer on top).
+use those libraries directly to operate on the MongoDB connection, and
+Beaucatcher is not a "MongoDB driver" (i.e. it doesn't implement any
+wire protocol stuff, it's a layer on top).
 
 ## BSON/JSON tree
 
@@ -111,11 +114,6 @@ You can convert a `BValue` (or `JValue`) to plain Scala values using `unwrapped`
 
     val scalaMap = bobject.unwrapped
 
-or to plain Java values (maybe handy for template languages that
-aren't Scala-aware, or for Java APIs):
-
-    val javaMap = bobject.unwrappedAsJava
-
 And you can convert to JSON:
 
     val jsonString = bobject.toJson()
@@ -133,6 +131,15 @@ is really supported.
 
 I find immutable trees a lot nicer to work with in Scala than the
 Java-ish `DBObject` interface.
+
+There's also an XPath-inspired `select()` method for BSON and JSON:
+
+    bobject.select("foo/bar")
+    bobject.select(".//bar")
+    bobject.select("foo/*")
+    bobject.selectAs[Int](".//bar")
+
+See the API documentation for more details on the syntax.
 
 ## Case class conversion
 
@@ -191,7 +198,7 @@ There are subtypes of the trait for `BObject` and case class entity
 types.
 
 Then there's a `CollectionOperations` trait, with some subclasses that
-connect to Casbah. This trait sets up both a `BObject` and a case
+connect to Casbah. This trait sets up both a `BObject` and a custom
 class DAO. You might use it like this:
 
     trait MyAppMongoProvider
@@ -205,7 +212,7 @@ class DAO. You might use it like this:
         case class Foo(_id : ObjectId, intField : Int, stringField : String)
 
         object Foo
-            extends CollectionOperations[Foo, ObjectId]
+            extends CollectionOperationsWithCaseClass[Foo, ObjectId]
             with MyAppMongoProvider {
             def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
                 syncDAO[E].find(BObject("intField" -> 23))
@@ -234,6 +241,15 @@ case class layer, you can override the "composers" included in the
 that converts between the case class and the `BObject`. The idea is
 that you could do things such as rename fields in here, making it an
 alternative to annotations for that.
+
+## Custom class rather than case class
+
+If you'd rather use an arbitrary custom class instead of a case class
+with a Mongo collection, then extend `CollectionOperations` rather
+than `CollectionOperationsWithCaseClass` and implement the field
+`entityBObjectEntityComposer` which must be a "composer" object that
+has two methods, `entityIn` to go from your entity object to
+`BObject`, and `entityOut` to go the other way.
 
 ## Parsing JSON validated against a case class
 
@@ -304,5 +320,6 @@ an example.
 
 ## Final note!
 
-Beaucatcher is not mature code and if it breaks you get the pieces.  But I am
-enjoying it so I hope you'll at least find the ideas interesting.
+Beaucatcher is not mature code and if it breaks you get the pieces
+(though the test suite is pretty decent, fwiw).  I am enjoying it so I
+hope you'll at least find the ideas interesting.

@@ -4,7 +4,9 @@ import org.bson.collection._
 import akka.dispatch._
 import java.util.concurrent.TimeUnit
 import org.beaucatcher.bson._
+import org.beaucatcher.mongo._
 import org.bson.SerializableBSONObject
+import com.mongodb.async.{ WriteResult => HammersmithWriteResult }
 
 package object hammersmith {
     private[hammersmith] def newPromise[T] = {
@@ -51,5 +53,14 @@ package object hammersmith {
         override protected def wrapValue(x : Any) : JValue = {
             BValue.wrap(x).toJValue()
         }
+    }
+
+    private[hammersmith] implicit def asBeaucatcherWriteResult(h : HammersmithWriteResult) : WriteResult = {
+        WriteResult(ok = h.ok,
+            err = h.error,
+            n = h.n,
+            code = h.code,
+            upserted = h.upsertID,
+            updatedExisting = h.updatedExisting)
     }
 }

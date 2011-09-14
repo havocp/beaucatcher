@@ -30,9 +30,7 @@ import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable
 import java.util.Date
 import org.apache.commons.codec.binary.Base64
-import org.bson.types._
 import org.joda.time._
-import scalaj.collection.Implicits._
 import scala.io.Source
 
 /**
@@ -82,18 +80,6 @@ sealed abstract trait BValue {
     val bsonType : BsonType.Value
 
     /**
-     * The unwrapped version of the [[org.beaucatcher.bson.BValue]] as a plain Java type. For example,
-     * while the `unwrapped` method on a `BObject` returns a Scala `Map`, the
-     * `unwrappedAsJava` method returns a Java `Map`. This is useful for interoperating
-     * with Java APIs.
-     * @return the unwrapped value as a Java type
-     */
-    def unwrappedAsJava : AnyRef = {
-        // this default implementation works for say String where Java and Scala are the same
-        unwrapped.asInstanceOf[AnyRef]
-    }
-
-    /**
      * The value converted to a [[org.beaucatcher.bson.JValue]]. For many primitive types,
      * this method simply returns the same object. But types that exist in BSON but
      * not in JSON, such as [[org.beaucatcher.bson.BObjectId]], have to be mapped into
@@ -122,6 +108,117 @@ sealed abstract trait BValue {
      */
     def toPrettyJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
         BsonJson.toPrettyJson(this, flavor)
+
+    final private val unboxedClasses : Map[Class[_], Class[_]] = Map(
+        classOf[java.lang.Integer] -> classOf[Int],
+        classOf[java.lang.Double] -> classOf[Double],
+        classOf[java.lang.Boolean] -> classOf[Boolean],
+        classOf[java.lang.Long] -> classOf[Long],
+        classOf[java.lang.Short] -> classOf[Short],
+        classOf[java.lang.Character] -> classOf[Char],
+        classOf[java.lang.Byte] -> classOf[Byte],
+        classOf[java.lang.Float] -> classOf[Float],
+        classOf[scala.runtime.BoxedUnit] -> classOf[Unit])
+
+    // The trickiness here is that asInstanceOf[A] doesn't use the
+    // manifest and thus doesn't do anything (no runtime type
+    // check). So we have to do it by hand, special-casing
+    // AnyVal primitives because Java Class.cast won't work
+    // on them as desired.
+    private def checkedCast[A <: Any : ClassManifest](value : Any) : A = {
+        if (value == null) {
+            if (classManifest[A] <:< classManifest[AnyVal]) {
+                throw new ClassCastException("null can't be converted to AnyVal type " + classManifest[A])
+            } else {
+                null.asInstanceOf[A]
+            }
+        } else {
+            val klass = value.asInstanceOf[AnyRef].getClass
+            val unboxedClass = unboxedClasses.getOrElse(klass, klass)
+
+            /* value and the return value are always boxed because that's how
+             * an Any is passed around; type A we're casting to may be boxed or
+             * unboxed. For example, value is always java.lang.Integer for
+             * ints, but A could be java.lang.Integer OR scala Int. But
+             * even if A is Int, the return value is really always a
+             * java.lang.Integer, so we can leave the value boxed.
+             */
+
+            if (classManifest[A].erasure.isAssignableFrom(unboxedClass) ||
+                classManifest[A].erasure.isAssignableFrom(klass)) {
+                value.asInstanceOf[A]
+            } else {
+                throw new ClassCastException("Requested " + classManifest[A] + " but value is " + value + " with type " +
+                    klass.getName)
+            }
+        }
+    }
+
+    /**
+     * Unwraps as with the `unwrapped` method but additionally casts to
+     * the requested type (throws `ClassCastException` if the node has the
+     * wrong type).
+     *
+     * @return the unwrapped value
+     * @tparam A the type that the value must have
+     */
+    def unwrappedAs[A : Manifest] = checkedCast[A](unwrapped)
+
+    /**
+     * Select a list of matching child nodes using an XPath-inspired syntax.
+     * The special characters are `/` to separate nodes, `//` to mean "any number
+     * of intermediate nodes," `.` to mean this node, and `*` to mean "all children."
+     * Other characters are taken as field names (numbers are interpreted as indices
+     * on array nodes and field names on object nodes).
+     *
+     *  - `select(".")` returns the node itself
+     *  - `select("foo")` returns a child field named `foo` if one exists (does not match grandchildren named `foo`)
+     *  - `select(".//foo")` returns any descendant named `foo`
+     *  - `select("*")` returns all children of the node
+     *  - `select(".//*")` returns all descendants of the node
+     *  - `select("foo//bar")` returns any descendant of `foo` named `bar`
+     *  - `select("3")` returns either field named `3` or array element at index `3`
+     *  - `select("foo/3")` returns field or array element `3` inside the node `foo`
+     *
+     * @param selector the selector expression
+     * @return list of matching nodes
+     */
+    def select(selector : String) : List[BValue] = {
+        Selector.select(this, selector)
+    }
+
+    /**
+     * Performs a `select()` then filters the resulting selected nodes by the
+     * type parameter and unwraps each value as with `unwrappedAs`.
+     *
+     * @param selector the selector expression
+     * @return list of matching unwrapped values
+     * @tparam A type of values to return (nodes with the wrong type are filtered out)
+     */
+    def selectAs[A : Manifest](selector : String) : List[A] = {
+        Selector.selectAs(this, selector)
+    }
+
+    /**
+     * Equivalent to `select(selector).headOption`.
+     *
+     * @param selector the selector expression
+     * @return first matching node or None
+     */
+    def selectOne(selector : String) : Option[BValue] = {
+        select(selector).headOption
+    }
+
+    /**
+     * Equivalent to `selectAs(selector).headOption`.
+     *
+     * @param selector the selector expression
+     * @return first value with the requested type that matches the selector
+     * @tparam A type of values to return (nodes with the wrong type are filtered out)
+     */
+    def selectOneAs[A : Manifest](selector : String) : Option[A] = {
+        selectAs(selector).headOption
+    }
 }
 
 /**
@@ -136,7 +233,7 @@ sealed abstract trait JValue extends BValue {
 }
 
 private[bson] sealed abstract class BSingleValue[T](override val bsonType : BsonType.Value, val value : T) extends BValue {
-    type WrappedType = T
+    override type WrappedType = T
     override def unwrapped = value
 }
 
@@ -144,7 +241,7 @@ private[bson] sealed abstract class BSingleValue[T](override val bsonType : Bson
  * The value `null` in BSON and JSON.
  */
 case object BNull extends JValue {
-    type WrappedType = Null
+    override type WrappedType = Null
     override val unwrapped = null
     override val bsonType = BsonType.NULL
 }
@@ -165,7 +262,7 @@ case class BString(override val value : String) extends BSingleValue(BsonType.ST
 sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, val value : T)
     extends ScalaNumber
     with ScalaNumericConversions with JValue {
-    type WrappedType = T
+    override type WrappedType = T
     override def unwrapped = value
 
     override def underlying = value.asInstanceOf[Number]
@@ -255,9 +352,8 @@ sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
      */
     val value : List[ElementType]
 
-    type WrappedType = List[Any]
+    override type WrappedType = List[Any]
     override lazy val unwrapped = value.map(_.unwrapped)
-    override def unwrappedAsJava = value.map(_.unwrappedAsJava).asJava
 
     // SeqLike: length
     override def length = value.length
@@ -391,79 +487,34 @@ object JArray extends ArrayBaseCompanion[JValue, JArray] {
 }
 
 /**
- * A BSON binary data value, wrapping [[org.bson.types.Binary]].
+ * A BSON binary data value, wrapping [[org.beaucatcher.bson.Binary]].
  *
- * @param value the raw byte array of binary data
- * @param subtype the "type detail" of the binary data see [[org.beaucatcher.bson.BsonSubtype]]
+ * @param value the binary data
  */
-case class BBinData(val value : Array[Byte], val subtype : BsonSubtype.Value) extends BValue {
-    type WrappedType = Binary
-    override lazy val unwrapped = new Binary(BsonSubtype.toByte(subtype), value)
-    override val bsonType = BsonType.BINARY
+case class BBinary(override val value : Binary) extends BSingleValue(BsonType.BINARY, value) {
 
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
-                BString(Base64.encodeBase64String(value))
+                BString(Base64.encodeBase64String(value.data))
             case JsonFlavor.STRICT =>
-                JObject(List(("$binary", BString(Base64.encodeBase64String(value))),
-                    ("$type", BString("%02x".format("%02x", (BsonSubtype.toByte(subtype) : Int) & 0xff)))))
+                JObject(List(("$binary", BString(Base64.encodeBase64String(value.data))),
+                    ("$type", BString("%02x".format("%02x", (BsonSubtype.toByte(value.subtype) : Int) & 0xff)))))
             case _ =>
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
     }
-
-    // We have to fix equals() because default doesn't implement it
-    // correctly (does not consider the contents of the byte[])
-    override def equals(other : Any) : Boolean = {
-        other match {
-            case that : BBinData =>
-                (that canEqual this) &&
-                    (subtype == that.subtype) &&
-                    (value.length == that.value.length) &&
-                    (value sameElements that.value)
-            case _ => false
-        }
-    }
-
-    // have to make hashCode match equals (array hashCode doesn't
-    // look at elements, Seq hashCode does)
-    override def hashCode() : Int = {
-        41 * (41 + subtype.hashCode) + (value : Seq[Byte]).hashCode
-    }
-
-    private def bytesAsString(sb : StringBuilder, i : Traversable[Byte]) = {
-        for (b <- i) {
-            sb.append("%02x".format((b : Int) & 0xff))
-        }
-    }
-
-    // default toString just shows byte[] object id
-    override def toString() : String = {
-        val sb = new StringBuilder
-        sb.append("BBinData(")
-        val bytes = value.take(10)
-        bytesAsString(sb, bytes)
-        if (value.length > 10)
-            sb.append("...")
-        sb.append("@")
-        sb.append(value.length.toString)
-        sb.append(",")
-        sb.append(subtype.toString)
-        sb.append(")")
-        sb.toString
-    }
 }
 
-/** Companion object for [[org.beaucatcher.bson.BBinData]]. */
-object BBinData {
-    /** Construct a [[org.beaucatcher.bson.BBinData]] from a [[org.bson.types.Binary]] object */
-    def apply(b : Binary) : BBinData = {
-        BBinData(b.getData(), BsonSubtype.fromByte(b.getType()).get)
-    }
+/** Companion object for [[org.beaucatcher.bson.BBinary]]. */
+object BBinary {
+    def apply(data : Array[Byte], subtype : BsonSubtype.Value) : BBinary =
+        BBinary(Binary(data, subtype))
+
+    def apply(data : Array[Byte]) : BBinary = BBinary(Binary(data))
 }
 
-/** A BSON object ID value, wrapping [[org.bson.types.ObjectId]]. */
+/** A BSON object ID value, wrapping [[org.beaucatcher.bson.ObjectId]]. */
 case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonType.OID, value) {
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
@@ -475,6 +526,11 @@ case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonTyp
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
     }
+}
+
+object BObjectId {
+    def apply(string : String) : BObjectId =
+        BObjectId(ObjectId(string))
 }
 
 /** A BSON or JSON boolean value. */
@@ -495,20 +551,21 @@ case class BISODate(override val value : DateTime) extends BSingleValue(BsonType
     }
 }
 
-/** A BSON timestamp value, wrapping [[org.bson.types.BSONTimestamp]]. */
-case class BTimestamp(override val value : BSONTimestamp) extends BSingleValue(BsonType.TIMESTAMP, value) {
+/** A BSON timestamp value, wrapping [[org.beaucatcher.bson.Timestamp]]. */
+case class BTimestamp(override val value : Timestamp) extends BSingleValue(BsonType.TIMESTAMP, value) {
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
-                // convert to milliseconds and treat the "increment" as milliseconds after
-                // the round number of seconds.
-                val asInteger = (value.getTime * 1000L) | value.getInc
-                BInt64(asInteger)
+                BInt64(value.asLong)
             /* http://www.mongodb.org/display/DOCS/Mongo+Extended+JSON is missing how to do timestamp for now */
             case _ =>
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
     }
+}
+
+object BTimestamp {
+    def apply(time : Int, inc : Int) : BTimestamp = BTimestamp(Timestamp(time, inc))
 }
 
 /**
@@ -524,7 +581,7 @@ case class BTimestamp(override val value : BSONTimestamp) extends BSingleValue(B
 abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     extends BValue
     with immutable.Map[String, ValueType] {
-    type WrappedType = Map[String, Any]
+    override type WrappedType = Map[String, Any]
 
     val value : List[Field[ValueType]]
 
@@ -532,7 +589,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     // but the only ordered map in standard collections is mutable, so
     // it isn't 100% no-brainer to use that.
     override lazy val unwrapped = Map() ++ value.map(field => (field._1, field._2.unwrapped : Any))
-    override def unwrappedAsJava = (Map() ++ value.map(field => (field._1, field._2.unwrappedAsJava))).asJava
+
     override val bsonType = BsonType.OBJECT
 
     protected[this] def construct(list : List[Field[ValueType]]) : Repr
@@ -582,51 +639,6 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
         value.map(field => (field._1, field._2)).iterator
     }
 
-    final private val unboxedClasses : Map[Class[_], Class[_]] = Map(
-        classOf[java.lang.Integer] -> classOf[Int],
-        classOf[java.lang.Double] -> classOf[Double],
-        classOf[java.lang.Boolean] -> classOf[Boolean],
-        classOf[java.lang.Long] -> classOf[Long],
-        classOf[java.lang.Short] -> classOf[Short],
-        classOf[java.lang.Character] -> classOf[Char],
-        classOf[java.lang.Byte] -> classOf[Byte],
-        classOf[java.lang.Float] -> classOf[Float],
-        classOf[scala.runtime.BoxedUnit] -> classOf[Unit])
-
-    // The trickiness here is that asInstanceOf[A] doesn't use the
-    // manifest and thus doesn't do anything (no runtime type
-    // check). So we have to do it by hand, special-casing
-    // AnyVal primitives because Java Class.cast won't work
-    // on them as desired.
-    private def checkedCast[A <: Any : ClassManifest](value : Any) : A = {
-        if (value == null) {
-            if (classManifest[A] <:< classManifest[AnyVal]) {
-                throw new ClassCastException("null can't be converted to AnyVal type " + classManifest[A])
-            } else {
-                null.asInstanceOf[A]
-            }
-        } else {
-            val klass = value.asInstanceOf[AnyRef].getClass
-            val unboxedClass = unboxedClasses.getOrElse(klass, klass)
-
-            /* value and the return value are always boxed because that's how
-             * an Any is passed around; type A we're casting to may be boxed or
-             * unboxed. For example, value is always java.lang.Integer for
-             * ints, but A could be java.lang.Integer OR scala Int. But
-             * even if A is Int, the return value is really always a
-             * java.lang.Integer, so we can leave the value boxed.
-             */
-
-            if (classManifest[A].erasure.isAssignableFrom(unboxedClass) ||
-                classManifest[A].erasure.isAssignableFrom(klass)) {
-                value.asInstanceOf[A]
-            } else {
-                throw new ClassCastException("Requested " + classManifest[A] + " but value is " + value + " with type " +
-                    klass.getName)
-            }
-        }
-    }
-
     /**
      * Gets an unwrapped value from the map, or throws [[java.util.NoSuchElementException]].
      * A more-convenient alternative to `obj.get(key).get.unwrapped.asInstanceOf[A]`.
@@ -637,7 +649,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
     def getUnwrappedAs[A : Manifest](key : String) : A = {
         get(key) match {
             case Some(bvalue) =>
-                checkedCast[A](bvalue.unwrapped)
+                bvalue.unwrappedAs[A]
             case None =>
                 throw new NoSuchElementException("Key not found in BSON object: " + key)
         }
@@ -850,8 +862,8 @@ object BValue {
             case oid : ObjectId =>
                 BObjectId(oid)
             case b : Binary =>
-                BBinData(b)
-            case t : BSONTimestamp =>
+                BBinary(b)
+            case t : Timestamp =>
                 BTimestamp(t)
             case b : Boolean =>
                 BBoolean(b)
@@ -869,23 +881,19 @@ object BValue {
                 BObject(m.iterator.map(kv => (kv._1.asInstanceOf[String], BValue.wrap(kv._2))).toList)
             case seq : Seq[_] =>
                 BArray(seq.map(BValue.wrap(_)).toList)
-            // we can wrap Java types too, so unwrappedAsJava can be undone
-            case m : java.util.Map[_, _] =>
-                wrap(m.asScala)
-            case l : java.util.List[_] =>
-                wrap(l.asScala)
             case _ =>
-                throw new UnsupportedOperationException("Cannot convert to BValue: " + value)
+                val failedClassName = value.asInstanceOf[AnyRef].getClass.getName
+                throw new UnsupportedOperationException("Cannot convert to BValue: " + failedClassName + ": " + value)
         }
     }
 
     /**
      * Parse a JSON string, validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
      * The JSON string must contain all the fields found in the case class (unless the fields have
-     * a [[scala.Option]] type). If the fields have a BSON type (such as [[org.bson.types.ObjectId]])
+     * a [[scala.Option]] type). If the fields have a BSON type (such as [[org.beaucatcher.bson.ObjectId]])
      * then the returned [[org.beaucatcher.bson.BValue]] will contain BSON-only types such as
      * [[org.beaucatcher.bson.BObjectId]]. The types of the case class fields are used to decide how
-     * to parse the JSON, for example if the `_id` field in the case class has type  [[org.bson.types.ObjectId]],
+     * to parse the JSON, for example if the `_id` field in the case class has type  [[org.beaucatcher.bson.ObjectId]],
      * then the parser knows to return a string in the JSON document as [[org.beaucatcher.bson.BObjectId]]
      * rather than [[org.beaucatcher.bson.BString]].
      *
