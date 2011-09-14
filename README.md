@@ -63,9 +63,9 @@ cluttered than your app will.)
 
 Beaucatcher builds on Casbah or Hammersmith, and only implements
 collection operations (find, save, remove, etc.). You still need to
-use those libraries directly to operate on the MongoDB connection or
-db, and Beaucatcher is not a "MongoDB driver" (i.e. it doesn't
-implement any wire protocol stuff, it's a layer on top).
+use those libraries directly to operate on the MongoDB connection, and
+Beaucatcher is not a "MongoDB driver" (i.e. it doesn't implement any
+wire protocol stuff, it's a layer on top).
 
 ## BSON/JSON tree
 
@@ -320,5 +320,6 @@ an example.
 
 ## Final note!
 
-Beaucatcher is not mature code and if it breaks you get the pieces.  But I am
-enjoying it so I hope you'll at least find the ideas interesting.
+Beaucatcher is not mature code and if it breaks you get the pieces
+(though the test suite is pretty decent, fwiw).  I am enjoying it so I
+hope you'll at least find the ideas interesting.

@@ -3,7 +3,7 @@ import Keys._
 
 object BuildSettings {
     val buildOrganization = "org.beaucatcher"
-    val buildVersion = "0.2"
+    val buildVersion = "0.3"
     val buildScalaVersion = "2.9.0-1"
 
     val globalSettings = Seq(
