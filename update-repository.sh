@@ -1,9 +1,15 @@
 #!/bin/bash
 
+REQUIRED_VERSION="$1"
+
 function die() {
     echo "$*"
     exit 1
 }
+
+if test -z "$REQUIRED_VERSION" ; then
+    die "Please specify version on command line"
+fi
 
 # thanks to Christian Kaltepoth for the
 # nice script
@@ -36,6 +42,10 @@ for JD_JAR in $(cd repository && find . -name "*-javadoc.jar"); do
     PROJ=$(basename $(echo "$D" | sed -e 's/_.*//g'))
     VERSION=$(basename "$D")
 
-    unpack "$JAR_ABSOLUTE" api/"$PROJ"/"$VERSION"
-    unpack "$JAR_ABSOLUTE" api/"$PROJ"/latest
+    if test "$VERSION" = "$REQUIRED_VERSION" ; then
+        unpack "$JAR_ABSOLUTE" api/"$PROJ"/"$VERSION"
+        unpack "$JAR_ABSOLUTE" api/"$PROJ"/latest
+    else
+        echo "Skipping old version $VERSION for docs unpack"
+    fi
 done
