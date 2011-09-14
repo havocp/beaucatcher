@@ -60,7 +60,7 @@ case object QueryAwaitData extends QueryFlag
 case object QueryExhaust extends QueryFlag
 
 case class CountOptions(fields : Option[Fields] = None, skip : Option[Long] = None, limit : Option[Long] = None, overrideQueryFlags : Option[Set[QueryFlag]] = None)
-private[beaucatcher] object CountOptions {
+object CountOptions {
     final val empty = CountOptions()
 }
 
@@ -69,7 +69,7 @@ case class DistinctOptions[+QueryType](query : Option[QueryType] = None, overrid
         DistinctOptions[AnotherQueryType](query map { converter(_) }, overrideQueryFlags)
 }
 
-private[beaucatcher] object DistinctOptions {
+object DistinctOptions {
     private final val _empty = DistinctOptions[Nothing]()
     def empty[QueryType] : DistinctOptions[QueryType] = _empty
 }
@@ -81,17 +81,17 @@ private[beaucatcher] object DistinctOptions {
 // assumes that the query object passed in is only the query
 // not sure how to sort this out yet.
 case class FindOptions(fields : Option[Fields] = None, skip : Option[Long] = None, limit : Option[Long] = None, batchSize : Option[Int] = None, overrideQueryFlags : Option[Set[QueryFlag]] = None)
-private[beaucatcher] object FindOptions {
+object FindOptions {
     final val empty = FindOptions()
 }
 
 case class FindOneOptions(fields : Option[Fields] = None, overrideQueryFlags : Option[Set[QueryFlag]] = None)
-private[beaucatcher] object FindOneOptions {
+object FindOneOptions {
     final val empty = FindOneOptions()
 }
 
 case class FindOneByIdOptions(fields : Option[Fields] = None, overrideQueryFlags : Option[Set[QueryFlag]] = None)
-private[beaucatcher] object FindOneByIdOptions {
+object FindOneByIdOptions {
     final val empty = FindOneByIdOptions()
 }
 
@@ -106,7 +106,7 @@ case class FindAndModifyOptions[+QueryType](sort : Option[QueryType] = None, fie
         FindAndModifyOptions[AnotherQueryType](sort map { converter(_) }, fields, flags)
 }
 
-private[beaucatcher] object FindAndModifyOptions {
+object FindAndModifyOptions {
     private final val _empty = FindAndModifyOptions[Nothing]()
     def empty[QueryType] : FindAndModifyOptions[QueryType] = _empty
     private final val _remove = FindAndModifyOptions[Nothing](flags = Set(FindAndModifyRemove))
@@ -119,7 +119,7 @@ case object UpdateMulti extends UpdateFlag
 
 case class UpdateOptions(flags : Set[UpdateFlag] = Set.empty)
 
-private[beaucatcher] object UpdateOptions {
+object UpdateOptions {
     final val empty = UpdateOptions()
     final val upsert = UpdateOptions(flags = Set(UpdateUpsert))
     final val multi = UpdateOptions(flags = Set(UpdateMulti))
@@ -133,7 +133,7 @@ case object IndexSparse extends IndexFlag
 
 case class IndexOptions(name : Option[String] = None, flags : Set[IndexFlag] = Set.empty, v : Option[Int] = None)
 
-private[beaucatcher] object IndexOptions {
+object IndexOptions {
     val empty = IndexOptions()
 }
 
