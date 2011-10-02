@@ -885,7 +885,7 @@ object BValue {
             case seq : Seq[_] =>
                 BArray(seq.map(BValue.wrap(_)).toList)
             case _ =>
-                val failedClassName = value.asInstanceOf[AnyRef].getClass.getName
+                val failedClassName = value.asInstanceOf[AnyRef].getClass.getSimpleName
                 throw new UnsupportedOperationException("Cannot convert to BValue: " + failedClassName + ": " + value)
         }
     }
