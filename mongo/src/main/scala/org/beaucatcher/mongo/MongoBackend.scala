@@ -29,6 +29,8 @@ trait MongoBackend {
         entityBObjectQueryComposer : QueryComposer[BObject, BObject],
         entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType]
 
+    def createDAOGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncDAOGroupWithoutEntity[IdType]
+
     def database : Database
     def config : MongoConfig
 }
