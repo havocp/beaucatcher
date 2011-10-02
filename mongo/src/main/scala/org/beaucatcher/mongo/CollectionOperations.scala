@@ -40,6 +40,7 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] {
      * example. Override this value to change it.
      */
     val collectionName : String = {
+        // FIXME getClass.getSimpleName ?
         // "org.bar.Foo$" -> "foo"
 
         val fullname = getClass().getName()
