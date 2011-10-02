@@ -160,7 +160,11 @@ object BeaucatcherBuild extends Build {
                            "package " + packageName + ".j\n" +
                        "import org.beaucatcher.bson._\n").
                 replaceAll("""object """, "private[" + lastPackageComponent + "] object ")
-            val oldContent = IO.read(target asFile)
+            val oldContent = try {
+                IO.read(target asFile)
+            } catch {
+                case e: java.io.IOException => ""
+            }
             if (newContent != oldContent) {
                 streams.log.info("Generated " + target)
                 IO.write(target asFile, newContent)
