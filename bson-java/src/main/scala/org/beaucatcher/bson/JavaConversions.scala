@@ -16,7 +16,7 @@ object JavaConversions {
     implicit def asScalaBinary(b : j.Binary) = Binary(b.getData(), BsonSubtype.fromByte(b.getType()).get)
 
     class JavaConvertibleBValue[SrcType <: BValue, JavaType <: AnyRef](src : SrcType) {
-        import scala.collection.JavaConversions._
+        import scala.collection.JavaConverters._
 
         private def unwrap(bvalue : BValue) : AnyRef = {
             bvalue match {
@@ -27,9 +27,9 @@ object JavaConversions {
                 case BObjectId(oid) =>
                     oid : j.ObjectId
                 case v : ArrayBase[_] =>
-                    v.value.map({ e => e.unwrappedAsJava }) : java.util.List[AnyRef]
+                    v.value.map({ e => unwrap(e) }).asJava
                 case v : ObjectBase[_, _] =>
-                    (Map() ++ v.value.map(field => (field._1, field._2.unwrappedAsJava))) : java.util.Map[String, AnyRef]
+                    (Map() ++ v.value.map(field => (field._1, unwrap(field._2)))).asJava
                 case v : BValue =>
                     // handles strings and ints and stuff
                     v.unwrapped.asInstanceOf[AnyRef]
@@ -68,7 +68,7 @@ object JavaConversions {
      * a Java type.
      */
     def wrapJavaAsBValue(x : Any) : BValue = {
-        import scala.collection.JavaConversions._
+        import scala.collection.JavaConverters._
 
         x match {
             // null is in BValue.wrap too, but has to be here since
@@ -83,13 +83,13 @@ object JavaConversions {
                 BObjectId(oid)
             case m : java.util.Map[_, _] =>
                 val builder = BObject.newBuilder
-                for (k <- m.keySet.iterator) {
+                for (k <- m.keySet.asScala) {
                     builder += (k.asInstanceOf[String] -> wrapJavaAsBValue(m.get(k)))
                 }
                 builder.result
             case l : java.util.List[_] =>
                 val builder = BArray.newBuilder
-                for (e <- l.iterator) {
+                for (e <- l.asScala) {
                     builder += wrapJavaAsBValue(e)
                 }
                 builder.result
