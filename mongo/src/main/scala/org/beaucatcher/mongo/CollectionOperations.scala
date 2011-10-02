@@ -4,34 +4,20 @@ import org.beaucatcher.bson._
 import scala.annotation.implicitNotFound
 
 /**
- * You generally want [[org.beaucatcher.mongo.CollectionOperations]] class rather than
- * this trait; the trait exists only for the rare case where you need to extend another
- * class.
- *
- * This trait would be added to the companion object for an entity case class.
- * This trait's interface supports operations on the collection itself.
- * The trait doesn't have knowledge of a specific MongoDB implementation
- * (Hammersmith, Casbah, etc.)
- *
- * A subclass of this trait has to provide a [[org.beaucatcher.mongo.MongoBackend]] which has
- * a concrete connection to a specific MongoDB implementation.
- *
- * Implementation note: many values in this class are lazy, because otherwise class and object
- * initialization has a lot of trouble (due to circular dependencies, or order of initialization anyway).
+ * This is a base trait, not used directly. There are three subclasses;
+ * one when you want operations on the collection to just use `BObject`,
+ * another when you want to use a choice of `BObject` or any "entity" class,
+ * and a third when your entity class is a case class (which means it can
+ * be automatically converted from BSON).
  */
-trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] {
+trait CollectionOperationsBaseTrait[IdType] {
     self : MongoBackendProvider with MongoConfigProvider =>
-
-    import CollectionOperationsTrait._
 
     /**
      * Because traits can't have constructor arguments or context bounds, a subtype of this
-     * trait has to provide the manifest for the EntityType. See [[org.beaucatcher.mongo.CollectionOperations]]
+     * trait has to provide the manifest for the IdType. See [[org.beaucatcher.mongo.CollectionOperations]]
      * which is an abstract class rather than a trait, and thus implements this method.
      */
-    implicit protected def entityTypeManifest : Manifest[EntityType]
-
-    /** as with `entityTypeManifest` this is needed because traits can't have context bounds */
     implicit protected def idTypeManifest : Manifest[IdType]
 
     /**
@@ -61,6 +47,70 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] {
     def migrate() : Unit = {}
 
     final def database = backend.database
+}
+
+/**
+ * Collection operations in terms of `BObject` only, with no mapping to another entity class.
+ *
+ * You generally want [[org.beaucatcher.mongo.CollectionOperationsWithoutEntity]] class rather than
+ * this trait; the trait exists only for the rare case where you need to extend another
+ * class.
+ *
+ * This trait would be added to an object you want to use to access a collection.
+ * This trait's interface supports operations on the collection itself.
+ * The trait doesn't have knowledge of a specific MongoDB implementation
+ * (Hammersmith, Casbah, etc.)
+ *
+ * A subclass of this trait has to provide a [[org.beaucatcher.mongo.MongoBackend]] which has
+ * a concrete connection to a specific MongoDB implementation.
+ */
+trait CollectionOperationsWithoutEntityTrait[IdType] extends CollectionOperationsBaseTrait[IdType] {
+    self : MongoBackendProvider with MongoConfigProvider =>
+
+    private lazy val daoGroup : SyncDAOGroupWithoutEntity[IdType] =
+        backend.createDAOGroupWithoutEntity(collectionName)
+
+    private[mongo] lazy val bobjectSyncDAO : SyncDAO[BObject, BObject, IdType, BValue] =
+        daoGroup.bobjectSyncDAO
+
+    /**
+     * Obtains the `SyncDAO` for this collection.
+     */
+    def syncDAO : SyncDAO[BObject, BObject, IdType, BValue] = bobjectSyncDAO
+}
+
+/**
+ * Collection operations offered in terms of both `BObject` and some entity class,
+ * which may or may not be a case class. You have to implement the conversion to and
+ * from `BObject`. See also [[org.beaucatcher.mongo.CollectionOperationsWithCaseClass]] which
+ * is fully automated.
+ *
+ * You generally want [[org.beaucatcher.mongo.CollectionOperations]] class rather than
+ * this trait; the trait exists only for the rare case where you need to extend another
+ * class.
+ *
+ * This trait would be added to the companion object for an entity class.
+ * This trait's interface supports operations on the collection itself.
+ * The trait doesn't have knowledge of a specific MongoDB implementation
+ * (Hammersmith, Casbah, etc.)
+ *
+ * A subclass of this trait has to provide a [[org.beaucatcher.mongo.MongoBackend]] which has
+ * a concrete connection to a specific MongoDB implementation.
+ *
+ * Implementation note: many values in this class are lazy, because otherwise class and object
+ * initialization has a lot of trouble (due to circular dependencies, or order of initialization anyway).
+ */
+trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends CollectionOperationsBaseTrait[IdType] {
+    self : MongoBackendProvider with MongoConfigProvider =>
+
+    import CollectionOperationsTrait._
+
+    /**
+     * Because traits can't have constructor arguments or context bounds, a subtype of this
+     * trait has to provide the manifest for the EntityType. See [[org.beaucatcher.mongo.CollectionOperations]]
+     * which is an abstract class rather than a trait, and thus implements this method.
+     */
+    implicit protected def entityTypeManifest : Manifest[EntityType]
 
     private lazy val daoGroup : SyncDAOGroup[EntityType, IdType, IdType] = {
         require(entityTypeManifest != null)
@@ -162,6 +212,13 @@ object CollectionOperationsTrait {
     }
 }
 
+/**
+ * Collection operations offered in terms of both `BObject` and some entity case class.
+ * The conversion from `BObject` to and from the case class is automatic.
+ * In most cases, you want the abstract class [[org.beaucatcher.mongo.CollectionOperationsWithCaseClass]]
+ * instead of this trait; the trait is only provided in case you need to derive from another class
+ * so can't use the abstract class version.
+ */
 trait CollectionOperationsWithCaseClassTrait[EntityType <: Product, IdType]
     extends CollectionOperationsTrait[EntityType, IdType] {
     self : MongoBackendProvider with MongoConfigProvider =>
@@ -170,6 +227,26 @@ trait CollectionOperationsWithCaseClassTrait[EntityType <: Product, IdType]
         new CaseClassBObjectEntityComposer[EntityType]
 }
 
+/**
+ * Derive an object from this class and use it to access a collection,
+ * treating the collection as a collection of `BObject`. Use
+ * [[org.beaucatcher.mongo.CollectionOperations]] or
+ * [[org.beaucatcher.mongo.CollectionOperationsWithCaseClass]]
+ * if you want to sometimes treat the collection as a collection of custom objects.
+ */
+abstract class CollectionOperationsWithoutEntity[IdType : Manifest]
+    extends CollectionOperationsWithoutEntityTrait[IdType] {
+    self : MongoBackendProvider with MongoConfigProvider =>
+    override final val idTypeManifest = manifest[IdType]
+}
+
+/**
+ * Derive an object (usually companion object to the `EntityType`) from this class
+ * to treat the collection as a collection of `EntityType`. With this class,
+ * you have to manually provide an [[org.beaucatcher.mongo.EntityComposer]] to convert
+ * the entity to and from `BObject`. With [[org.beaucatcher.mongo.CollectionOperationsWithCaseClass]] the
+ * conversion is automatic but your entity must be a case class.
+ */
 abstract class CollectionOperations[EntityType <: AnyRef : Manifest, IdType : Manifest]
     extends CollectionOperationsTrait[EntityType, IdType] {
     self : MongoBackendProvider with MongoConfigProvider =>
@@ -177,6 +254,13 @@ abstract class CollectionOperations[EntityType <: AnyRef : Manifest, IdType : Ma
     override final val idTypeManifest = manifest[IdType]
 }
 
+/**
+ * Derive an object (usually companion object to the `EntityType`) from this class
+ * to treat the collection as a collection of `EntityType`. With this class,
+ * conversion to and from the `EntityType` is automatic, but the entity must be
+ * a case class. With [[org.beaucatcher.mongo.CollectionOperations]] you can use
+ * any class (non-case classes), but you have to write a converter.
+ */
 abstract class CollectionOperationsWithCaseClass[EntityType <: Product : Manifest, IdType : Manifest]
     extends CollectionOperations[EntityType, IdType]
     with CollectionOperationsWithCaseClassTrait[EntityType, IdType] {

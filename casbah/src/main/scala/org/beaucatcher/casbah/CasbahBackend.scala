@@ -60,6 +60,20 @@ final class CasbahBackend private[casbah] (override val config : MongoConfig)
         }
     }
 
+    override def createDAOGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncDAOGroupWithoutEntity[IdType] = {
+        val idManifest = manifest[IdType]
+        if (idManifest <:< manifest[ObjectId]) {
+            new BObjectCasbahDAOGroup[IdType, JavaObjectId](this,
+                collection(collectionName),
+                CasbahBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
+        } else {
+            val identityIdComposer = new IdentityIdComposer[IdType]
+            new BObjectCasbahDAOGroup[IdType, IdType](this,
+                collection(collectionName),
+                identityIdComposer)
+        }
+    }
+
     override final lazy val database = {
         new CasbahDatabase(this)
     }
