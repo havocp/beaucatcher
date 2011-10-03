@@ -7,7 +7,6 @@ import com.mongodb.{ CommandResult => _, _ }
 
 private[casbah] class CasbahSyncDatabase(override protected val database : CasbahDatabase) extends SyncDatabase {
     override def command(cmd : BObject, options : CommandOptions) : CommandResult = {
-        import j.JavaConversions._
         import Implicits._
 
         val casbahDB = database.backend.underlyingDatabase

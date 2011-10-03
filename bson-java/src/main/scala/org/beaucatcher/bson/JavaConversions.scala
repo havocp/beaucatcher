@@ -1,6 +1,7 @@
 package org.beaucatcher.bson
 
 import org.bson.{ types => j }
+import org.bson.BSONObject
 
 object JavaConversions {
     implicit def asJavaObjectId(o : ObjectId) = new j.ObjectId(o.time, o.machine, o.inc)
@@ -93,9 +94,41 @@ object JavaConversions {
                     builder += wrapJavaAsBValue(e)
                 }
                 builder.result
+            // Note: BSONObject that also implement List should be caught by the
+            // case for List above, so we should get a BArray for them.
+            case bsonObj : BSONObject =>
+                asScalaBObject(bsonObj)
+            case a : Array[Byte] =>
+                // Sometimes Casbah gives us a raw byte array rather than
+                // a Binary object, apparently?
+                BBinary(a)
             case _ =>
                 // Fall back to handle Scala types (including all the plain integers and so on)
                 BValue.wrap(x)
+        }
+    }
+
+    private[beaucatcher] implicit def asScalaBObject(bsonObj : BSONObject) = {
+        import scala.collection.JavaConverters._
+
+        val fields = for { key <- bsonObj.keySet().asScala }
+            yield (key, wrapJavaAsBValue(bsonObj.get(key)))
+        BObject(fields.toList)
+    }
+
+    private[beaucatcher] def dumpBSONObject(indent : Int, o : BSONObject) {
+        import scala.collection.JavaConverters._
+        for (k <- o.keySet.asScala) {
+            for (i <- 0 to indent)
+                print(" ")
+            val v = o.get(k)
+            v match {
+                case vo : BSONObject =>
+                    println(k + "=")
+                    dumpBSONObject(indent + 4, vo)
+                case _ =>
+                    println(k + "=" + v)
+            }
         }
     }
 }
