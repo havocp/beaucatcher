@@ -175,7 +175,6 @@ sealed abstract trait BValue {
      *  - `select("foo")` returns a child field named `foo` if one exists (does not match grandchildren named `foo`)
      *  - `select(".//foo")` returns any descendant named `foo`
      *  - `select("*")` returns all children of the node
-     *  - `select(".//*")` returns all descendants of the node
      *  - `select("foo//bar")` returns any descendant of `foo` named `bar`
      *  - `select("3")` returns either field named `3` or array element at index `3`
      *  - `select("foo/3")` returns field or array element `3` inside the node `foo`
