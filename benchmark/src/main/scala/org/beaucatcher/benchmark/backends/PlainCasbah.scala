@@ -3,16 +3,10 @@ package org.beaucatcher.benchmark.backends
 import java.util.concurrent.Executors
 import scala.collection.Map
 import scala.collection.TraversableOnce
+import com.mongodb.casbah.Imports._
+import com.mongodb.casbah.util.bson.conversions.RegisterJodaTimeConversionHelpers
 import org.beaucatcher.benchmark.MongoBenchmark
 import org.beaucatcher.benchmark.BenchmarkFuture
-import com.mongodb.casbah.Imports.MongoCollection
-import com.mongodb.casbah.Imports.MongoConnection
-import com.mongodb.casbah.Imports.MongoDB
-import com.mongodb.casbah.Imports.MongoDBObject
-import com.mongodb.casbah.Imports.WriteConcern
-import com.mongodb.casbah.Imports.unwrapDBObj
-import com.mongodb.casbah.Imports.wrapDBObj
-import com.mongodb.casbah.util.bson.conversions.RegisterJodaTimeConversionHelpers
 import java.util.concurrent.ExecutorService
 
 class PlainCasbahBenchmark extends MongoBenchmark[MongoCollection] {

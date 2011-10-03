@@ -59,7 +59,8 @@ trait SyncDatabase {
 
     final def createCollection(name : String, options : CreateCollectionOptions) : CommandResult = {
         val builder = BObject.newBuilder
-        builder += ("create" -> name) // the Mongo docs say "createCollection" but driver uses "create"
+        // the Mongo docs say "createCollection" but driver uses "create"
+        builder += ("create" -> name)
         // use "match" here so it will break if we modify CreateCollectionOptions fields
         options match {
             case CreateCollectionOptions(autoIndexId, capped, max, size, overrideQueryFlags) =>

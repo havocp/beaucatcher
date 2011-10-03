@@ -164,7 +164,7 @@ class JsonTest extends TestUtils {
             case lift.JNull =>
                 BNull
             case lift.JNothing =>
-                throw new IllegalStateException("not sure what to do with lift's JNothing here, shouldn't happen")
+                throw new JsonParseException("Lift returned JNothing, probably an empty document (?)", null)
         }
     }
 

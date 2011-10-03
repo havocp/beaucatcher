@@ -30,7 +30,8 @@ import abstractfoo._
 
 abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionOperationsTrait[Foo, ObjectId],
     FooWithIntId : CollectionOperationsTrait[FooWithIntId, Int],
-    FooWithOptionalField : CollectionOperationsTrait[FooWithOptionalField, ObjectId])
+    FooWithOptionalField : CollectionOperationsTrait[FooWithOptionalField, ObjectId],
+    Bar : CollectionOperationsWithoutEntityTrait[ObjectId])
     extends TestUtils {
 
     protected def newFoo(id : ObjectId, i : Int, s : String) : Foo
@@ -42,9 +43,11 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         Foo.syncDAO.remove(BObject())
         FooWithIntId.syncDAO.remove(BObject())
         FooWithOptionalField.syncDAO.remove(BObject())
+        Bar.syncDAO.remove(BObject())
         Foo.syncDAO.dropIndexes()
         FooWithIntId.syncDAO.dropIndexes()
         FooWithOptionalField.syncDAO.dropIndexes()
+        Bar.syncDAO.dropIndexes()
     }
 
     @Test
@@ -53,11 +56,13 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals("fooWithIntId", FooWithIntId.collectionName)
         assertEquals(Foo.collectionName, Foo.syncDAO.name)
         assertEquals(FooWithIntId.collectionName, FooWithIntId.syncDAO.name)
+        assertEquals(Bar.collectionName, Bar.syncDAO.name)
     }
 
     @Test
     def testFullName() = {
         assertEquals(Foo.database.name + "." + Foo.collectionName, Foo.syncDAO.fullName)
+        assertEquals(Bar.database.name + "." + Bar.collectionName, Bar.syncDAO.fullName)
     }
 
     @Test
@@ -980,4 +985,87 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         // the _id_ index doesn't drop so there's always 1
         assertEquals(1, Foo.syncDAO.findIndexes().length)
     }
+
+    private val objectManyTypes = BsonTest.makeObjectManyTypes()
+    private val arrayManyTypes = BsonTest.makeArrayManyTypes()
+
+    protected def roundTripThroughJava(bvalue : BValue) : Unit
+
+    private def roundTrip[A <% BValue](value : A) {
+        val bvalue : BValue = value
+
+        // be sure wrapping in BValue is round-trippable or the
+        // step involving MongoDB will never work!
+        value match {
+            case _ : BValue =>
+                assertEquals(value, bvalue)
+            case _ =>
+                assertEquals(value, bvalue.unwrapped)
+        }
+
+        roundTripThroughJava(bvalue)
+
+        val orig = BObject("_id" -> ObjectId(),
+            "value" -> bvalue)
+        val id = orig.getUnwrappedAs[ObjectId]("_id")
+        Bar.syncDAO.save(orig)
+        val foundOption = Bar.syncDAO.findOneById(id)
+        assertTrue(foundOption.isDefined)
+        assertEquals(id, foundOption.get.getUnwrappedAs[ObjectId]("_id"))
+        assertEquals(orig, foundOption.get)
+
+        // check that the round trip went all the way back to the
+        // non-BValue that was passed in
+        value match {
+            case _ : BValue =>
+                assertEquals(value, foundOption.get.get("value").get)
+            case _ =>
+                assertEquals(value, foundOption.get.get("value").get.unwrapped)
+        }
+
+        Bar.syncDAO.removeById(id)
+    }
+
+    @Test
+    def testRoundTripString = roundTrip(BString("hello world"))
+
+    @Test
+    def testRoundTripMaxInt32 = roundTrip(BInt32(Int.MaxValue))
+
+    @Test
+    def testRoundTripMinInt32 = roundTrip(BInt32(Int.MinValue))
+
+    @Test
+    def testRoundTripObjectId = roundTrip(BObjectId(ObjectId()))
+
+    @Test
+    def testRoundTripNull = roundTrip(BNull)
+
+    private val stringArray = BArray("hello", "world", "!")
+    require(stringArray.size == 3)
+
+    @Test
+    def testRoundTripObjectWithArrayOfString = roundTrip(BObject("stringarray" -> stringArray))
+
+    @Test
+    def testRoundTripArrayOfString = roundTrip(stringArray)
+
+    @Test
+    def testRoundTripSeqOfString = roundTrip(Seq("a", "b", "c", "d"))
+
+    @Test
+    def testRoundTripMap = roundTrip(Map("a" -> 1, "b" -> 2, "c" -> 3, "d" -> 4))
+
+    @Test
+    def testRoundTripManyTypes {
+        for (kv <- objectManyTypes.iterator) {
+            roundTrip(kv._2)
+        }
+    }
+
+    @Test
+    def testRoundTripMegaObject = roundTrip(objectManyTypes)
+
+    @Test
+    def testRoundTripMegaArray = roundTrip(arrayManyTypes)
 }

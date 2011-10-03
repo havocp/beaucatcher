@@ -3,7 +3,7 @@ import Keys._
 
 object BuildSettings {
     val buildOrganization = "org.beaucatcher"
-    val buildVersion = "0.3"
+    val buildVersion = "0.3.1"
     val buildScalaVersion = "2.8.1"
 
     val globalSettings = Seq(
@@ -160,7 +160,11 @@ object BeaucatcherBuild extends Build {
                            "package " + packageName + ".j\n" +
                        "import org.beaucatcher.bson._\n").
                 replaceAll("""object """, "private[" + lastPackageComponent + "] object ")
-            val oldContent = IO.read(target asFile)
+            val oldContent = try {
+                IO.read(target asFile)
+            } catch {
+                case e: java.io.IOException => ""
+            }
             if (newContent != oldContent) {
                 streams.log.info("Generated " + target)
                 IO.write(target asFile, newContent)

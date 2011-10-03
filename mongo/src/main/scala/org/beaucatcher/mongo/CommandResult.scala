@@ -43,6 +43,8 @@ class CommandResult(lazyRaw : => BObject) {
     def code : Option[Int] = {
         getInt("code")
     }
+
+    override def toString = "CommandResult(ok=%s,errmsg=%s,err=%s,code=%s)".format(ok, errmsg, err, code)
 }
 
 object CommandResult {

@@ -1,6 +1,7 @@
 package org.beaucatcher.bson
 
 import org.bson.{ types => j }
+import org.bson.BSONObject
 
 object JavaConversions {
     implicit def asJavaObjectId(o : ObjectId) = new j.ObjectId(o.time, o.machine, o.inc)
@@ -16,7 +17,7 @@ object JavaConversions {
     implicit def asScalaBinary(b : j.Binary) = Binary(b.getData(), BsonSubtype.fromByte(b.getType()).get)
 
     class JavaConvertibleBValue[SrcType <: BValue, JavaType <: AnyRef](src : SrcType) {
-        import scala.collection.JavaConversions._
+        import scala.collection.JavaConverters._
 
         private def unwrap(bvalue : BValue) : AnyRef = {
             bvalue match {
@@ -27,9 +28,9 @@ object JavaConversions {
                 case BObjectId(oid) =>
                     oid : j.ObjectId
                 case v : ArrayBase[_] =>
-                    v.value.map({ e => e.unwrappedAsJava }) : java.util.List[AnyRef]
+                    v.value.map({ e => unwrap(e) }).asJava
                 case v : ObjectBase[_, _] =>
-                    (Map() ++ v.value.map(field => (field._1, field._2.unwrappedAsJava))) : java.util.Map[String, AnyRef]
+                    (Map() ++ v.value.map(field => (field._1, unwrap(field._2)))).asJava
                 case v : BValue =>
                     // handles strings and ints and stuff
                     v.unwrapped.asInstanceOf[AnyRef]
@@ -68,7 +69,7 @@ object JavaConversions {
      * a Java type.
      */
     def wrapJavaAsBValue(x : Any) : BValue = {
-        import scala.collection.JavaConversions._
+        import scala.collection.JavaConverters._
 
         x match {
             // null is in BValue.wrap too, but has to be here since
@@ -83,19 +84,51 @@ object JavaConversions {
                 BObjectId(oid)
             case m : java.util.Map[_, _] =>
                 val builder = BObject.newBuilder
-                for (k <- m.keySet.iterator) {
+                for (k <- m.keySet.asScala) {
                     builder += (k.asInstanceOf[String] -> wrapJavaAsBValue(m.get(k)))
                 }
                 builder.result
             case l : java.util.List[_] =>
                 val builder = BArray.newBuilder
-                for (e <- l.iterator) {
+                for (e <- l.asScala) {
                     builder += wrapJavaAsBValue(e)
                 }
                 builder.result
+            // Note: BSONObject that also implement List should be caught by the
+            // case for List above, so we should get a BArray for them.
+            case bsonObj : BSONObject =>
+                asScalaBObject(bsonObj)
+            case a : Array[Byte] =>
+                // Sometimes Casbah gives us a raw byte array rather than
+                // a Binary object, apparently?
+                BBinary(a)
             case _ =>
                 // Fall back to handle Scala types (including all the plain integers and so on)
                 BValue.wrap(x)
+        }
+    }
+
+    private[beaucatcher] implicit def asScalaBObject(bsonObj : BSONObject) = {
+        import scala.collection.JavaConverters._
+
+        val fields = for { key <- bsonObj.keySet().asScala }
+            yield (key, wrapJavaAsBValue(bsonObj.get(key)))
+        BObject(fields.toList)
+    }
+
+    private[beaucatcher] def dumpBSONObject(indent : Int, o : BSONObject) {
+        import scala.collection.JavaConverters._
+        for (k <- o.keySet.asScala) {
+            for (i <- 0 to indent)
+                print(" ")
+            val v = o.get(k)
+            v match {
+                case vo : BSONObject =>
+                    println(k + "=")
+                    dumpBSONObject(indent + 4, vo)
+                case _ =>
+                    println(k + "=" + v)
+            }
         }
     }
 }

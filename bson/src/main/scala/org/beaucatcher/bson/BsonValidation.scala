@@ -100,7 +100,7 @@ private[bson] object BsonValidation {
             }
             case "org.joda.time.DateTime" => value match {
                 case n : BNumericValue[_] =>
-                    BISODate(new DateTime(n.longValue, DateTimeZone.UTC))
+                    BISODate(n.longValue)
                 case _ =>
                     throw new UnhandledTypeException(fieldName, symbol.path)
             }
