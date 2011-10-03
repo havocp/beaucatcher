@@ -386,7 +386,16 @@ class BsonTest extends TestUtils {
 
     @Test
     def wrapJavaDate() = {
-        assertEquals(BISODate(new DateTime(someJavaDate)), BValue.wrap(someJavaDate))
+        assertEquals(BISODate.fromDateTime(new DateTime(someJavaDate)), BValue.wrap(someJavaDate))
+
+        // the main point of this is to be sure BISODate can be used in a match,
+        // even though the constructor is private.
+        BValue.wrap(someJavaDate) match {
+            case BISODate(dateTime) =>
+                assertEquals(dateTime.getMillis, someJavaDate.getTime)
+            case whatever =>
+                throw new IllegalStateException("wrapped java date in non-BISODate: " + whatever)
+        }
     }
 
     @Test
