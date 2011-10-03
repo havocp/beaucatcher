@@ -236,7 +236,7 @@ private[bson] sealed abstract class BSingleValue[T](override val bsonType : Bson
     override def unwrapped = value
 
     if (value == null)
-        throw new IllegalArgumentException("Somehow creating " + this.getClass.getSimpleName + " with a null value; instead, use BNull") 
+        throw new IllegalArgumentException("Somehow creating " + this.getClass.getSimpleName + " with a null value; instead, use BNull")
 }
 
 /**
