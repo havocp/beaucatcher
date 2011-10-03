@@ -551,6 +551,22 @@ case class BISODate(override val value : DateTime) extends BSingleValue(BsonType
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
     }
+
+    // DateTime counts the time zone in equality, but Mongo does not save
+    // the time zone anywhere. So we get rid of it from equals and hashCode,
+    // otherwise it causes confusion.
+    override def equals(other : Any) : Boolean = {
+        other match {
+            case that : BISODate =>
+                (that canEqual this) &&
+                    that.value.getMillis == this.value.getMillis
+            case _ => false
+        }
+    }
+
+    override def hashCode : Int = {
+        value.getMillis.hashCode
+    }
 }
 
 /** A BSON timestamp value, wrapping [[org.beaucatcher.bson.Timestamp]]. */
