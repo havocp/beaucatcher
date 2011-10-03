@@ -49,7 +49,7 @@ object Resolvers {
 }
 
 object Dependencies {
-    val scalap = "org.scala-lang" % "scalap" % "2.9.0-1"
+    val scalap = "org.scala-lang" % "scalap" % BuildSettings.buildScalaVersion
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.6.5"
     val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
