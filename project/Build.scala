@@ -4,7 +4,7 @@ import Keys._
 object BuildSettings {
     val buildOrganization = "org.beaucatcher"
     val buildVersion = "0.3.1"
-    val buildScalaVersion = "2.8.1"
+    val buildScalaVersion = "2.8.2"
 
     val globalSettings = Seq(
         organization := buildOrganization,
@@ -54,7 +54,8 @@ object Dependencies {
     val scalap = "org.scala-lang" % "scalap" % BuildSettings.buildScalaVersion
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.6.5"
-    val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
+    // FIXME go back to %% when possible (no 2.8.2 release is out for now)
+    val casbahCore = "com.mongodb.casbah" % "casbah-core_2.8.1" % "2.1.5-1"
     val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
     val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.7"
     val jodaTime = "joda-time" % "joda-time" % "1.6.2"
@@ -62,7 +63,8 @@ object Dependencies {
     // Dependencies in "test" configuration
     object Test {
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test"
-        val liftJson = "net.liftweb" %% "lift-json" % "2.4-SNAPSHOT" % "test"
+        // FIXME go back to %% when possible (no 2.8.2 release is out for now)
+        val liftJson = "net.liftweb" % "lift-json_2.8.1" % "2.4-SNAPSHOT" % "test"
         val slf4j = "org.slf4j" % "slf4j-api" % "1.6.0"
         val mongoJavaDriver = Dependencies.mongoJavaDriver % "test"
     }
