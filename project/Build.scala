@@ -12,6 +12,8 @@ object BuildSettings {
         scalaVersion := buildScalaVersion,
         shellPrompt := ShellPrompt.buildShellPrompt,
         fork in test := true,
+        // Scaladoc in 2.8.x is broken and pukes when publishing
+        publishArtifact in packageDoc := false,
         publishTo in Scope.GlobalScope <<= (thisProjectRef) { (ref) =>
             val baseDir = new File(ref.build)
             Some(Resolver.file("gh-pages", new File(baseDir, "../beaucatcher-web/repository")))
