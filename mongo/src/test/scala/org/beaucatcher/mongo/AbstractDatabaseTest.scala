@@ -21,9 +21,9 @@ abstract class AbstractDatabaseTest
     @Test
     def createAndListCollections() = {
         assertEquals(Nil, db.sync.collectionNames.toList)
-        db.sync.createCollection("created1", CreateCollectionOptions(capped = Some(true), max = Some(10)))
-        db.sync.createCollection("created2", CreateCollectionOptions(capped = Some(true), max = Some(10)))
-        assertEquals(List("beaucatchercasbahdb.created1", "beaucatchercasbahdb.created2"), db.sync.collectionNames.toList)
+        db.sync.createCollection("created1", CreateCollectionOptions(capped = Some(true), size = Some(1024 * 10)))
+        db.sync.createCollection("created2", CreateCollectionOptions(capped = Some(true), size = Some(1024 * 10)))
+        assertEquals(List(db.name + ".created1", db.name + ".created2"), db.sync.collectionNames.toList)
         db.sync.dropDatabase()
         assertEquals(Nil, db.sync.collectionNames.toList)
     }
