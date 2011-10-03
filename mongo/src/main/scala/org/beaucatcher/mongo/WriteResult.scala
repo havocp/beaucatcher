@@ -9,6 +9,9 @@ class WriteResult(lazyRaw : => BObject) extends CommandResult(lazyRaw) {
     def upserted : Option[Any] = raw.get("upserted") map { _.unwrapped }
 
     def updatedExisting : Option[Boolean] = getBoolean("updatedExisting")
+
+    override def toString =
+        "WriteResult(ok=%s,errmsg=%s,err=%s,code=%s,n=%s,updatedExisting=%s,upserted=%s)".format(ok, errmsg, err, code, n, updatedExisting, upserted)
 }
 
 object WriteResult {
