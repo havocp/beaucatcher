@@ -8,6 +8,8 @@ import org.beaucatcher.casbah._
 import org.beaucatcher.mongo._
 import org.junit.Assert._
 import org.junit._
+import foo._
+import com.mongodb.DBObject
 
 package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
@@ -33,14 +35,36 @@ package foo {
     object FooWithOptionalField extends CollectionOperationsWithCaseClass[FooWithOptionalField, ObjectId]
         with CasbahTestProvider {
     }
+
+    object Bar extends CollectionOperationsWithoutEntity[ObjectId]
+        with CasbahTestProvider {
+
+    }
 }
 
-import foo._
 class DAOTest
-    extends AbstractDAOTest[Foo, FooWithIntId, FooWithOptionalField](Foo, FooWithIntId, FooWithOptionalField) {
+    extends AbstractDAOTest[Foo, FooWithIntId, FooWithOptionalField](Foo, FooWithIntId, FooWithOptionalField, Bar) {
     override def newFoo(_id : ObjectId, intField : Int, stringField : String) = Foo(_id, intField, stringField)
     override def newFooWithIntId(_id : Int, intField : Int, stringField : String) = FooWithIntId(_id, intField, stringField)
     override def newFooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) = FooWithOptionalField(_id, intField, stringField)
+
+    override def roundTripThroughJava(bvalue : BValue) {
+        // be sure we can round-trip through Java
+        import j.JavaConversions._
+        val jvalue = bvalue.unwrappedAsJava
+        val wrapped = wrapJavaAsBValue(jvalue)
+        assertEquals(bvalue, wrapped)
+
+        // and be sure the wrap/unwrap of BObject works
+        import org.beaucatcher.casbah.Implicits._
+        bvalue match {
+            case o : BObject =>
+                val dbval : DBObject = new BObjectDBObject(o)
+                val asBObject : BObject = dbval
+                assertEquals(bvalue, asBObject)
+            case _ =>
+        }
+    }
 
     // factoring this up into AbstractDAOTest is just too annoying
     @Test
