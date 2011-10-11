@@ -206,9 +206,9 @@ class ClassAnalysis[X <: ClassAnalysis.CaseClass](private val clazz : Class[X]) 
     // is not a concern
     private lazy val allTheChildren : Seq[Symbol] = sym.children ++ interestingInterfaces.map(_._2.children).flatten ++ interestingSuperclass.map(_._2.children).flatten
 
-    // sym.children would look at objects like these two for a field "foo" 
+    // sym.children would look at objects like these two for a field "foo"
     //   MethodSymbol(foo, owner=0, flags=29400200, info=32 ,None)
-    //   MethodSymbol(foo , owner=0, flags=21080004, info=33 ,None)    
+    //   MethodSymbol(foo , owner=0, flags=21080004, info=33 ,None)
     private lazy val indexedFields = {
         // don't use allTheChildren here!  this is the indexed fields for clazz and clazz alone
         sym.children

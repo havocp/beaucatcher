@@ -738,7 +738,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(14, foundById.get.intField)
 
         // duplicate should throw
-        val e = intercept[Exception] {
+        val e = intercept[DuplicateKeyMongoException] {
             Foo.syncDAO[Foo].insert(f)
         }
         assertTrue(e.getMessage.contains("duplicate key"))
