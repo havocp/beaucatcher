@@ -13,48 +13,74 @@ private[beaucatcher] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityT
     protected val entityComposer : EntityComposer[OuterEntityType, InnerEntityType]
     protected val idComposer : IdComposer[OuterIdType, InnerIdType]
     protected val valueComposer : ValueComposer[OuterValueType, InnerValueType]
+    protected val exceptionMapper : PartialFunction[Throwable, Throwable] = {
+        case _ if false => throw new Exception("undefined exceptionMapper was applied")
+    }
 
-    override def name : String =
+    private def withExceptionsMapped[A](body : => A) = {
+        try {
+            body
+        } catch {
+            case e if exceptionMapper.isDefinedAt(e) =>
+                throw exceptionMapper.apply(e)
+        }
+    }
+
+    override def name : String = withExceptionsMapped {
         inner.name
+    }
 
-    override def emptyQuery : OuterQueryType =
+    override def emptyQuery : OuterQueryType = withExceptionsMapped {
         queryOut(inner.emptyQuery)
+    }
 
-    override def count(query : OuterQueryType, options : CountOptions) : Long =
+    override def count(query : OuterQueryType, options : CountOptions) : Long = withExceptionsMapped {
         inner.count(queryIn(query), options)
+    }
 
-    override def distinct(key : String, options : DistinctOptions[OuterQueryType]) : Seq[OuterValueType] =
+    override def distinct(key : String, options : DistinctOptions[OuterQueryType]) : Seq[OuterValueType] = withExceptionsMapped {
         inner.distinct(key, options.convert(queryIn(_))) map { valueOut(_) }
+    }
 
-    override def find(query : OuterQueryType, options : FindOptions) : Iterator[OuterEntityType] =
+    override def find(query : OuterQueryType, options : FindOptions) : Iterator[OuterEntityType] = withExceptionsMapped {
         inner.find(queryIn(query), options).map(entityOut(_))
+    }
 
-    override def findOne(query : OuterQueryType, options : FindOneOptions) : Option[OuterEntityType] =
+    override def findOne(query : OuterQueryType, options : FindOneOptions) : Option[OuterEntityType] = withExceptionsMapped {
         entityOut(inner.findOne(queryIn(query), options))
+    }
 
-    override def findOneById(id : OuterIdType, options : FindOneByIdOptions) : Option[OuterEntityType] =
+    override def findOneById(id : OuterIdType, options : FindOneByIdOptions) : Option[OuterEntityType] = withExceptionsMapped {
         inner.findOneById(idIn(id), options) flatMap { e => Some(entityOut(e)) }
+    }
 
-    override def findAndModify(query : OuterQueryType, update : Option[OuterQueryType], options : FindAndModifyOptions[OuterQueryType]) : Option[OuterEntityType] =
+    override def findAndModify(query : OuterQueryType, update : Option[OuterQueryType], options : FindAndModifyOptions[OuterQueryType]) : Option[OuterEntityType] = withExceptionsMapped {
         entityOut(inner.findAndModify(queryIn(query), queryIn(update), options.convert(queryIn(_))))
+    }
 
-    override def insert(o : OuterEntityType) : WriteResult =
+    override def insert(o : OuterEntityType) : WriteResult = withExceptionsMapped {
         inner.insert(entityIn(o))
+    }
 
-    override def update(query : OuterQueryType, modifier : OuterQueryType, options : UpdateOptions) : WriteResult =
+    override def update(query : OuterQueryType, modifier : OuterQueryType, options : UpdateOptions) : WriteResult = withExceptionsMapped {
         inner.update(queryIn(query), queryIn(modifier), options)
+    }
 
-    override def remove(query : OuterQueryType) : WriteResult =
+    override def remove(query : OuterQueryType) : WriteResult = withExceptionsMapped {
         inner.remove(queryIn(query))
+    }
 
-    override def removeById(id : OuterIdType) : WriteResult =
+    override def removeById(id : OuterIdType) : WriteResult = withExceptionsMapped {
         inner.removeById(idIn(id))
+    }
 
-    def ensureIndex(keys : OuterQueryType, options : IndexOptions) : WriteResult =
+    def ensureIndex(keys : OuterQueryType, options : IndexOptions) : WriteResult = withExceptionsMapped {
         inner.ensureIndex(queryIn(keys), options)
+    }
 
-    def dropIndex(name : String) : CommandResult =
+    def dropIndex(name : String) : CommandResult = withExceptionsMapped {
         inner.dropIndex(name)
+    }
 
     /* These are all final because you should override the composers instead, these are
      * just here to save typing

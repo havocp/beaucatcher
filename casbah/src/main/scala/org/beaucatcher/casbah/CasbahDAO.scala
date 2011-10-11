@@ -210,4 +210,5 @@ private[casbah] abstract trait BObjectCasbahSyncDAO[OuterIdType, InnerIdType]
     override protected val entityComposer : EntityComposer[BObject, DBObject]
     override protected val idComposer : IdComposer[OuterIdType, InnerIdType]
     override protected val valueComposer : ValueComposer[BValue, Any]
+    override protected val exceptionMapper = casbahExceptionMapper
 }

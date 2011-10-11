@@ -3,7 +3,8 @@ package org.beaucatcher
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.bson.BSONObject
-import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, _ }
+import org.bson.BSONException
+import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, MongoException => JavaMongoException, _ }
 
 package object casbah {
     import j.JavaConversions._
@@ -40,5 +41,11 @@ package object casbah {
 
     private[casbah] class BArrayDBObject(b : BArray = BArray.empty) extends j.BArrayBSONObject(b) with BValueDBObject {
 
+    }
+
+    private[casbah] val casbahExceptionMapper : PartialFunction[Throwable, MongoException] = {
+        case ex : JavaMongoException.DuplicateKey => new DuplicateKeyMongoException(ex.getMessage, ex)
+        case ex : JavaMongoException => new MongoException(ex.getMessage, ex)
+        case ex : BSONException => new MongoException(ex.getMessage, ex)
     }
 }
