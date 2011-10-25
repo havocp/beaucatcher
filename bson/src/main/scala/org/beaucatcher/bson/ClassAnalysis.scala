@@ -103,7 +103,11 @@ class ClassAnalysis[X <: ClassAnalysis.CaseClass](private val clazz : Class[X]) 
                             case Some(value) =>
                                 value
                             case None =>
-                                throw new Exception("%s requires value for '%s' map was '%s'".format(clazz, field.name, m))
+                                if (field.isList) {
+                                    Nil
+                                } else {
+                                    throw new Exception("%s requires value for '%s:%s' map was '%s'".format(clazz, field.name, field.typeRefType, m))
+                                }
                         }
                     }
                 }
@@ -290,6 +294,19 @@ object ClassAnalysis {
         }
     }
 
+    private def isListType(t : Type) : Boolean = {
+        t match {
+            // the symbol.path for List can be
+            // "scala.package.List" or
+            // "scala.collection.immutable.List" or whatever,
+            // maybe need a better way to do this.
+            case TypeRefType(_, symbol, _) if symbol.path.startsWith("scala.") && symbol.path.endsWith(".List") =>
+                true
+            case _ =>
+                false
+        }
+    }
+
     private def companionClass(clazz : Class[_]) : Class[_] =
         Class.forName(if (clazz.getName.endsWith("$")) clazz.getName else "%s$".format(clazz.getName))
 
@@ -306,6 +323,7 @@ object ClassAnalysis {
 
         lazy val optionalType : Option[Type] = extractSingleTypeArg(typeRefType, "scala.Option")
         def optional : Boolean = optionalType.isDefined
+        def isList : Boolean = isListType(typeRefType)
     }
 
     private def parseScalaSig0(clazz : Class[_]) : Option[ScalaSig] = {
