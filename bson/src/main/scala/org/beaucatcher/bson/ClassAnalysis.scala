@@ -304,8 +304,8 @@ object ClassAnalysis {
     private class Field(val idx : Int, val name : String, val typeRefType : TypeRefType) {
         override def toString = "Field[%d/%s]".format(idx, name)
 
-        val optionalType : Option[Type] = extractSingleTypeArg(typeRefType, "scala.Option")
-        val optional : Boolean = optionalType.isDefined
+        lazy val optionalType : Option[Type] = extractSingleTypeArg(typeRefType, "scala.Option")
+        def optional : Boolean = optionalType.isDefined
     }
 
     private def parseScalaSig0(clazz : Class[_]) : Option[ScalaSig] = {
