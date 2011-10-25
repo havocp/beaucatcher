@@ -14,6 +14,8 @@ object IntAndString {
 
 case class IntAndOptionalString(foo : Int, bar : Option[String])
 
+case class IntAndListString(foo : Int, bar : List[String])
+
 class ClassAnalysisTest {
 
     @org.junit.Before
@@ -106,5 +108,16 @@ class ClassAnalysisTest {
         }
         assertTrue(failure.isDefined)
         assertTrue(failure.get.getMessage().contains("requires value for"))
+    }
+
+    @Test
+    def createCaseClassWithListFromFields() = {
+        val analysis = new ClassAnalysis(classOf[IntAndListString])
+        val o = analysis.fromMap(Map("foo" -> 42, "bar" -> List("brown fox")))
+        assertEquals(IntAndListString(42, List("brown fox")), o)
+
+        // can omit list fields from the map
+        val oWithoutString = analysis.fromMap(Map("foo" -> 42))
+        assertEquals(IntAndListString(42, Nil), oWithoutString)
     }
 }
