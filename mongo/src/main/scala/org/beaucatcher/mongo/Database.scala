@@ -11,9 +11,8 @@ import org.beaucatcher.bson.Implicits._
 final class SystemCollections private[mongo] (backend : MongoBackend) {
     private def createCollectionOperations[EntityType <: Product : Manifest, IdType : Manifest](name : String) = {
         val b = backend
-        new CollectionOperationsWithCaseClass[EntityType, IdType] with MongoBackendProvider with MongoConfigProvider {
+        new CollectionOperationsWithCaseClass[EntityType, IdType] with MongoBackendProvider {
             override val backend = b
-            override val mongoConfig = b.config
             override val collectionName = name
         }
     }
