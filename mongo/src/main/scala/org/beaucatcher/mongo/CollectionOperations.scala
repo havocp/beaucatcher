@@ -11,7 +11,7 @@ import scala.annotation.implicitNotFound
  * be automatically converted from BSON).
  */
 trait CollectionOperationsBaseTrait[IdType] {
-    self : MongoBackendProvider with MongoConfigProvider =>
+    self : MongoBackendProvider =>
 
     /**
      * Because traits can't have constructor arguments or context bounds, a subtype of this
@@ -65,7 +65,7 @@ trait CollectionOperationsBaseTrait[IdType] {
  * a concrete connection to a specific MongoDB implementation.
  */
 trait CollectionOperationsWithoutEntityTrait[IdType] extends CollectionOperationsBaseTrait[IdType] {
-    self : MongoBackendProvider with MongoConfigProvider =>
+    self : MongoBackendProvider =>
 
     private lazy val daoGroup : SyncDAOGroupWithoutEntity[IdType] =
         backend.createDAOGroupWithoutEntity(collectionName)
@@ -101,7 +101,7 @@ trait CollectionOperationsWithoutEntityTrait[IdType] extends CollectionOperation
  * initialization has a lot of trouble (due to circular dependencies, or order of initialization anyway).
  */
 trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends CollectionOperationsBaseTrait[IdType] {
-    self : MongoBackendProvider with MongoConfigProvider =>
+    self : MongoBackendProvider =>
 
     import CollectionOperationsTrait._
 
@@ -221,7 +221,7 @@ object CollectionOperationsTrait {
  */
 trait CollectionOperationsWithCaseClassTrait[EntityType <: Product, IdType]
     extends CollectionOperationsTrait[EntityType, IdType] {
-    self : MongoBackendProvider with MongoConfigProvider =>
+    self : MongoBackendProvider =>
 
     override protected lazy val entityBObjectEntityComposer : EntityComposer[EntityType, BObject] =
         new CaseClassBObjectEntityComposer[EntityType]
@@ -236,7 +236,7 @@ trait CollectionOperationsWithCaseClassTrait[EntityType <: Product, IdType]
  */
 abstract class CollectionOperationsWithoutEntity[IdType : Manifest]
     extends CollectionOperationsWithoutEntityTrait[IdType] {
-    self : MongoBackendProvider with MongoConfigProvider =>
+    self : MongoBackendProvider =>
     override final val idTypeManifest = manifest[IdType]
 }
 
@@ -249,7 +249,7 @@ abstract class CollectionOperationsWithoutEntity[IdType : Manifest]
  */
 abstract class CollectionOperations[EntityType <: AnyRef : Manifest, IdType : Manifest]
     extends CollectionOperationsTrait[EntityType, IdType] {
-    self : MongoBackendProvider with MongoConfigProvider =>
+    self : MongoBackendProvider =>
     override final val entityTypeManifest = manifest[EntityType]
     override final val idTypeManifest = manifest[IdType]
 }
@@ -264,6 +264,6 @@ abstract class CollectionOperations[EntityType <: AnyRef : Manifest, IdType : Ma
 abstract class CollectionOperationsWithCaseClass[EntityType <: Product : Manifest, IdType : Manifest]
     extends CollectionOperations[EntityType, IdType]
     with CollectionOperationsWithCaseClassTrait[EntityType, IdType] {
-    self : MongoBackendProvider with MongoConfigProvider =>
+    self : MongoBackendProvider =>
 
 }
