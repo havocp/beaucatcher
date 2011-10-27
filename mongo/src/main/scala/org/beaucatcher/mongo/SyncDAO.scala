@@ -137,48 +137,7 @@ object IndexOptions {
     val empty = IndexOptions()
 }
 
-/**
- * Trait expressing all data-access operations on a collection in synchronous form.
- * This trait does not include setup and teardown operations such as creating or
- * removing indexes; you would use the underlying API such as Casbah or Hammersmith
- * for that, for now.
- *
- * The recommended way to obtain an instance of [[org.beaucatcher.mongo.SyncDAO]]
- * is from the `syncDAO` property on [[org.beaucatcher.mongo.CollectionOperations]],
- * which would in turn be implemented by the companion object of a case class
- * representing an object in a collection. For example you might have `case class Foo`
- * representing objects in the `foo` collection, with a companion object `object Foo`
- * which implements [[org.beaucatcher.mongo.CollectionOperations]]. You would then
- * write code such as:
- * {{{
- *    Foo.syncDAO[BObject].find() // obtain results as a BObject
- *    Foo.syncDAO[Foo].find()     // obtain results as a case class instance
- *    Foo.syncDAO.count()         // entity type not relevant
- * }}}
- * This is only a convention though, of course there's more than one way to do it.
- *
- * @define findAndModifyVsUpdate
- *
- *   findAndModify(), findAndReplace() will affect only one object and will return
- *   either the old or the new object depending on whether you specify the
- *   [[org.beaucatcher.mongo.FindAndModifyNew]] flag. update() and its variants
- *   do not return an object, and with updateMulti() you can modify multiple
- *   objects at once.
- *
- * @define findAndReplaceDocs
- *
- *   Finds the first object matching the query and updates it with the
- *   values from the provided entity. However, the ID is not updated.
- *   Returns the old object, or the new one if the
- *   [[org.beaucatcher.mongo.FindAndModifyNew]] flag was provided.
- *   If multiple objects match the query, then the `sort` parameter
- *   determines which will be replaced; only one object is ever replaced.
- *   A sort object is a map from fields to the integer "1" for ascending,
- *   "-1" for descending.
- *   If specified, the `fields` parameter determines which fields are
- *   returned in the old (or new) object returned from the method.
- */
-abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
+trait ReadOnlySyncDAO[QueryType, EntityType, IdType, ValueType] {
     private[beaucatcher] def backend : MongoBackend
 
     /** The database containing the collection */
@@ -239,7 +198,50 @@ abstract trait SyncDAO[QueryType, EntityType, IdType, ValueType] {
         findOneById(id, FindOneByIdOptions(fields = fields.toOption))
 
     def findOneById(id : IdType, options : FindOneByIdOptions) : Option[EntityType]
+}
 
+/**
+ * Trait expressing all data-access operations on a collection in synchronous form.
+ * This trait does not include setup and teardown operations such as creating or
+ * removing indexes; you would use the underlying API such as Casbah or Hammersmith
+ * for that, for now.
+ *
+ * The recommended way to obtain an instance of [[org.beaucatcher.mongo.SyncDAO]]
+ * is from the `syncDAO` property on [[org.beaucatcher.mongo.CollectionOperations]],
+ * which would in turn be implemented by the companion object of a case class
+ * representing an object in a collection. For example you might have `case class Foo`
+ * representing objects in the `foo` collection, with a companion object `object Foo`
+ * which implements [[org.beaucatcher.mongo.CollectionOperations]]. You would then
+ * write code such as:
+ * {{{
+ *    Foo.syncDAO[BObject].find() // obtain results as a BObject
+ *    Foo.syncDAO[Foo].find()     // obtain results as a case class instance
+ *    Foo.syncDAO.count()         // entity type not relevant
+ * }}}
+ * This is only a convention though, of course there's more than one way to do it.
+ *
+ * @define findAndModifyVsUpdate
+ *
+ *   findAndModify(), findAndReplace() will affect only one object and will return
+ *   either the old or the new object depending on whether you specify the
+ *   [[org.beaucatcher.mongo.FindAndModifyNew]] flag. update() and its variants
+ *   do not return an object, and with updateMulti() you can modify multiple
+ *   objects at once.
+ *
+ * @define findAndReplaceDocs
+ *
+ *   Finds the first object matching the query and updates it with the
+ *   values from the provided entity. However, the ID is not updated.
+ *   Returns the old object, or the new one if the
+ *   [[org.beaucatcher.mongo.FindAndModifyNew]] flag was provided.
+ *   If multiple objects match the query, then the `sort` parameter
+ *   determines which will be replaced; only one object is ever replaced.
+ *   A sort object is a map from fields to the integer "1" for ascending,
+ *   "-1" for descending.
+ *   If specified, the `fields` parameter determines which fields are
+ *   returned in the old (or new) object returned from the method.
+ */
+trait SyncDAO[QueryType, EntityType, IdType, ValueType] extends ReadOnlySyncDAO[QueryType, EntityType, IdType, ValueType] {
     /**
      * $findAndReplaceDocs
      *
