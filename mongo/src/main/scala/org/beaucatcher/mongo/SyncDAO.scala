@@ -20,9 +20,9 @@ sealed trait Fields {
     }
 }
 
-sealed trait IncludeIdFlag
-case object WithId extends IncludeIdFlag
-case object WithoutId extends IncludeIdFlag
+sealed trait IncludedFieldsIdFlag
+case object FieldsWithId extends IncludedFieldsIdFlag
+case object FieldsWithoutId extends IncludedFieldsIdFlag
 
 object AllFields extends Fields {
     override val included : Set[String] = Set.empty
@@ -31,15 +31,16 @@ object AllFields extends Fields {
     override def toString = "AllFields"
 }
 
-class IncludedFields(includeId : IncludeIdFlag, override val included : Set[String]) extends Fields {
-    override val excluded : Set[String] = if (includeId == WithId) Set.empty else Set("_id")
+class IncludedFields(includeId : IncludedFieldsIdFlag, override val included : Set[String]) extends Fields {
+    override val excluded : Set[String] = if (includeId == FieldsWithId) Set.empty else Set("_id")
 }
 
 object IncludedFields {
-    def apply(included : String*) = new IncludedFields(WithId, included.toSet)
-    def apply(includeId : IncludeIdFlag, included : String*) = new IncludedFields(includeId, included.toSet)
-    def apply(included : TraversableOnce[String]) = new IncludedFields(WithId, included.toSet)
-    def apply(includeId : IncludeIdFlag, included : TraversableOnce[String]) = new IncludedFields(includeId, included.toSet)
+    lazy val idOnly = new IncludedFields(FieldsWithId, Set.empty)
+    def apply(included : String*) = new IncludedFields(FieldsWithId, included.toSet)
+    def apply(includeId : IncludedFieldsIdFlag, included : String*) = new IncludedFields(includeId, included.toSet)
+    def apply(included : TraversableOnce[String]) = new IncludedFields(FieldsWithId, included.toSet)
+    def apply(includeId : IncludedFieldsIdFlag, included : TraversableOnce[String]) = new IncludedFields(includeId, included.toSet)
 }
 
 class ExcludedFields(override val excluded : Set[String]) extends Fields {

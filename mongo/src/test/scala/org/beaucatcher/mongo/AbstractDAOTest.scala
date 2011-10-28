@@ -303,7 +303,7 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
         assertEquals(8, Foo.syncDAO.count())
 
         val threes = Foo.syncDAO[BObject].find(BObject("intField" -> 3),
-            IncludedFields(WithoutId, "intField")).toIndexedSeq
+            IncludedFields(FieldsWithoutId, "intField")).toIndexedSeq
         assertEquals(2, threes.length)
         assertEquals(3, threes(0).getUnwrappedAs[Int]("intField"))
         assertEquals(3, threes(1).getUnwrappedAs[Int]("intField"))
