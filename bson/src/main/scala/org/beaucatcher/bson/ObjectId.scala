@@ -95,17 +95,7 @@ object ObjectId {
     protected[bson] def assembleString(time : Int, machine : Int, inc : Int) = {
         val bytes = assembleBytes(time, machine, inc)
 
-        val buf = new StringBuilder(24)
-
-        for (b <- bytes) {
-            val x : Int = b & 0xFF
-            val s = Integer.toHexString(x)
-            if (s.length == 1)
-                buf.append("0")
-            buf.append(s)
-        }
-
-        buf.toString
+        toHex(bytes)
     }
 
     protected[bson] def disassembleString(string : String) : ObjectIdParts = {
