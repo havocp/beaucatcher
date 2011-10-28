@@ -45,6 +45,16 @@ class CommandResult(lazyRaw : => BObject) {
     }
 
     override def toString = "CommandResult(ok=%s,errmsg=%s,err=%s,code=%s)".format(ok, errmsg, err, code)
+
+    /**
+     * Convert a non-OK result into a thrown exception. If you have a method foo() returning
+     * a CommandResult or WriteResult, use foo().throwIfNotOk to get an exception instead of
+     * manually inspecting the result.
+     */
+    def throwIfNotOk() {
+        if (!ok)
+            throw new CommandResultMongoException(this)
+    }
 }
 
 object CommandResult {

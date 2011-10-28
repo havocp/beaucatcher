@@ -12,6 +12,11 @@ class WriteResult(lazyRaw : => BObject) extends CommandResult(lazyRaw) {
 
     override def toString =
         "WriteResult(ok=%s,errmsg=%s,err=%s,code=%s,n=%s,updatedExisting=%s,upserted=%s)".format(ok, errmsg, err, code, n, updatedExisting, upserted)
+
+    override def throwIfNotOk() {
+        if (!ok)
+            throw new WriteResultMongoException(this)
+    }
 }
 
 object WriteResult {
