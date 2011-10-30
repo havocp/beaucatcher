@@ -607,7 +607,7 @@ class BsonTest extends TestUtils {
             }
         }
 
-        def rightType[T : Manifest](key : String, expected : Any) : T = {
+        def rightType[T : Manifest](key : String, expected : T) : T = {
             val t = obj.getUnwrappedAs[T](key)
             assertEquals(expected, t)
             t
@@ -625,18 +625,23 @@ class BsonTest extends TestUtils {
         rightType[Int]("int", 42)
         rightType[java.lang.Integer]("int", 42)
         rightType[Any]("int", 42)
-        wrongType[Long]("int")
+        rightType[Long]("int", 42L)
+        rightType[java.lang.Long]("int", 42L)
+        wrongType[Byte]("int")
+        wrongType[Char]("int")
+        wrongType[Short]("int")
         wrongType[String]("int")
 
         rightType[scala.Long]("long", 37L)
         rightType[java.lang.Long]("long", 37L)
         rightType[Any]("long", 37L)
+        wrongType[Int]("long")
         wrongType[String]("long")
 
         // a field created with BigInt is stored as an Int or Long,
         // not a BigInt. BValue canonicalizes the representation.
         rightType[Int]("bigint", 42)
-        rightType[AnyRef]("bigint", 42)
+        rightType[AnyRef]("bigint", 42 : java.lang.Integer)
         rightType[Any]("bigint", 42)
         wrongType[BigDecimal]("bigint")
         wrongType[BigInt]("bigint")
@@ -658,7 +663,7 @@ class BsonTest extends TestUtils {
         // a field created with BigDecimal is stored as a double,
         // BValue canonicalizes the representation.
         rightType[Double]("bigdecimal", BigDecimal(23.49).toDouble)
-        rightType[AnyRef]("bigdecimal", BigDecimal(23.49).toDouble)
+        rightType[AnyRef]("bigdecimal", BigDecimal(23.49).toDouble : java.lang.Double)
         wrongType[BigDecimal]("bigdecimal")
 
         rightType[Boolean]("boolean", true)
