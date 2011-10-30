@@ -40,10 +40,10 @@ abstract class AbstractDAOTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWi
 
     @org.junit.Before
     def setup() {
-        Foo.syncDAO.remove(BObject())
-        FooWithIntId.syncDAO.remove(BObject())
-        FooWithOptionalField.syncDAO.remove(BObject())
-        Bar.syncDAO.remove(BObject())
+        Foo.syncDAO.removeAll()
+        FooWithIntId.syncDAO.removeAll()
+        FooWithOptionalField.syncDAO.removeAll()
+        Bar.syncDAO.removeAll()
         Foo.syncDAO.dropIndexes()
         FooWithIntId.syncDAO.dropIndexes()
         FooWithOptionalField.syncDAO.dropIndexes()

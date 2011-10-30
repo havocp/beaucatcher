@@ -427,6 +427,13 @@ trait SyncDAO[QueryType, EntityType, IdType, ValueType] extends ReadOnlySyncDAO[
     def remove(query : QueryType) : WriteResult
 
     /**
+     * Deletes ALL objects.
+     */
+    final def removeAll() : WriteResult = {
+        remove(emptyQuery)
+    }
+
+    /**
      * Deletes the object with the given ID, if any.
      */
     def removeById(id : IdType) : WriteResult
