@@ -12,6 +12,7 @@ object BuildSettings {
         scalaVersion := buildScalaVersion,
         shellPrompt := ShellPrompt.buildShellPrompt,
         fork in test := true,
+        checksums := Nil, // lift-json sha1 is hosed at the moment
         publishTo in Scope.GlobalScope <<= (thisProjectRef) { (ref) =>
             val baseDir = new File(ref.build)
             Some(Resolver.file("gh-pages", new File(baseDir, "../beaucatcher-web/repository")))
@@ -63,6 +64,7 @@ object Dependencies {
         val liftJson = "net.liftweb" %% "lift-json" % "2.4-SNAPSHOT" % "test"
         val slf4j = "org.slf4j" % "slf4j-api" % "1.6.0"
         val mongoJavaDriver = Dependencies.mongoJavaDriver % "test"
+        val commonsIO = "commons-io" % "commons-io" % "2.1" % "test"
     }
 }
 
@@ -81,8 +83,7 @@ object BeaucatcherBuild extends Build {
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),
         settings = projectSettings ++
-            Seq(checksums := Nil, // lift-json sha1 is hosed at the moment
-                libraryDependencies := Seq(scalap, commonsCodec, jodaTime,
+            Seq(libraryDependencies := Seq(scalap, commonsCodec, jodaTime,
                     Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver)))
 
     lazy val bsonJava = Project("beaucatcher-bson-java",
@@ -98,7 +99,7 @@ object BeaucatcherBuild extends Build {
         file("casbah"),
         settings = projectSettings ++
             makeGenerateBsonJavaSettings("org.beaucatcher.casbah") ++
-            Seq(libraryDependencies += casbahCore)) dependsOn (mongo % "compile->compile;test->test")
+            Seq(libraryDependencies ++= Seq(casbahCore, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test")
 
     lazy val async = Project("beaucatcher-async",
         file("async"),
