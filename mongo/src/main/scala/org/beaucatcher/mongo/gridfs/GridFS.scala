@@ -63,7 +63,7 @@ trait GridFS {
 
 object GridFS {
     private[gridfs] val DEFAULT_BUCKET = "fs"
-    private[gridfs] val DEFAULT_CHUNK_SIZE = 256 * 1024
+    private[gridfs] val DEFAULT_CHUNK_SIZE = 256 * 1024L
 }
 
 sealed trait SyncGridFS extends GridFS {

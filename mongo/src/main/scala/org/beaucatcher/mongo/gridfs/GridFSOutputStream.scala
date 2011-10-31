@@ -16,7 +16,10 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
     if (file.length > 0)
         throw new GridFSMongoException("File opened for writing but already has chunks: " + file)
 
-    private val bufSize = file.chunkSize
+    if (file.chunkSize > Int.MaxValue)
+        throw new GridFSMongoException("File opened for writing but chunks are too big for OutputStream API: " + file)
+
+    private val bufSize = file.chunkSize.toInt
     private val buf = new ByteArrayOutputStream(bufSize)
     private val digest = GridFSOutputStream.digestCache.acquire
     private var chunkNumber = 0

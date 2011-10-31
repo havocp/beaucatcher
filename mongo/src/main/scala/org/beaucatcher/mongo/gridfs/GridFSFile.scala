@@ -7,7 +7,7 @@ import org.beaucatcher.bson.Implicits._
 import org.joda.time._
 
 case class CreateOptions(filename : Option[String] = None, contentType : Option[String] = None,
-    chunkSize : Option[Int] = None, aliases : List[String] = Nil, metadata : BObject = BObject.empty) {
+    chunkSize : Option[Long] = None, aliases : List[String] = Nil, metadata : BObject = BObject.empty) {
 
     private[gridfs] def asBObjectWithNewId = {
         val b = BObject.newBuilder
@@ -50,7 +50,7 @@ class GridFSFile private[gridfs] (private[gridfs] val underlying : BObject) {
     /** get the file's length in bytes or throw NoSuchElementException */
     def length = underlying.getUnwrappedAs[Long]("length")
     /** get the file's chunk size or throw NoSuchElementException */
-    def chunkSize = underlying.getUnwrappedAs[Int]("chunkSize")
+    def chunkSize = underlying.getUnwrappedAs[Long]("chunkSize") // using "Long" is silly (Input/OutputStream don't) but Java driver stores as Int64
     /** get the file's uploadDate or throw NoSuchElementException */
     def uploadDate = underlying.getUnwrappedAs[DateTime]("uploadDate")
     /** get the file's aliases or throw NoSuchElementException */
