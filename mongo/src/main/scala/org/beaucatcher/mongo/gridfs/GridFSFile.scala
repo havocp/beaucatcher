@@ -7,7 +7,7 @@ import org.beaucatcher.bson.Implicits._
 import org.joda.time._
 
 case class CreateOptions(filename : Option[String] = None, contentType : Option[String] = None,
-    chunkSize : Option[Long] = None, aliases : List[String] = Nil, metadata : BObject = BObject.empty) {
+    chunkSize : Option[Long] = None, aliases : Seq[String] = Nil, metadata : BObject = BObject.empty) {
 
     private[gridfs] def asBObjectWithNewId = {
         val b = BObject.newBuilder
@@ -54,7 +54,7 @@ class GridFSFile private[gridfs] (private[gridfs] val underlying : BObject) {
     /** get the file's uploadDate or throw NoSuchElementException */
     def uploadDate = underlying.getUnwrappedAs[DateTime]("uploadDate")
     /** get the file's aliases or throw NoSuchElementException */
-    def aliases = underlying.getUnwrappedAs[List[String]]("aliases")
+    def aliases : Seq[String] = underlying.getUnwrappedAs[List[String]]("aliases")
     /** get the file's metadata object or an empty object (throw NoSuchElementException only if there's a broken non-object under "metadata") */
     def metadata : BObject = underlying.get("metadata") match {
         case Some(obj : BObject) =>
