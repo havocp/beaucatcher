@@ -645,6 +645,10 @@ object BISODate {
     // it conflicts with the one generated for the case class.
     def fromDateTime(dateTime : DateTime) =
         BISODate(dateTime.withZone(DateTimeZone.UTC))
+
+    def now = {
+        BISODate(new DateTime(DateTimeZone.UTC))
+    }
 }
 
 /** A BSON timestamp value, wrapping [[org.beaucatcher.bson.Timestamp]]. */
