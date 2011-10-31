@@ -72,6 +72,8 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
     }
 
     override def write(bytes : Array[Byte], offset : Int, len : Int) {
+        require(bytes != null)
+
         var start = offset
         var remaining = len
 
