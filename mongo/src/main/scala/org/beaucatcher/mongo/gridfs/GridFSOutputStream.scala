@@ -107,7 +107,8 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
                     val md5 = toHex(digest.digest())
 
                     val newFileFields = BObject("md5" -> md5,
-                        "length" -> totalCount)
+                        "length" -> totalCount,
+                        "uploadDate" -> BISODate.now)
                     val newFile = new GridFSFile(file.underlying ++ newFileFields)
 
                     try {
