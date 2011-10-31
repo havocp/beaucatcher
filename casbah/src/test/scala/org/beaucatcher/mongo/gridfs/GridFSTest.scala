@@ -218,4 +218,68 @@ class GridFSTest extends TestUtils {
         javaCreateSmallChunkFiles()
         readAndRemoveSmallChunkFiles()
     }
+
+    private def createOneByteFile(filename : String, contentType : String, aliases : Seq[String]) = {
+        val f = GridFSFile(CreateOptions(filename = Some(filename), contentType = Some(contentType), aliases = aliases))
+        val stream = TestFS.sync.openForWriting(f)
+        stream.write('a')
+        stream.close()
+        f._id
+    }
+
+    private def javaCreateOneByteFile(filename : String, contentType : String, aliases : Seq[String]) = {
+        import scala.collection.JavaConverters._
+
+        val jfs = new JavaFS()
+
+        val f = jfs.fs.createFile()
+        f.setFilename(filename)
+        f.setContentType(contentType)
+        f.put("aliases", aliases.asJava)
+
+        val stream = f.getOutputStream()
+        stream.write('a')
+        stream.close()
+
+        jfs.close()
+        ObjectId(f.getId().toString())
+    }
+
+    @Test
+    def javaDriverCreatesMatchingObjects() {
+        // There is one difference with the Java driver that we aren't
+        // triggering here on purpose, which is that it stores "null"
+        // for contentType, aliases, and filename if those are unset,
+        // while we just omit them from the database in that case.
+        // Seems like omitting should work, we'll see.
+
+        val ourId = createOneByteFile("foo", "text/plain", Seq("bar"))
+        val jId = javaCreateOneByteFile("foo", "text/plain", Seq("bar"))
+
+        val ourFile = TestFS.sync.dao.findOneById(ourId).get
+        val jFile = TestFS.sync.dao.findOneById(jId).get
+
+        assertEquals(ourId, ourFile._id)
+        assertEquals(jId, jFile._id)
+
+        assertTrue(ourFile.underlying.contains("uploadDate"))
+        assertTrue(jFile.underlying.contains("uploadDate"))
+
+        assertEquals(Seq("bar"), ourFile.aliases)
+        // This is broken; the Java driver does this. If this assertion fails,
+        // maybe the Java driver is fixed, and you could included aliases
+        // below
+        assertEquals(BArray(BArray("bar") : BValue), jFile.underlying.get("aliases").get)
+
+        // strip aliases due to the above bug, strip _id and uploadDate because they
+        // are not supposed to match.
+        val ourStripped = ourFile.underlying - "_id" - "uploadDate" - "aliases"
+        val jStripped = jFile.underlying - "_id" - "uploadDate" - "aliases"
+
+        assertEquals(ourStripped.toSeq.sortBy(_._1),
+            jStripped.toSeq.sortBy(_._1))
+
+        TestFS.sync.removeById(ourId)
+        TestFS.sync.removeById(jId)
+    }
 }
