@@ -29,7 +29,9 @@ class GridFSTest extends TestUtils {
     @Test
     def createAndReadEmptyFile() {
         val f = GridFSFile()
+        TestFS.sync.openForWriting(f).close()
         assertEquals(0, f.length)
+        assertTrue(TestFS.sync.dao.findOneById(f._id).isDefined)
         val stream = TestFS.sync.openForReading(f)
         val content = IOUtils.toString(stream)
         stream.close()

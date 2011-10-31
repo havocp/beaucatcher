@@ -15,6 +15,10 @@ private[gridfs] class GridFSInputStream(fs : SyncGridFS, file : GridFSFile)
 object GridFSInputStream {
 
     private def chunkStreams(fs : SyncGridFS, file : GridFSFile) : java.util.Enumeration[InputStream] = {
+        // a quirk of this implementation is that it "succeeds" if GridFSFile is not even
+        // in mongodb, if the file is zero-length. But throwing an error in that non-real-world case does
+        // not seem worth an extra round trip to mongodb in every real world case.
+
         // the weird cast is because BDouble and Double are both in scope with intValue methods
         val numChunks = (math.ceil((file.length : Double) / file.chunkSize) : java.lang.Double).intValue
 
