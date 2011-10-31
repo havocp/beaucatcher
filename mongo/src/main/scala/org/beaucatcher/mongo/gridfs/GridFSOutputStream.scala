@@ -76,7 +76,9 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
             precheck()
 
             val available = bufSize - buf.size
-            val toWrite = math.min(len, available)
+            require(available > 0)
+
+            val toWrite = math.min(remaining, available)
 
             buf.write(bytes, start, toWrite)
             remaining -= toWrite
