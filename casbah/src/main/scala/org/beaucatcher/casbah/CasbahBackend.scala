@@ -89,8 +89,6 @@ private[casbah] object CasbahBackend {
 
     val connections = new MongoConnectionStore[MongoConnection] {
         override def create(address : MongoConnectionAddress) = {
-            RegisterJodaTimeConversionHelpers()
-
             val c = MongoConnection(MongoURI(address.url))
             // things are awfully race-prone without Safe, and you
             // don't get constraint violations for example

@@ -3,6 +3,8 @@ package org.beaucatcher.bson
 import org.bson.{ types => j }
 import org.bson.BSONObject
 
+import org.joda.time._
+
 object JavaConversions {
     implicit def asJavaObjectId(o : ObjectId) = new j.ObjectId(o.time, o.machine, o.inc)
 
@@ -27,6 +29,8 @@ object JavaConversions {
                     t : j.BSONTimestamp
                 case BObjectId(oid) =>
                     oid : j.ObjectId
+                case BISODate(joda) =>
+                    joda.toDate()
                 case v : ArrayBase[_] =>
                     v.value.map({ e => unwrap(e) }).asJava
                 case v : ObjectBase[_, _] =>
