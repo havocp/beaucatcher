@@ -457,6 +457,11 @@ sealed trait ArrayBaseCompanion[ElementType <: BValue, Repr <: ArrayBase[Element
     /**
      * Constructs a [[org.beaucatcher.bson.BArray]] or [[org.beaucatcher.bson.JArray]] containing the values in the sequence,
      * each wrapped in a [[org.beaucatcher.bson.BValue]] or [[org.beaucatcher.bson.JValue]].
+     *
+     * This overload creates one tricky situation: BArray(BArray()) uses the wrong apply(), it creates one array
+     * with the values from the inner array, rather than array of array. You can work around this with
+     * Barray(BArray() : BValue). But a better solution would be nice :-/
+     *
      * @param seq a sequence of values convertible to [[org.beaucatcher.bson.BValue]] or [[org.beaucatcher.bson.JValue]]
      * @tparam V type of elements in the sequence
      */
