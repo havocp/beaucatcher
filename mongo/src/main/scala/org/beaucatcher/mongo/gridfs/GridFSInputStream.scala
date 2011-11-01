@@ -25,7 +25,7 @@ object GridFSInputStream {
         // this all needs to be lazy, which I _think_ it should be...
         // the ".iterator" allows us to later use .asJavaEnumeration which isn't allowed on a sequence.
         val chunks = for (n <- (0 until numChunks).iterator)
-            yield fs.chunksDAO.findOne(BObject("files_id" -> file._id, "n" -> n)).getOrElse(throw new IOException("Missing chunk " + n + "/" + numChunks + " of file " + file))
+            yield fs.chunksCollection.findOne(BObject("files_id" -> file._id, "n" -> n)).getOrElse(throw new IOException("Missing chunk " + n + "/" + numChunks + " of file " + file))
         val streams = chunks map { chunk =>
             chunk.get("data") match {
                 case Some(BBinary(bin)) =>

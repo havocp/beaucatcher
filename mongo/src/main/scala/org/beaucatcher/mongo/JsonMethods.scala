@@ -33,8 +33,8 @@ import org.beaucatcher.bson.ClassAnalysis
  * but maybe there's something cleaner.
  */
 trait JsonMethods[SchemaType <: Product] {
-    /** Point this to a DAO to use to store BObject */
-    protected def jsonSync : SyncDAO[BObject, BObject, _, _]
+    /** Point this to a Collection to use to store BObject */
+    protected def jsonSync : SyncCollection[BObject, BObject, _, _]
     /** Since we're a trait, we don't have a manifest and you have to provide this */
     protected def jsonAnalysis : ClassAnalysis[SchemaType]
     /** If you want to override the JSON flavor, do so here */

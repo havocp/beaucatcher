@@ -67,22 +67,22 @@ object GridFS {
 }
 
 sealed trait SyncGridFS extends GridFS {
-    private[gridfs] def filesDAO = files.sync[GridFSFile]
-    private[gridfs] def chunksDAO = chunks.sync
+    private[gridfs] def filesCollection = files.sync[GridFSFile]
+    private[gridfs] def chunksCollection = chunks.sync
 
     /**
      * Obtain a read-only data access object for the bucket.files collection.
      * Use this to query for files.
      */
-    def collection : ReadOnlySyncDAO[BObject, GridFSFile, ObjectId, _] = filesDAO
+    def collection : ReadOnlySyncCollection[BObject, GridFSFile, ObjectId, _] = filesCollection
 
     /**
      * Delete one file by ID.
      */
     def removeById(id : ObjectId) : WriteResult = {
-        val result = filesDAO.removeById(id)
+        val result = filesCollection.removeById(id)
         if (result.ok)
-            chunksDAO.remove(BObject("files_id" -> id))
+            chunksCollection.remove(BObject("files_id" -> id))
         else
             result
     }

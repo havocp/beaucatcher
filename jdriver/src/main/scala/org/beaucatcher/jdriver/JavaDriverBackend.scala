@@ -34,21 +34,21 @@ final class JavaDriverBackend private[jdriver] (override val config : MongoConfi
         coll
     }
 
-    override final def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
+    override final def createCollectionGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
-        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType] = {
+        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncCollectionGroup[EntityType, IdType, IdType] = {
         val identityIdComposer = new IdentityIdComposer[IdType]
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
             // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
-            new EntityBObjectJavaDriverDAOGroup[EntityType, IdType, IdType, JavaObjectId](this,
+            new EntityBObjectJavaDriverCollectionGroup[EntityType, IdType, IdType, JavaObjectId](this,
                 underlyingCollection(collectionName),
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,
                 JavaDriverBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
-            new EntityBObjectJavaDriverDAOGroup[EntityType, IdType, IdType, IdType](this,
+            new EntityBObjectJavaDriverCollectionGroup[EntityType, IdType, IdType, IdType](this,
                 underlyingCollection(collectionName),
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
@@ -57,15 +57,15 @@ final class JavaDriverBackend private[jdriver] (override val config : MongoConfi
         }
     }
 
-    override def createDAOGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncDAOGroupWithoutEntity[IdType] = {
+    override def createCollectionGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncCollectionGroupWithoutEntity[IdType] = {
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
-            new BObjectJavaDriverDAOGroup[IdType, JavaObjectId](this,
+            new BObjectJavaDriverCollectionGroup[IdType, JavaObjectId](this,
                 underlyingCollection(collectionName),
                 JavaDriverBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
             val identityIdComposer = new IdentityIdComposer[IdType]
-            new BObjectJavaDriverDAOGroup[IdType, IdType](this,
+            new BObjectJavaDriverCollectionGroup[IdType, IdType](this,
                 underlyingCollection(collectionName),
                 identityIdComposer)
         }

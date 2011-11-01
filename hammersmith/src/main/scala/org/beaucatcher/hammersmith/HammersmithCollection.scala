@@ -97,8 +97,8 @@ private class CursorIterator[T : SerializableBSONObject](val cursor : Cursor[T])
     }
 }
 
-private[hammersmith] class HammersmithAsyncDAO[EntityType : SerializableBSONObject : Manifest, IdType <: AnyRef](protected val collection : Collection)
-    extends AsyncDAO[BSONDocument, EntityType, IdType, Any] {
+private[hammersmith] class HammersmithAsyncCollection[EntityType : SerializableBSONObject : Manifest, IdType <: AnyRef](protected val collection : Collection)
+    extends AsyncCollection[BSONDocument, EntityType, IdType, Any] {
     private implicit def optionalfields2bsondocument(maybeFields : Option[Fields]) : BSONDocument = {
         maybeFields match {
             case Some(fields) =>
@@ -316,12 +316,12 @@ private[hammersmith] class BObjectHammersmithQueryComposer extends QueryComposer
 }
 
 /**
- * A BObject DAO that specifically backends to a Hammersmith DAO.
+ * A BObject Collection that specifically backends to a Hammersmith Collection.
  * Subclass would provide the backend and could override the in/out type converters.
  */
-private[hammersmith] abstract trait BObjectHammersmithSyncDAO[OuterIdType, InnerIdType <: AnyRef]
-    extends BObjectComposedSyncDAO[OuterIdType, BSONDocument, BObject, InnerIdType, Any] {
-    override protected val backend : SyncDAO[BSONDocument, BObject, InnerIdType, Any]
+private[hammersmith] abstract trait BObjectHammersmithSyncCollection[OuterIdType, InnerIdType <: AnyRef]
+    extends BObjectComposedSyncCollection[OuterIdType, BSONDocument, BObject, InnerIdType, Any] {
+    override protected val backend : SyncCollection[BSONDocument, BObject, InnerIdType, Any]
 
     override protected val queryComposer : QueryComposer[BObject, BSONDocument]
     override protected val entityComposer : EntityComposer[BObject, BObject]

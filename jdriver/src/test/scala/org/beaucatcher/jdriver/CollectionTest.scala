@@ -1,29 +1,29 @@
-package org.beaucatcher.hammersmith
+package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
-import org.beaucatcher.hammersmith._
+import org.beaucatcher.jdriver._
 import org.beaucatcher.mongo._
 import org.junit.Assert._
 import org.junit._
+import foo._
+import com.mongodb.DBObject
 
-package foohammersmith {
+package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
 
     object Foo extends CollectionOperationsWithCaseClass[Foo, ObjectId]
-        with HammersmithTestProvider {
-        def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
+        with JavaDriverTestProvider {
+        def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
         }
-
-        System.setProperty("org.apache.commons.logging.simplelog.defaultlog", "debug")
     }
 
     case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
 
     object FooWithIntId extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
-        with HammersmithTestProvider {
-        def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
+        with JavaDriverTestProvider {
+        def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
         }
     }
@@ -31,18 +31,40 @@ package foohammersmith {
     case class FooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) extends abstractfoo.AbstractFooWithOptionalField
 
     object FooWithOptionalField extends CollectionOperationsWithCaseClass[FooWithOptionalField, ObjectId]
-        with HammersmithTestProvider {
+        with JavaDriverTestProvider {
+    }
+
+    object Bar extends CollectionOperationsWithoutEntity[ObjectId]
+        with JavaDriverTestProvider {
+
     }
 }
 
-import foohammersmith._
-class DAOTestHammersmith
-    extends AbstractDAOTest[Foo, FooWithIntId, FooWithOptionalField](Foo, FooWithIntId, FooWithOptionalField) {
+class CollectionTest
+    extends AbstractCollectionTest[Foo, FooWithIntId, FooWithOptionalField](Foo, FooWithIntId, FooWithOptionalField, Bar) {
     override def newFoo(_id : ObjectId, intField : Int, stringField : String) = Foo(_id, intField, stringField)
     override def newFooWithIntId(_id : Int, intField : Int, stringField : String) = FooWithIntId(_id, intField, stringField)
     override def newFooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) = FooWithOptionalField(_id, intField, stringField)
 
-    // factoring this up into AbstractDAOTest is just too annoying
+    override def roundTripThroughJava(bvalue : BValue) {
+        // be sure we can round-trip through Java
+        import j.JavaConversions._
+        val jvalue = bvalue.unwrappedAsJava
+        val wrapped = wrapJavaAsBValue(jvalue)
+        assertEquals(bvalue, wrapped)
+
+        // and be sure the wrap/unwrap of BObject works
+        import org.beaucatcher.jdriver.Implicits._
+        bvalue match {
+            case o : BObject =>
+                val dbval : DBObject = new BObjectDBObject(o)
+                val asBObject : BObject = dbval
+                assertEquals(bvalue, asBObject)
+            case _ =>
+        }
+    }
+
+    // factoring this up into AbstractCollectionTest is just too annoying
     @Test
     def testCustomQueryReturnsVariousEntityTypes() {
         val foo = Foo(ObjectId(), 23, "woohoo")
@@ -60,7 +82,7 @@ class DAOTestHammersmith
         assertEquals("woohoo", f.stringField)
     }
 
-    // factoring this up into AbstractDAOTest is just too annoying
+    // factoring this up into AbstractCollectionTest is just too annoying
     @Test
     def testCustomQueryReturnsVariousEntityTypesWithIntId() {
         val foo = FooWithIntId(100, 23, "woohoo")

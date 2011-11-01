@@ -138,7 +138,7 @@ object IndexOptions {
     val empty = IndexOptions()
 }
 
-trait ReadOnlySyncDAO[QueryType, EntityType, IdType, ValueType] {
+trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
     private[beaucatcher] def backend : MongoBackend
 
     /** The database containing the collection */
@@ -207,8 +207,8 @@ trait ReadOnlySyncDAO[QueryType, EntityType, IdType, ValueType] {
  * removing indexes; you would use the underlying API such as Casbah or Hammersmith
  * for that, for now.
  *
- * The recommended way to obtain an instance of [[org.beaucatcher.mongo.SyncDAO]]
- * is from the `syncDAO` property on [[org.beaucatcher.mongo.CollectionOperations]],
+ * The recommended way to obtain an instance of [[org.beaucatcher.mongo.SyncCollection]]
+ * is from the `sync` property on [[org.beaucatcher.mongo.CollectionOperations]],
  * which would in turn be implemented by the companion object of a case class
  * representing an object in a collection. For example you might have `case class Foo`
  * representing objects in the `foo` collection, with a companion object `object Foo`
@@ -242,7 +242,7 @@ trait ReadOnlySyncDAO[QueryType, EntityType, IdType, ValueType] {
  *   If specified, the `fields` parameter determines which fields are
  *   returned in the old (or new) object returned from the method.
  */
-trait SyncDAO[QueryType, EntityType, IdType, ValueType] extends ReadOnlySyncDAO[QueryType, EntityType, IdType, ValueType] {
+trait SyncCollection[QueryType, EntityType, IdType, ValueType] extends ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
     /**
      * $findAndReplaceDocs
      *

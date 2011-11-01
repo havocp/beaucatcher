@@ -7,47 +7,47 @@ import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.routing._
 
-private[async] sealed trait DAORequest
-private[async] sealed trait DAOReply {
+private[async] sealed trait CollectionRequest
+private[async] sealed trait CollectionReply {
     val result : Any
 }
 
-private[async] case class ErrorReply(override val result : Exception) extends DAOReply
+private[async] case class ErrorReply(override val result : Exception) extends CollectionReply
 
-private[async] case class CountRequest[QueryType](query : QueryType, options : CountOptions) extends DAORequest
-private[async] case class CountReply(override val result : Long) extends DAOReply
+private[async] case class CountRequest[QueryType](query : QueryType, options : CountOptions) extends CollectionRequest
+private[async] case class CountReply(override val result : Long) extends CollectionReply
 
-private[async] case class DistinctRequest[QueryType](key : String, options : DistinctOptions[QueryType]) extends DAORequest
-private[async] case class DistinctReply[ValueType](override val result : Seq[ValueType]) extends DAOReply
-private[async] case class FindRequest[QueryType](query : QueryType, options : FindOptions) extends DAORequest
-private[async] case class FindReply[EntityType](override val result : Iterator[EntityType]) extends DAOReply
+private[async] case class DistinctRequest[QueryType](key : String, options : DistinctOptions[QueryType]) extends CollectionRequest
+private[async] case class DistinctReply[ValueType](override val result : Seq[ValueType]) extends CollectionReply
+private[async] case class FindRequest[QueryType](query : QueryType, options : FindOptions) extends CollectionRequest
+private[async] case class FindReply[EntityType](override val result : Iterator[EntityType]) extends CollectionReply
 
-private[async] case class OptionalEntityReply[EntityType](override val result : Option[EntityType]) extends DAOReply
-private[async] case class WriteReply(override val result : WriteResult) extends DAOReply
+private[async] case class OptionalEntityReply[EntityType](override val result : Option[EntityType]) extends CollectionReply
+private[async] case class WriteReply(override val result : WriteResult) extends CollectionReply
 
-private[async] case class FindOneRequest[QueryType](query : QueryType, options : FindOneOptions) extends DAORequest
-private[async] case class FindOneByIdRequest[IdType](id : IdType, options : FindOneByIdOptions) extends DAORequest
-private[async] case class FindAndModifyRequest[QueryType](query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) extends DAORequest
+private[async] case class FindOneRequest[QueryType](query : QueryType, options : FindOneOptions) extends CollectionRequest
+private[async] case class FindOneByIdRequest[IdType](id : IdType, options : FindOneByIdOptions) extends CollectionRequest
+private[async] case class FindAndModifyRequest[QueryType](query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) extends CollectionRequest
 
-private[async] case class InsertRequest[EntityType](o : EntityType) extends DAORequest
-private[async] case class UpdateRequest[QueryType](query : QueryType, modifier : QueryType, options : UpdateOptions) extends DAORequest
-private[async] case class RemoveRequest[QueryType](query : QueryType) extends DAORequest
-private[async] case class RemoveByIdRequest[IdType](id : IdType) extends DAORequest
+private[async] case class InsertRequest[EntityType](o : EntityType) extends CollectionRequest
+private[async] case class UpdateRequest[QueryType](query : QueryType, modifier : QueryType, options : UpdateOptions) extends CollectionRequest
+private[async] case class RemoveRequest[QueryType](query : QueryType) extends CollectionRequest
+private[async] case class RemoveByIdRequest[IdType](id : IdType) extends CollectionRequest
 
-private[async] case class CommandReply(override val result : CommandResult) extends DAOReply
+private[async] case class CommandReply(override val result : CommandResult) extends CollectionReply
 
-private[async] case class EnsureIndexRequest[QueryType](keys : QueryType, options : IndexOptions) extends DAORequest
-private[async] case class DropIndexRequest(name : String) extends DAORequest
-private[async] case object FindIndexesRequest extends DAORequest
+private[async] case class EnsureIndexRequest[QueryType](keys : QueryType, options : IndexOptions) extends CollectionRequest
+private[async] case class DropIndexRequest(name : String) extends CollectionRequest
+private[async] case object FindIndexesRequest extends CollectionRequest
 
 // This could be implemented with typed actors, but not sure it's worth the dependency for now I guess
-// This actor blocks on a synchronous DAO for each request. So, usually you want more than
+// This actor blocks on a synchronous Collection for each request. So, usually you want more than
 // one of these in a pool.
-// Hmm. FIXME we really want one pool globally, not per-DAO-type-parameterization, so this needs to
+// Hmm. FIXME we really want one pool globally, not per-Collection-type-parameterization, so this needs to
 // just drop all its type parameters and pass a lot of Any around
-private class BlockingDAOActor[QueryType, EntityType, IdType, ValueType](val underlying : SyncDAO[QueryType, EntityType, IdType, ValueType])
+private class BlockingCollectionActor[QueryType, EntityType, IdType, ValueType](val underlying : SyncCollection[QueryType, EntityType, IdType, ValueType])
     extends Actor {
-    private def handleRequest(request : DAORequest) : DAOReply = {
+    private def handleRequest(request : CollectionRequest) : CollectionReply = {
         // lots of casts in here, but don't know the right solution
         request match {
             case CountRequest(query, options) =>
@@ -82,13 +82,13 @@ private class BlockingDAOActor[QueryType, EntityType, IdType, ValueType](val und
     }
 
     override def receive = {
-        case request : DAORequest =>
+        case request : CollectionRequest =>
             val result = handleRequest(request)
             if (self.senderFuture.isDefined) {
                 result match {
                     case ErrorReply(e) =>
                         self.senderFuture.get.completeWithException(e)
-                    case success : DAOReply =>
+                    case success : CollectionReply =>
                         self.senderFuture.get.completeWithResult(success.result)
                 }
             } else {
@@ -99,11 +99,11 @@ private class BlockingDAOActor[QueryType, EntityType, IdType, ValueType](val und
 
 /**
  * Actor pool; the goal is to have an actor per outstanding synchronous MongoDB request.
- * It's assumed that the underlying SyncDAO is thread-safe.
- * FIXME we really want one pool globally, not per-DAO-type-parameterization, so this needs to
+ * It's assumed that the underlying SyncCollection is thread-safe.
+ * FIXME we really want one pool globally, not per-Collection-type-parameterization, so this needs to
  * just drop all its type parameters and pass a lot of Any around
  */
-private[async] class DAOActor[QueryType, EntityType, IdType, ValueType](val underlying : SyncDAO[QueryType, EntityType, IdType, ValueType])
+private[async] class CollectionActor[QueryType, EntityType, IdType, ValueType](val underlying : SyncCollection[QueryType, EntityType, IdType, ValueType])
     extends Actor
     with DefaultActorPool
     with BoundedCapacityStrategy
@@ -128,5 +128,5 @@ private[async] class DAOActor[QueryType, EntityType, IdType, ValueType](val unde
     override val backoffRate = 0.50
     override val backoffThreshold = 0.50
 
-    override def instance = Actor.actorOf(new BlockingDAOActor[QueryType, EntityType, IdType, ValueType](underlying))
+    override def instance = Actor.actorOf(new BlockingCollectionActor[QueryType, EntityType, IdType, ValueType](underlying))
 }

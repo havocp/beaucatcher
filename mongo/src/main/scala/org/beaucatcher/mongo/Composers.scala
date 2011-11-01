@@ -3,7 +3,7 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 
 /**
- * Object which converts queries as they go from a DAO into or out of an "underlying" DAO.
+ * Object which converts queries as they go from a Collection into or out of an "underlying" Collection.
  */
 abstract trait QueryComposer[OuterQueryType, InnerQueryType] {
     def queryIn(q : OuterQueryType) : InnerQueryType
@@ -17,7 +17,7 @@ class IdentityQueryComposer[QueryType]
 }
 
 /**
- * Object which converts entities (document representations) as they go from a DAO into or out of an "underlying" DAO.
+ * Object which converts entities (document representations) as they go from a Collection into or out of an "underlying" Collection.
  */
 abstract trait EntityComposer[OuterEntityType, InnerEntityType] {
     def entityIn(o : OuterEntityType) : InnerEntityType
@@ -31,7 +31,7 @@ class IdentityEntityComposer[EntityType]
 }
 
 /**
- * Object which converts IDs (usually the "_id" field value) as they go from a DAO into or out of an "underlying" DAO.
+ * Object which converts IDs (usually the "_id" field value) as they go from a Collection into or out of an "underlying" Collection.
  */
 abstract trait IdComposer[OuterIdType, InnerIdType] {
     def idIn(id : OuterIdType) : InnerIdType
@@ -45,7 +45,7 @@ class IdentityIdComposer[IdType]
 }
 
 /**
- * Object which converts values (the value part of the key-value pairs of a BSON object) as they go from a DAO into or out of an "underlying" DAO.
+ * Object which converts values (the value part of the key-value pairs of a BSON object) as they go from a Collection into or out of an "underlying" Collection.
  */
 abstract trait ValueComposer[OuterValueType, InnerValueType] {
     def valueIn(v : OuterValueType) : InnerValueType

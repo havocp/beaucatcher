@@ -1,6 +1,6 @@
 package org.beaucatcher.hammersmith
 
-import org.beaucatcher.mongo.SyncDAO
+import org.beaucatcher.mongo.SyncCollection
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.mongo._

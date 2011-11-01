@@ -25,11 +25,11 @@ trait MongoBackend {
     def underlyingDatabase : DatabaseType
     def underlyingCollection(name : String) : CollectionType
 
-    def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
+    def createCollectionGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         entityBObjectQueryComposer : QueryComposer[BObject, BObject],
-        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType]
+        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncCollectionGroup[EntityType, IdType, IdType]
 
-    def createDAOGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncDAOGroupWithoutEntity[IdType]
+    def createCollectionGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncCollectionGroupWithoutEntity[IdType]
 
     def database : Database
     def config : MongoConfig

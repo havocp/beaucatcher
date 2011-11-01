@@ -23,11 +23,11 @@ private[jdriver] class OuterBValueValueComposer
     override def valueOut(v : Any) : BValue = wrapJavaAsBValue(v)
 }
 
-private[jdriver] class BObjectJavaDriverDAOGroup[BObjectIdType, JavaDriverIdType](
+private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDriverIdType](
     val backend : JavaDriverBackend,
     val collection : DBCollection,
     private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
-    extends SyncDAOGroupWithoutEntity[BObjectIdType] {
+    extends SyncCollectionGroupWithoutEntity[BObjectIdType] {
     require(backend != null)
     require(collection != null)
 
@@ -42,29 +42,29 @@ private[jdriver] class BObjectJavaDriverDAOGroup[BObjectIdType, JavaDriverIdType
         new OuterBValueValueComposer()
 
     /**
-     *  This is the "raw" JavaDriver DAO, if you need to work with a DBObject for some reason.
+     *  This is the "raw" JavaDriver Collection, if you need to work with a DBObject for some reason.
      *  This is best avoided because the hope is that Hammersmith would allow us to
      *  eliminate this layer. In fact, we'll make this private...
      */
-    private lazy val jdriverSyncDAO : JavaDriverSyncDAO[JavaDriverIdType] = {
+    private lazy val jdriverSyncCollection : JavaDriverSyncCollection[JavaDriverIdType] = {
         val outerCollection = collection
         val outerBackend = backend
-        new JavaDriverSyncDAO[JavaDriverIdType] {
+        new JavaDriverSyncCollection[JavaDriverIdType] {
             override val collection = outerCollection
             override val backend = outerBackend
         }
     }
 
     /**
-     *  This DAO works with a traversable immutable BSON tree (BObject), which is probably
+     *  This Collection works with a traversable immutable BSON tree (BObject), which is probably
      *  the best representation if you want to convert to JSON. This is intended to be the "raw"
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    override lazy val bobjectSync : BObjectSyncDAO[BObjectIdType] = {
+    override lazy val bobjectSync : BObjectSyncCollection[BObjectIdType] = {
         val outerBackend = backend
-        new BObjectJavaDriverSyncDAO[BObjectIdType, JavaDriverIdType] {
-            override val inner = jdriverSyncDAO
+        new BObjectJavaDriverSyncCollection[BObjectIdType, JavaDriverIdType] {
+            override val inner = jdriverSyncCollection
             override val backend = outerBackend
             override val queryComposer = bobjectJavaDriverQueryComposer
             override val entityComposer = bobjectJavaDriverEntityComposer
@@ -75,27 +75,27 @@ private[jdriver] class BObjectJavaDriverDAOGroup[BObjectIdType, JavaDriverIdType
 }
 
 /**
- * A DAOGroup exposes the entire chain of DAO conversions; you can "tap in" and use the
- * nicest DAO at whatever level is convenient for whatever you're doing. You can also
+ * A CollectionGroup exposes the entire chain of Collection conversions; you can "tap in" and use the
+ * nicest Collection at whatever level is convenient for whatever you're doing. You can also
  * override any of the conversions as the data makes its way up from MongoDB.
  *
- * The long-term idea is to get rid of the JavaDriver part, and the DAOGroup will
- * have a 2x2 of DAO flavors: sync vs. async, and BObject vs. case entity.
+ * The long-term idea is to get rid of the JavaDriver part, and the CollectionGroup will
+ * have a 2x2 of Collection flavors: sync vs. async, and BObject vs. case entity.
  *
  * Rather than a bunch of annotations specifying how to go from MongoDB to
  * the case entity, there's a theory here that you can override the
  * "composer" objects and do things like validation or dealing with legacy
  * object formats in there.
  */
-private[jdriver] class EntityBObjectJavaDriverDAOGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, JavaDriverIdType](
+private[jdriver] class EntityBObjectJavaDriverCollectionGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, JavaDriverIdType](
     override val backend : JavaDriverBackend,
     override val collection : DBCollection,
     val entityBObjectQueryComposer : QueryComposer[BObject, BObject],
     val entityBObjectEntityComposer : EntityComposer[EntityType, BObject],
     val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],
     private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
-    extends BObjectJavaDriverDAOGroup[BObjectIdType, JavaDriverIdType](backend, collection, bobjectJavaDriverIdComposer)
-    with SyncDAOGroup[EntityType, EntityIdType, BObjectIdType] {
+    extends BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDriverIdType](backend, collection, bobjectJavaDriverIdComposer)
+    with SyncCollectionGroup[EntityType, EntityIdType, BObjectIdType] {
     require(backend != null)
     require(collection != null)
     require(entityBObjectQueryComposer != null)
@@ -103,13 +103,13 @@ private[jdriver] class EntityBObjectJavaDriverDAOGroup[EntityType <: AnyRef : Ma
     require(entityBObjectIdComposer != null)
 
     /**
-     *  This DAO works with a specified case class, for typesafe access to fields
+     *  This Collection works with a specified case class, for typesafe access to fields
      *  from within Scala code. You also know that all the fields are present
      *  if the case class was successfully constructed.
      */
-    override lazy val entitySync : EntitySyncDAO[BObject, EntityType, EntityIdType] = {
+    override lazy val entitySync : EntitySyncCollection[BObject, EntityType, EntityIdType] = {
         val outerBackend = backend
-        new EntityBObjectSyncDAO[EntityType, EntityIdType, BObjectIdType] {
+        new EntityBObjectSyncCollection[EntityType, EntityIdType, BObjectIdType] {
             override val inner = bobjectSync
             override val backend = outerBackend
             override val queryComposer = entityBObjectQueryComposer

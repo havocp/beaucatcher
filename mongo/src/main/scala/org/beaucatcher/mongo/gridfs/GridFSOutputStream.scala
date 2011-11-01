@@ -41,7 +41,7 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
             digest.update(bytes)
 
             try {
-                fs.chunksDAO.save(chunk).throwIfNotOk
+                fs.chunksCollection.save(chunk).throwIfNotOk
             } catch {
                 case ex : MongoException =>
                     failed = true
@@ -112,7 +112,7 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
                     val newFile = new GridFSFile(file.underlying ++ newFileFields)
 
                     try {
-                        fs.filesDAO.save(newFile).throwIfNotOk
+                        fs.filesCollection.save(newFile).throwIfNotOk
                     } catch {
                         case ex : MongoException =>
                             throw new IOException("Failed to write file md5 and length, file " + newFile, ex)

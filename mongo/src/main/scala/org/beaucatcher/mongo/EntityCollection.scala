@@ -3,31 +3,31 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 
 /**
- * A Sync DAO parameterized to support returning some kind of domain object ("entity").
+ * A Sync Collection parameterized to support returning some kind of domain object ("entity").
  */
-abstract trait EntitySyncDAO[OuterQueryType, EntityType <: AnyRef, IdType]
-    extends SyncDAO[OuterQueryType, EntityType, IdType, Any] {
+abstract trait EntitySyncCollection[OuterQueryType, EntityType <: AnyRef, IdType]
+    extends SyncCollection[OuterQueryType, EntityType, IdType, Any] {
 
 }
 
 /**
- * The general type of an entity DAO that backends to another DAO.
+ * The general type of an entity Collection that backends to another Collection.
  * This is an internal implementation class not exported from the library.
  */
-private[beaucatcher] abstract trait EntityComposedSyncDAO[OuterQueryType, EntityType <: AnyRef, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
-    extends EntitySyncDAO[OuterQueryType, EntityType, OuterIdType]
-    with ComposedSyncDAO[OuterQueryType, EntityType, OuterIdType, Any, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType] {
+private[beaucatcher] abstract trait EntityComposedSyncCollection[OuterQueryType, EntityType <: AnyRef, OuterIdType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
+    extends EntitySyncCollection[OuterQueryType, EntityType, OuterIdType]
+    with ComposedSyncCollection[OuterQueryType, EntityType, OuterIdType, Any, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType] {
 }
 
 /**
- * An entity DAO that specifically backends to a BObject DAO and uses BObject
+ * An entity Collection that specifically backends to a BObject Collection and uses BObject
  * for queries.
  * Subclass would provide the backend and could override the in/out type converters.
  * This is an internal implementation class not exported from the library.
  */
-private[beaucatcher] abstract trait EntityBObjectSyncDAO[EntityType <: AnyRef, OuterIdType, InnerIdType]
-    extends EntityComposedSyncDAO[BObject, EntityType, OuterIdType, BObject, BObject, InnerIdType, BValue] {
-    override protected val inner : BObjectSyncDAO[InnerIdType]
+private[beaucatcher] abstract trait EntityBObjectSyncCollection[EntityType <: AnyRef, OuterIdType, InnerIdType]
+    extends EntityComposedSyncCollection[BObject, EntityType, OuterIdType, BObject, BObject, InnerIdType, BValue] {
+    override protected val inner : BObjectSyncCollection[InnerIdType]
 
     override def entityToUpsertableObject(entity : EntityType) : BObject = {
         entityIn(entity)

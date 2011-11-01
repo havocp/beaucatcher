@@ -24,13 +24,13 @@ private[hammersmith] class OuterBValueValueComposer
     override def valueOut(v : Any) : BValue = wrapJavaAsBValue(v)
 }
 
-private[hammersmith] class EntityBObjectHammersmithDAOGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, HammersmithIdType <: AnyRef](
+private[hammersmith] class EntityBObjectHammersmithCollectionGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, HammersmithIdType <: AnyRef](
     val collection : Collection,
     val entityBObjectQueryComposer : QueryComposer[BObject, BObject],
     val entityBObjectEntityComposer : EntityComposer[EntityType, BObject],
     val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],
     private val bobjectHammersmithIdComposer : IdComposer[BObjectIdType, HammersmithIdType])
-    extends SyncDAOGroup[EntityType, EntityIdType, BObjectIdType] {
+    extends SyncCollectionGroup[EntityType, EntityIdType, BObjectIdType] {
     require(collection != null)
     require(entityBObjectQueryComposer != null)
     require(entityBObjectEntityComposer != null)
@@ -48,17 +48,17 @@ private[hammersmith] class EntityBObjectHammersmithDAOGroup[EntityType <: AnyRef
         new OuterBValueValueComposer()
 
     /**
-     *  This is the "raw" Hammersmith DAO, if you need to work with a BSONDocument for some reason.
+     *  This is the "raw" Hammersmith Collection, if you need to work with a BSONDocument for some reason.
      *  This is best avoided because the hope is that Hammersmith would allow us to
      *  eliminate this layer. In fact, we'll make this private...
      */
-    private lazy val hammersmithSyncDAO : SyncDAO[BSONDocument, BObject, HammersmithIdType, Any] = {
-        makeSync(new HammersmithAsyncDAO[BObject, HammersmithIdType](collection))
+    private lazy val hammersmithSyncCollection : SyncCollection[BSONDocument, BObject, HammersmithIdType, Any] = {
+        makeSync(new HammersmithAsyncCollection[BObject, HammersmithIdType](collection))
     }
 
-    override lazy val bobjectSync : BObjectSyncDAO[BObjectIdType] = {
-        new BObjectHammersmithSyncDAO[BObjectIdType, HammersmithIdType] {
-            override val backend = hammersmithSyncDAO
+    override lazy val bobjectSync : BObjectSyncCollection[BObjectIdType] = {
+        new BObjectHammersmithSyncCollection[BObjectIdType, HammersmithIdType] {
+            override val backend = hammersmithSyncCollection
             override val queryComposer = bobjectHammersmithQueryComposer
             override val entityComposer = bobjectHammersmithEntityComposer
             override val idComposer = bobjectHammersmithIdComposer
@@ -66,8 +66,8 @@ private[hammersmith] class EntityBObjectHammersmithDAOGroup[EntityType <: AnyRef
         }
     }
 
-    override lazy val entitySync : EntitySyncDAO[BObject, EntityType, EntityIdType] = {
-        new EntityBObjectSyncDAO[EntityType, EntityIdType, BObjectIdType] {
+    override lazy val entitySync : EntitySyncCollection[BObject, EntityType, EntityIdType] = {
+        new EntityBObjectSyncCollection[EntityType, EntityIdType, BObjectIdType] {
             override val backend = bobjectSync
             override val queryComposer = entityBObjectQueryComposer
             override val entityComposer = entityBObjectEntityComposer

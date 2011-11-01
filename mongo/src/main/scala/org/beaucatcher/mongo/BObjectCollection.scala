@@ -4,15 +4,15 @@ import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 
 /**
- * A Sync DAO parameterized to work with BObject
+ * A Sync Collection parameterized to work with BObject
  */
-abstract trait BObjectSyncDAO[IdType] extends SyncDAO[BObject, BObject, IdType, BValue] {
+abstract trait BObjectSyncCollection[IdType] extends SyncCollection[BObject, BObject, IdType, BValue] {
 }
 
-/** A BObject DAO that backends to another DAO. This is an internal implementation class not exported from the library. */
-private[beaucatcher] abstract trait BObjectComposedSyncDAO[OuterIdType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
-    extends BObjectSyncDAO[OuterIdType]
-    with ComposedSyncDAO[BObject, BObject, OuterIdType, BValue, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType] {
+/** A BObject Collection that backends to another Collection. This is an internal implementation class not exported from the library. */
+private[beaucatcher] abstract trait BObjectComposedSyncCollection[OuterIdType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
+    extends BObjectSyncCollection[OuterIdType]
+    with ComposedSyncCollection[BObject, BObject, OuterIdType, BValue, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType] {
 
     override def entityToUpsertableObject(entity : BObject) : BObject = {
         entity

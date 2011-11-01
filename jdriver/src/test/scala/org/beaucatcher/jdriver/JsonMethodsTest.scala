@@ -18,15 +18,15 @@ package restdemo {
         with JavaDriverTestProvider
         with JsonMethods[Foo] {
         // the default collection name would conflict with the Foo
-        // in DAOTest since tests are run concurrently;
+        // in CollectionTest since tests are run concurrently;
         // in apps you don't usually have to set this manually
         override val collectionName = "restfoo"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[Foo])
-        override def jsonSync : SyncDAO[BObject, BObject, _, _] = sync[BObject]
+        override def jsonSync : SyncCollection[BObject, BObject, _, _] = sync[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
-        // This object inherits a complete DAO for BObject and for the Foo case class,
+        // This object inherits a complete Collection for BObject and for the Foo case class,
         // plus CRUD methods that accept/return JSON strings. In this file we're
         // testing the CRUD methods.
     }
@@ -37,12 +37,12 @@ package restdemo {
         with JavaDriverTestProvider
         with JsonMethods[FooWithIntId] {
         // the default collection name would conflict with the FooWithIntId
-        // in DAOTest since tests are run concurrently;
+        // in CollectionTest since tests are run concurrently;
         // in apps you don't usually have to set this manually
         override val collectionName = "restfooWithIntId"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[FooWithIntId])
-        override def jsonSync : SyncDAO[BObject, BObject, _, _] = sync[BObject]
+        override def jsonSync : SyncCollection[BObject, BObject, _, _] = sync[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         override def parseJValueIdFromPath(path : String) : BInt32 = {

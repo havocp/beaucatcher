@@ -45,13 +45,13 @@ final class HammersmithBackend private[hammersmith] (private val config : MongoC
     override def underlyingDatabase : DB = connection(hammersmithURI.db.get)
     override def underlyingCollection(name : String) : Collection = collection(name)
 
-    override final def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
+    override final def createCollectionGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         entityBObjectQueryComposer : QueryComposer[BObject, BObject],
-        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncDAOGroup[EntityType, IdType, IdType] = {
+        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncCollectionGroup[EntityType, IdType, IdType] = {
         val identityIdComposer = new IdentityIdComposer[IdType]
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
-            new EntityBObjectHammersmithDAOGroup[EntityType, IdType, IdType, JavaObjectId](collection(collectionName),
+            new EntityBObjectHammersmithCollectionGroup[EntityType, IdType, IdType, JavaObjectId](collection(collectionName),
                 entityBObjectQueryComposer,
                 entityBObjectEntityComposer,
                 identityIdComposer,
@@ -61,7 +61,7 @@ final class HammersmithBackend private[hammersmith] (private val config : MongoC
                 override def idOut(id : AnyRef) : IdType = id.asInstanceOf[IdType]
                 override def idIn(id : IdType) : AnyRef = id.asInstanceOf[AnyRef]
             }
-            new EntityBObjectHammersmithDAOGroup[EntityType, IdType, IdType, AnyRef](collection(collectionName),
+            new EntityBObjectHammersmithCollectionGroup[EntityType, IdType, IdType, AnyRef](collection(collectionName),
                 entityBObjectQueryComposer,
                 entityBObjectEntityComposer,
                 identityIdComposer,

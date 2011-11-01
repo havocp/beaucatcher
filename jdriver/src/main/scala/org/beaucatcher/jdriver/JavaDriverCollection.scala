@@ -9,10 +9,10 @@ import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaComman
 import j.JavaConversions._
 
 /**
- * Base trait that chains SyncDAO methods to a JavaDriver collection, which must be provided
+ * Base trait that chains SyncCollection methods to a JavaDriver collection, which must be provided
  * by a subclass of this trait.
  */
-abstract trait JavaDriverSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType, Any] {
+abstract trait JavaDriverSyncCollection[IdType <: Any] extends SyncCollection[DBObject, DBObject, IdType, Any] {
     override private[beaucatcher] def backend : JavaDriverBackend
     protected def collection : DBCollection
 
@@ -189,11 +189,11 @@ abstract trait JavaDriverSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObje
     }
 
     override def ensureIndex(keys : DBObject, options : IndexOptions) : WriteResult = {
-        throw new BugInSomethingMongoException("ensureIndex() should be implemented on an outer wrapper DAO and not make it here")
+        throw new BugInSomethingMongoException("ensureIndex() should be implemented on an outer wrapper Collection and not make it here")
     }
 
     override def dropIndex(indexName : String) : CommandResult = {
-        throw new BugInSomethingMongoException("dropIndex() should be implemented on an outer wrapper DAO and not make it here")
+        throw new BugInSomethingMongoException("dropIndex() should be implemented on an outer wrapper Collection and not make it here")
     }
 }
 
@@ -212,12 +212,12 @@ private[jdriver] class BObjectJavaDriverEntityComposer extends EntityComposer[BO
 }
 
 /**
- * A BObject DAO that specifically backends to a JavaDriver DAO.
+ * A BObject Collection that specifically backends to a JavaDriver Collection.
  * Subclass would provide the backend and could override the in/out type converters.
  */
-private[jdriver] abstract trait BObjectJavaDriverSyncDAO[OuterIdType, InnerIdType]
-    extends BObjectComposedSyncDAO[OuterIdType, DBObject, DBObject, InnerIdType, Any] {
-    override protected val inner : JavaDriverSyncDAO[InnerIdType]
+private[jdriver] abstract trait BObjectJavaDriverSyncCollection[OuterIdType, InnerIdType]
+    extends BObjectComposedSyncCollection[OuterIdType, DBObject, DBObject, InnerIdType, Any] {
+    override protected val inner : JavaDriverSyncCollection[InnerIdType]
 
     override protected val queryComposer : QueryComposer[BObject, DBObject]
     override protected val entityComposer : EntityComposer[BObject, DBObject]

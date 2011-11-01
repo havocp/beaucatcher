@@ -67,16 +67,16 @@ trait CollectionOperationsBaseTrait[IdType] {
 trait CollectionOperationsWithoutEntityTrait[IdType] extends CollectionOperationsBaseTrait[IdType] {
     self : MongoBackendProvider =>
 
-    private lazy val daoGroup : SyncDAOGroupWithoutEntity[IdType] =
-        backend.createDAOGroupWithoutEntity(collectionName)
+    private lazy val collectionGroup : SyncCollectionGroupWithoutEntity[IdType] =
+        backend.createCollectionGroupWithoutEntity(collectionName)
 
-    private[mongo] lazy val bobjectSync : SyncDAO[BObject, BObject, IdType, BValue] =
-        daoGroup.bobjectSync
+    private[mongo] lazy val bobjectSync : SyncCollection[BObject, BObject, IdType, BValue] =
+        collectionGroup.bobjectSync
 
     /**
-     * Obtains the `SyncDAO` for this collection.
+     * Obtains the `SyncCollection` for this collection.
      */
-    def sync : SyncDAO[BObject, BObject, IdType, BValue] = bobjectSync
+    def sync : SyncCollection[BObject, BObject, IdType, BValue] = bobjectSync
 }
 
 /**
@@ -112,25 +112,25 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends Collection
      */
     implicit protected def entityTypeManifest : Manifest[EntityType]
 
-    private lazy val daoGroup : SyncDAOGroup[EntityType, IdType, IdType] = {
+    private lazy val collectionGroup : SyncCollectionGroup[EntityType, IdType, IdType] = {
         require(entityTypeManifest != null)
-        backend.createDAOGroup(collectionName, entityBObjectQueryComposer,
+        backend.createCollectionGroup(collectionName, entityBObjectQueryComposer,
             entityBObjectEntityComposer)
     }
 
-    /** Synchronous DAO returning BObject values from the collection */
-    private[mongo] final lazy val bobjectSync : BObjectSyncDAO[IdType] =
-        daoGroup.bobjectSync
+    /** Synchronous Collection returning BObject values from the collection */
+    private[mongo] final lazy val bobjectSync : BObjectSyncCollection[IdType] =
+        collectionGroup.bobjectSync
 
-    /** Synchronous DAO returning case class entity values from the collection */
-    private[mongo] final lazy val entitySync : EntitySyncDAO[BObject, EntityType, IdType] =
-        daoGroup.entitySync
+    /** Synchronous Collection returning case class entity values from the collection */
+    private[mongo] final lazy val entitySync : EntitySyncCollection[BObject, EntityType, IdType] =
+        collectionGroup.entitySync
 
     /**
-     * The type of a DAO chooser that will select the proper DAO for result type E and value type V on this
+     * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
      * CollectionOperations object. Used as implicit argument to sync method.
      */
-    type SyncDAOChooser[E, V] = GenericSyncDAOChooser[E, IdType, V, CollectionOperationsTrait[EntityType, IdType]]
+    type SyncCollectionChooser[E, V] = GenericSyncCollectionChooser[E, IdType, V, CollectionOperationsTrait[EntityType, IdType]]
 
     /**
      * This lets you write a function that generically works for either the entity (often case class) or
@@ -141,27 +141,27 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends Collection
      *    sync[MyCaseClass].find() // returns MyCaseClass results
      *    def myQuery[E] = sync[E].find(... query ...) // generic query
      * }}}
-     * With methods such as distinct(), you probably need the `syncDAO[E,V]` flavor that lets you specify
+     * With methods such as distinct(), you probably need the `sync[E,V]` flavor that lets you specify
      * the type of field values.
-     * With methods that don't return objects, such as count(), you can use the `syncDAO` flavor with no
+     * With methods that don't return objects, such as count(), you can use the `sync` flavor with no
      * type parameters.
      */
-    def sync[E](implicit chooser : SyncDAOChooser[E, _]) : SyncDAO[BObject, E, IdType, _] = {
+    def sync[E](implicit chooser : SyncCollectionChooser[E, _]) : SyncCollection[BObject, E, IdType, _] = {
         chooser.choose(this)
     }
 
     /**
-     * This lets you specify the field value type of the synchronous DAO you are asking for;
+     * This lets you specify the field value type of the synchronous Collection you are asking for;
      * the only time this matters right now is if you're using the distinct() method
-     * on the DAO since it returns field values. You would use it like
+     * on the Collection since it returns field values. You would use it like
      * {{{
      *    sync[BObject,BValue].distinct("foo") // returns Seq[BValue]
      *    sync[MyCaseClass,Any].distinct("foo") // returns Seq[Any]
      * }}}
-     * Otherwise, you can use the `syncDAO[E]` version that only requires you to specify
-     * the entity type, or the `syncDAO` version with no type parameters at all.
+     * Otherwise, you can use the `sync[E]` version that only requires you to specify
+     * the entity type, or the `sync` version with no type parameters at all.
      */
-    def sync[E, V](implicit chooser : SyncDAOChooser[E, V], ignored : DummyImplicit) : SyncDAO[BObject, E, IdType, V] = {
+    def sync[E, V](implicit chooser : SyncCollectionChooser[E, V], ignored : DummyImplicit) : SyncCollection[BObject, E, IdType, V] = {
         chooser.choose(this)
     }
 
@@ -169,14 +169,14 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends Collection
      * If the type of entity returned doesn't matter, then you can use this overload
      * of sync which does not require you to specify an entity type.
      * If you're calling a method that does return objects or field values, then you
-     * need to use `syncDAO[E]` or `syncDAO[E,V]` to specify the object type or field
+     * need to use `sync[E]` or `sync[E,V]` to specify the object type or field
      * value type.
      */
-    def sync : SyncDAO[BObject, _, IdType, _] = bobjectSync
+    def sync : SyncCollection[BObject, _, IdType, _] = bobjectSync
 
     /**
      * There probably isn't a reason to override this, but it would modify a query
-     * as it went from the case class DAO to the BObject DAO.
+     * as it went from the case class Collection to the BObject Collection.
      */
     protected lazy val entityBObjectQueryComposer : QueryComposer[BObject, BObject] =
         new IdentityQueryComposer()
@@ -193,20 +193,20 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends Collection
 }
 
 object CollectionOperationsTrait {
-    // used as an implicit parameter to select the correct DAO based on requested query result type
-    @implicitNotFound(msg = "No synchronous DAO that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionOperations '${CO}') (implicit GenericSyncDAOChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
-    trait GenericSyncDAOChooser[E, I, V, -CO] {
-        def choose(ops : CO) : SyncDAO[BObject, E, I, V]
+    // used as an implicit parameter to select the correct Collection based on requested query result type
+    @implicitNotFound(msg = "No synchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionOperations '${CO}') (implicit GenericSyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
+    trait GenericSyncCollectionChooser[E, I, V, -CO] {
+        def choose(ops : CO) : SyncCollection[BObject, E, I, V]
     }
 
-    implicit def createDAOChooserForBObject[I] : GenericSyncDAOChooser[BObject, I, BValue, CollectionOperationsTrait[_, I]] = {
-        new GenericSyncDAOChooser[BObject, I, BValue, CollectionOperationsTrait[_, I]] {
+    implicit def createCollectionChooserForBObject[I] : GenericSyncCollectionChooser[BObject, I, BValue, CollectionOperationsTrait[_, I]] = {
+        new GenericSyncCollectionChooser[BObject, I, BValue, CollectionOperationsTrait[_, I]] {
             def choose(ops : CollectionOperationsTrait[_, I]) = ops.bobjectSync
         }
     }
 
-    implicit def createDAOChooserForEntity[E <: AnyRef, I] : GenericSyncDAOChooser[E, I, Any, CollectionOperationsTrait[E, I]] = {
-        new GenericSyncDAOChooser[E, I, Any, CollectionOperationsTrait[E, I]] {
+    implicit def createCollectionChooserForEntity[E <: AnyRef, I] : GenericSyncCollectionChooser[E, I, Any, CollectionOperationsTrait[E, I]] = {
+        new GenericSyncCollectionChooser[E, I, Any, CollectionOperationsTrait[E, I]] {
             def choose(ops : CollectionOperationsTrait[E, I]) = ops.entitySync
         }
     }

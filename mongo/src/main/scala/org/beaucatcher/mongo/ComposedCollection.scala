@@ -1,13 +1,13 @@
 package org.beaucatcher.mongo
 
 /**
- * A DAO that backends to another DAO. The two may have different query, entity, and ID types.
+ * A Collection that backends to another Collection. The two may have different query, entity, and ID types.
  * This is an internal implementation class not exported from the library.
  */
-private[beaucatcher] abstract trait ComposedSyncDAO[OuterQueryType, OuterEntityType, OuterIdType, OuterValueType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
-    extends SyncDAO[OuterQueryType, OuterEntityType, OuterIdType, OuterValueType] {
+private[beaucatcher] abstract trait ComposedSyncCollection[OuterQueryType, OuterEntityType, OuterIdType, OuterValueType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
+    extends SyncCollection[OuterQueryType, OuterEntityType, OuterIdType, OuterValueType] {
 
-    protected val inner : SyncDAO[InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
+    protected val inner : SyncCollection[InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
 
     protected val queryComposer : QueryComposer[OuterQueryType, InnerQueryType]
     protected val entityComposer : EntityComposer[OuterEntityType, InnerEntityType]

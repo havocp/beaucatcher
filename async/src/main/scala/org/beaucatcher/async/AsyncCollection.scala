@@ -5,7 +5,7 @@ import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.mongo._
 import akka.dispatch.Future
 
-abstract trait AsyncDAO[QueryType, EntityType, IdType, ValueType] {
+abstract trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
     private[beaucatcher] def backend : MongoBackend
 
     /** The database containing the collection */
@@ -158,6 +158,6 @@ abstract trait AsyncDAO[QueryType, EntityType, IdType, ValueType] {
     def findIndexes() : Future[Iterator[Future[CollectionIndex]]]
 }
 
-object AsyncDAO {
+object AsyncCollection {
 
 }

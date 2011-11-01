@@ -7,11 +7,11 @@ import akka.dispatch.Future
 
 package object async {
 
-    private class AsyncDAOWrappingSync[QueryType, EntityType, IdType, ValueType](private[async] val underlying : SyncDAO[QueryType, EntityType, IdType, ValueType])
-        extends AsyncDAO[QueryType, EntityType, IdType, ValueType] {
-        // FIXME use one global pool, not a different one per DAO; pass the underlying sync DAO
+    private class AsyncCollectionWrappingSync[QueryType, EntityType, IdType, ValueType](private[async] val underlying : SyncCollection[QueryType, EntityType, IdType, ValueType])
+        extends AsyncCollection[QueryType, EntityType, IdType, ValueType] {
+        // FIXME use one global pool, not a different one per Collection; pass the underlying sync Collection
         // in the messages.
-        private val actor = Actor.actorOf(new DAOActor[QueryType, EntityType, IdType, ValueType](underlying)).start
+        private val actor = Actor.actorOf(new CollectionActor[QueryType, EntityType, IdType, ValueType](underlying)).start
 
         override def backend =
             underlying.backend
@@ -59,8 +59,8 @@ package object async {
         }
     }
 
-    private class SyncDAOWrappingAsync[QueryType, EntityType, IdType, ValueType](private[async] val underlying : AsyncDAO[QueryType, EntityType, IdType, ValueType])
-        extends SyncDAO[QueryType, EntityType, IdType, ValueType] {
+    private class SyncCollectionWrappingAsync[QueryType, EntityType, IdType, ValueType](private[async] val underlying : AsyncCollection[QueryType, EntityType, IdType, ValueType])
+        extends SyncCollection[QueryType, EntityType, IdType, ValueType] {
         override def backend =
             underlying.backend
         override def name =
@@ -101,23 +101,23 @@ package object async {
             underlying.dropIndex(name).get
     }
 
-    def makeAsync[QueryType, EntityType, IdType, ValueType](sync : SyncDAO[QueryType, EntityType, IdType, ValueType]) : AsyncDAO[QueryType, EntityType, IdType, ValueType] = {
+    def makeAsync[QueryType, EntityType, IdType, ValueType](sync : SyncCollection[QueryType, EntityType, IdType, ValueType]) : AsyncCollection[QueryType, EntityType, IdType, ValueType] = {
         sync match {
-            case wrapper : SyncDAOWrappingAsync[_, _, _, _] =>
+            case wrapper : SyncCollectionWrappingAsync[_, _, _, _] =>
                 // we can just "unwrap" to avoid building up a huge chain
-                wrapper.asInstanceOf[SyncDAOWrappingAsync[QueryType, EntityType, IdType, ValueType]].underlying
+                wrapper.asInstanceOf[SyncCollectionWrappingAsync[QueryType, EntityType, IdType, ValueType]].underlying
             case _ =>
-                new AsyncDAOWrappingSync(sync)
+                new AsyncCollectionWrappingSync(sync)
         }
     }
 
-    def makeSync[QueryType, EntityType, IdType, ValueType](async : AsyncDAO[QueryType, EntityType, IdType, ValueType]) : SyncDAO[QueryType, EntityType, IdType, ValueType] = {
+    def makeSync[QueryType, EntityType, IdType, ValueType](async : AsyncCollection[QueryType, EntityType, IdType, ValueType]) : SyncCollection[QueryType, EntityType, IdType, ValueType] = {
         async match {
-            case wrapper : AsyncDAOWrappingSync[_, _, _, _] =>
+            case wrapper : AsyncCollectionWrappingSync[_, _, _, _] =>
                 // we can just "unwrap" to avoid building up a huge chain
-                wrapper.asInstanceOf[AsyncDAOWrappingSync[QueryType, EntityType, IdType, ValueType]].underlying
+                wrapper.asInstanceOf[AsyncCollectionWrappingSync[QueryType, EntityType, IdType, ValueType]].underlying
             case _ =>
-                new SyncDAOWrappingAsync(async)
+                new SyncCollectionWrappingAsync(async)
         }
     }
 }
