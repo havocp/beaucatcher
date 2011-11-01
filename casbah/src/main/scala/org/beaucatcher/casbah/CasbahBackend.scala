@@ -2,9 +2,8 @@ package org.beaucatcher.casbah
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import com.mongodb.casbah.MongoURI
-import com.mongodb.casbah.Imports.{ ObjectId => JavaObjectId, _ }
-import com.mongodb.casbah.commons.conversions.scala._
+import com.mongodb._
+import org.bson.types.{ ObjectId => JavaObjectId, _ }
 import org.joda.time.DateTime
 
 /**
@@ -16,26 +15,24 @@ import org.joda.time.DateTime
 final class CasbahBackend private[casbah] (override val config : MongoConfig)
     extends MongoBackend {
 
-    private lazy val casbahURI = MongoURI(config.url)
+    private lazy val casbahURI = new MongoURI(config.url)
     private lazy val connection = CasbahBackend.connections.ensure(MongoConnectionAddress(config.url))
 
-    private def collection(name : String) : MongoCollection = {
+    override type ConnectionType = Mongo
+    override type DatabaseType = DB
+    override type CollectionType = DBCollection
+
+    override def underlyingConnection : Mongo = connection
+    override def underlyingDatabase : DB = connection.getDB(casbahURI.getDatabase())
+    override def underlyingCollection(name : String) : DBCollection = {
         if (name == null)
             throw new IllegalArgumentException("null collection name")
-        val db : MongoDB = connection(casbahURI.database)
+        val db : DB = underlyingDatabase
         assert(db != null)
-        val coll : MongoCollection = db(name)
+        val coll : DBCollection = db.getCollection(name)
         assert(coll != null)
         coll
     }
-
-    override type ConnectionType = MongoConnection
-    override type DatabaseType = MongoDB
-    override type CollectionType = MongoCollection
-
-    override def underlyingConnection : MongoConnection = connection
-    override def underlyingDatabase : MongoDB = connection(casbahURI.database)
-    override def underlyingCollection(name : String) : MongoCollection = collection(name)
 
     override final def createDAOGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
@@ -45,14 +42,14 @@ final class CasbahBackend private[casbah] (override val config : MongoConfig)
         if (idManifest <:< manifest[ObjectId]) {
             // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
             new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, JavaObjectId](this,
-                collection(collectionName),
+                underlyingCollection(collectionName),
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,
                 CasbahBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
             new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, IdType](this,
-                collection(collectionName),
+                underlyingCollection(collectionName),
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,
@@ -64,12 +61,12 @@ final class CasbahBackend private[casbah] (override val config : MongoConfig)
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
             new BObjectCasbahDAOGroup[IdType, JavaObjectId](this,
-                collection(collectionName),
+                underlyingCollection(collectionName),
                 CasbahBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
             val identityIdComposer = new IdentityIdComposer[IdType]
             new BObjectCasbahDAOGroup[IdType, IdType](this,
-                collection(collectionName),
+                underlyingCollection(collectionName),
                 identityIdComposer)
         }
     }
@@ -87,12 +84,12 @@ private[casbah] object CasbahBackend {
         override def idOut(id : JavaObjectId) : ObjectId = id
     }
 
-    val connections = new MongoConnectionStore[MongoConnection] {
+    val connections = new MongoConnectionStore[Mongo] {
         override def create(address : MongoConnectionAddress) = {
-            val c = MongoConnection(MongoURI(address.url))
+            val c = new Mongo(new MongoURI(address.url))
             // things are awfully race-prone without Safe, and you
             // don't get constraint violations for example
-            c.setWriteConcern(WriteConcern.Safe)
+            c.setWriteConcern(WriteConcern.SAFE)
             c
         }
     }

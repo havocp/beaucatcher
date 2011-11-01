@@ -20,5 +20,5 @@ private[casbah] class CasbahSyncDatabase(override protected val database : Casba
 private[casbah] class CasbahDatabase(override protected[casbah] val backend : CasbahBackend) extends Database {
     override lazy val sync = new CasbahSyncDatabase(this)
 
-    override def name = backend.underlyingDatabase.name
+    override def name = backend.underlyingDatabase.getName()
 }

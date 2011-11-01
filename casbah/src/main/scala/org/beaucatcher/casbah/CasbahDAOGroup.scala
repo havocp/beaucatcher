@@ -3,7 +3,7 @@ package org.beaucatcher.casbah
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import com.mongodb.DBObject
-import com.mongodb.casbah.MongoCollection
+import com.mongodb.DBCollection
 
 private[casbah] class InnerBValueValueComposer
     extends ValueComposer[Any, BValue] {
@@ -25,7 +25,7 @@ private[casbah] class OuterBValueValueComposer
 
 private[casbah] class BObjectCasbahDAOGroup[BObjectIdType, CasbahIdType](
     val backend : CasbahBackend,
-    val collection : MongoCollection,
+    val collection : DBCollection,
     private val bobjectCasbahIdComposer : IdComposer[BObjectIdType, CasbahIdType])
     extends SyncDAOGroupWithoutEntity[BObjectIdType] {
     require(backend != null)
@@ -89,7 +89,7 @@ private[casbah] class BObjectCasbahDAOGroup[BObjectIdType, CasbahIdType](
  */
 private[casbah] class EntityBObjectCasbahDAOGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, CasbahIdType](
     override val backend : CasbahBackend,
-    override val collection : MongoCollection,
+    override val collection : DBCollection,
     val entityBObjectQueryComposer : QueryComposer[BObject, BObject],
     val entityBObjectEntityComposer : EntityComposer[EntityType, BObject],
     val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],

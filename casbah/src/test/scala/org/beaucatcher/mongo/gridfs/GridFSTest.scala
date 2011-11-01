@@ -266,15 +266,11 @@ class GridFSTest extends TestUtils {
         assertTrue(jFile.underlying.contains("uploadDate"))
 
         assertEquals(Seq("bar"), ourFile.aliases)
-        // This is broken; the Java driver does this. If this assertion fails,
-        // maybe the Java driver is fixed, and you could included aliases
-        // below
-        assertEquals(BArray(BArray("bar") : BValue), jFile.underlying.get("aliases").get)
+        assertEquals(Seq("bar"), jFile.aliases)
 
-        // strip aliases due to the above bug, strip _id and uploadDate because they
-        // are not supposed to match.
-        val ourStripped = ourFile.underlying - "_id" - "uploadDate" - "aliases"
-        val jStripped = jFile.underlying - "_id" - "uploadDate" - "aliases"
+        // strip _id and uploadDate because they are not supposed to match.
+        val ourStripped = ourFile.underlying - "_id" - "uploadDate"
+        val jStripped = jFile.underlying - "_id" - "uploadDate"
 
         assertEquals(ourStripped.toSeq.sortBy(_._1),
             jStripped.toSeq.sortBy(_._1))

@@ -4,9 +4,7 @@ import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.beaucatcher.mongo.wire._
 import org.bson.BSONObject
-import com.mongodb.casbah.MongoCollection
-import com.mongodb.DBObject
-import com.mongodb.casbah.commons.MongoDBObject
+import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, _ }
 
 import j.JavaConversions._
 
@@ -16,22 +14,22 @@ import j.JavaConversions._
  */
 abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType, Any] {
     override private[beaucatcher] def backend : CasbahBackend
-    protected def collection : MongoCollection
+    protected def collection : DBCollection
 
     private implicit def fields2dbobject(fields : Fields) : DBObject = {
-        val builder = MongoDBObject.newBuilder
+        val builder = new BasicDBObjectBuilder()
         for (i <- fields.included) {
-            builder += (i -> 1)
+            builder.add(i, 1)
         }
         for (e <- fields.excluded) {
-            builder += (e -> 0)
+            builder.add(e, 0)
         }
-        builder.result
+        builder.get()
     }
 
-    override def name : String = collection.name
+    override def name : String = collection.getName()
 
-    override def emptyQuery : DBObject = MongoDBObject() // not immutable, so we always make a new one
+    override def emptyQuery : DBObject = new BasicDBObject() // not immutable, so we always make a new one
 
     override def entityToUpsertableObject(entity : DBObject) : DBObject = {
         // maybe we should copy this since it isn't immutable :-/
@@ -68,7 +66,9 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
     override def entityToUpdateQuery(entity : DBObject) : DBObject = {
         if (!entity.containsField("_id"))
             throw new IllegalArgumentException("Object is missing an _id field, can't save() or whatever you are doing")
-        MongoDBObject("_id" -> entity.get("_id"))
+        val obj = new BasicDBObject()
+        obj.put("_id", entity.get("_id"))
+        obj
     }
 
     override def count(query : DBObject, options : CountOptions) : Long = {
@@ -77,20 +77,35 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
             if (options.limit.isDefined || options.skip.isDefined)
                 collection.getCount(query, fieldsQuery, options.limit.getOrElse(0), options.skip.getOrElse(0))
             else
-                collection.count(query, fieldsQuery)
+                collection.getCount(query, fieldsQuery)
         }
     }
 
     override def distinct(key : String, options : DistinctOptions[DBObject]) : Seq[Any] = {
+        import scala.collection.JavaConverters._
+
         withQueryFlags(options.overrideQueryFlags) {
             if (options.query.isDefined)
-                collection.distinct(key, options.query.get)
+                collection.distinct(key, options.query.get).asScala
             else
-                collection.distinct(key)
+                collection.distinct(key).asScala
+        }
+    }
+
+    // adapter from DBCursor to scala Iterator
+    private class CursorIterator(cursor : DBCursor) extends Iterator[DBObject] {
+        override def next() : DBObject = {
+            cursor.next()
+        }
+
+        override def hasNext() : Boolean = {
+            cursor.hasNext()
         }
     }
 
     override def find(query : DBObject, options : FindOptions) : Iterator[DBObject] = {
+        import scala.collection.JavaConverters._
+
         val cursor = {
             if (options.fields.isDefined) {
                 collection.find(query, options.fields.get)
@@ -105,53 +120,49 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
         if (options.batchSize.isDefined)
             cursor.batchSize(options.batchSize.get.intValue)
         if (options.overrideQueryFlags.isDefined) {
-            cursor.options = options.overrideQueryFlags.get
+            cursor.setOptions(options.overrideQueryFlags.get)
         }
 
-        cursor
+        new CursorIterator(cursor)
     }
 
     override def findOne(query : DBObject, options : FindOneOptions) : Option[DBObject] = {
         withQueryFlags(options.overrideQueryFlags) {
             if (options.fields.isDefined) {
-                collection.findOne(query, options.fields.get)
+                Option(collection.findOne(query, options.fields.get))
             } else {
-                collection.findOne(query)
+                Option(collection.findOne(query))
             }
         }
     }
 
     override def findOneById(id : IdType, options : FindOneByIdOptions) : Option[DBObject] = {
-        withQueryFlags(options.overrideQueryFlags) {
-            if (options.fields.isDefined) {
-                collection.findOneByID(id.asInstanceOf[AnyRef], options.fields.get)
-            } else {
-                collection.findOneByID(id.asInstanceOf[AnyRef])
-            }
-        }
+        val query = new BasicDBObject()
+        query.put("_id", id)
+        findOne(query, FindOneOptions(options.fields, options.overrideQueryFlags))
     }
 
     override def findAndModify(query : DBObject, update : Option[DBObject], options : FindAndModifyOptions[DBObject]) : Option[DBObject] = {
         if (options.flags.contains(FindAndModifyRemove)) {
             if (update.isDefined)
                 throw new IllegalArgumentException("Does not make sense to provide a replacement or modifier object to findAndModify with remove flag")
-            collection.findAndRemove(query)
+            Option(collection.findAndRemove(query))
         } else if (!update.isDefined) {
             throw new IllegalArgumentException("Must provide a replacement or modifier object to findAndModify")
         } else if (options.flags.isEmpty && !options.fields.isDefined) {
             if (options.sort.isDefined)
-                collection.findAndModify(query, options.sort.get, update.get)
+                Option(collection.findAndModify(query, options.sort.get, update.get))
             else
-                collection.findAndModify(query, update.get)
+                Option(collection.findAndModify(query, update.get))
         } else {
-            collection.findAndModify(query,
+            Option(collection.findAndModify(query,
                 // getOrElse mixes poorly with implicit conversion from Fields
                 if (options.fields.isDefined) { options.fields.get : DBObject } else { emptyQuery },
                 options.sort.getOrElse(emptyQuery),
                 false, // remove
                 update.get,
                 options.flags.contains(FindAndModifyNew),
-                options.flags.contains(FindAndModifyUpsert))
+                options.flags.contains(FindAndModifyUpsert)))
         }
     }
 
@@ -172,7 +183,9 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
 
     override def removeById(id : IdType) : WriteResult = {
         import Implicits._
-        collection.remove(MongoDBObject("_id" -> id))
+        val obj = new BasicDBObject()
+        obj.put("_id", id)
+        collection.remove(obj)
     }
 
     override def ensureIndex(keys : DBObject, options : IndexOptions) : WriteResult = {

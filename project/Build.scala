@@ -53,7 +53,6 @@ object Dependencies {
     val scalap = "org.scala-lang" % "scalap" % BuildSettings.buildScalaVersion
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.6.5"
-    val casbahCore = "com.mongodb.casbah" %% "casbah-core" % "2.1.5-1"
     val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
     val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.7"
     val jodaTime = "joda-time" % "joda-time" % "1.6.2"
@@ -99,7 +98,7 @@ object BeaucatcherBuild extends Build {
         file("casbah"),
         settings = projectSettings ++
             makeGenerateBsonJavaSettings("org.beaucatcher.casbah") ++
-            Seq(libraryDependencies ++= Seq(casbahCore, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test")
+            Seq(libraryDependencies ++= Seq(mongoJavaDriver, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test")
 
     lazy val async = Project("beaucatcher-async",
         file("async"),

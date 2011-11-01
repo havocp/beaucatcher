@@ -5,8 +5,6 @@ import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.mongo._
 import org.beaucatcher.casbah._
-import com.mongodb.casbah.Imports._
-import com.mongodb.casbah.commons.conversions.scala._
 import org.joda.time.DateTime
 
 trait CasbahTestProvider

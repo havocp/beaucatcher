@@ -1,7 +1,5 @@
 package org.beaucatcher.casbah
 
-import com.mongodb.casbah.commons.MongoDBObject
-import com.mongodb.casbah.MongoCollection
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.casbah._

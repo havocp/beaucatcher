@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.casbah.Implicits._
-import com.mongodb.casbah.commons.MongoDBObject
+import com.mongodb.BasicDBObject
 import java.util.Date
 import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
@@ -17,15 +17,20 @@ class BsonCasbahTest {
     }
 
     protected def makeObjectWithImplicits() = {
+        val obj = new BasicDBObject()
+        obj.put("a", 30)
+        obj.put("b", "foo")
         BObject("int" -> 42,
-            "bsonobj" -> MongoDBObject("a" -> 30, "b" -> "foo"))
+            "bsonobj" -> obj)
     }
 
     protected def makeArrayWithImplicits() = {
+        val obj = new BasicDBObject()
+        obj.put("a", 30)
+        obj.put("b", "foo")
         // a non-homogeneous-typed array is pretty much nonsense, but JavaScript
         // lets you do whatever, so we let you do whatever.
-        BArray(42,
-            MongoDBObject("a" -> 30, "b" -> "foo"))
+        BArray(42, obj)
     }
 
     @Test
