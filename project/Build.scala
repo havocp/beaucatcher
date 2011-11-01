@@ -77,7 +77,7 @@ object BeaucatcherBuild extends Build {
     lazy val root = Project("beaucatcher",
         file("."),
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (bson, bsonJava, mongo, async, casbah)
+            Seq(publishArtifact := false)) aggregate (bson, bsonJava, mongo, async, jdriver)
 
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),
@@ -94,8 +94,8 @@ object BeaucatcherBuild extends Build {
         file("mongo"),
         settings = projectSettings) dependsOn (bson % "compile->compile;test->test")
 
-    lazy val casbah = Project("beaucatcher-casbah",
-        file("casbah"),
+    lazy val jdriver = Project("beaucatcher-java-driver",
+        file("jdriver"),
         settings = projectSettings ++
             makeGenerateBsonJavaSettings("org.beaucatcher.jdriver") ++
             Seq(libraryDependencies ++= Seq(mongoJavaDriver, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test")
@@ -114,7 +114,7 @@ object BeaucatcherBuild extends Build {
     lazy val benchmark = Project("beaucatcher-benchmark",
         file("benchmark"),
         settings = projectSettings ++
-            Seq(fork in run := true, javaOptions in run := Seq("-Xmx2G"))) dependsOn (hammersmith, casbah)
+            Seq(fork in run := true, javaOptions in run := Seq("-Xmx2G"))) dependsOn (hammersmith, jdriver)
 
     def makeGenerateBsonJavaSettings(packageName: String) = {
         Seq(

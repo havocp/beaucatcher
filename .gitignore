@@ -18,5 +18,5 @@
 /*/project/build/target/
 /*/lib_managed
 /*/target/
-/casbah/src/main/scala/org/beaucatcher/jdriver/j
+/jdriver/src/main/scala/org/beaucatcher/jdriver/j
 /hammersmith/src/main/scala/org/beaucatcher/hammersmith/j
