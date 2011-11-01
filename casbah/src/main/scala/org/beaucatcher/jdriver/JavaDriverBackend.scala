@@ -1,4 +1,4 @@
-package org.beaucatcher.casbah
+package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
@@ -7,23 +7,23 @@ import org.bson.types.{ ObjectId => JavaObjectId, _ }
 import org.joda.time.DateTime
 
 /**
- * [[org.beaucatcher.casbah.CasbahBackend]] is final with a private constructor - there's no way to create one
- * directly. However, a [[org.beaucatcher.casbah.CasbahBackendProvider]] exposes a [[org.beaucatcher.casbah.CasbahBackend]] and
+ * [[org.beaucatcher.jdriver.JavaDriverBackend]] is final with a private constructor - there's no way to create one
+ * directly. However, a [[org.beaucatcher.jdriver.JavaDriverBackendProvider]] exposes a [[org.beaucatcher.jdriver.JavaDriverBackend]] and
  * you may want to use `provider.backend.underlyingConnection`, `underlyingDB`, or `underlyingCollection`
- * to get at Casbah methods directly.
+ * to get at JavaDriver methods directly.
  */
-final class CasbahBackend private[casbah] (override val config : MongoConfig)
+final class JavaDriverBackend private[jdriver] (override val config : MongoConfig)
     extends MongoBackend {
 
-    private lazy val casbahURI = new MongoURI(config.url)
-    private lazy val connection = CasbahBackend.connections.ensure(MongoConnectionAddress(config.url))
+    private lazy val jdriverURI = new MongoURI(config.url)
+    private lazy val connection = JavaDriverBackend.connections.ensure(MongoConnectionAddress(config.url))
 
     override type ConnectionType = Mongo
     override type DatabaseType = DB
     override type CollectionType = DBCollection
 
     override def underlyingConnection : Mongo = connection
-    override def underlyingDatabase : DB = connection.getDB(casbahURI.getDatabase())
+    override def underlyingDatabase : DB = connection.getDB(jdriverURI.getDatabase())
     override def underlyingCollection(name : String) : DBCollection = {
         if (name == null)
             throw new IllegalArgumentException("null collection name")
@@ -41,14 +41,14 @@ final class CasbahBackend private[casbah] (override val config : MongoConfig)
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
             // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
-            new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, JavaObjectId](this,
+            new EntityBObjectJavaDriverDAOGroup[EntityType, IdType, IdType, JavaObjectId](this,
                 underlyingCollection(collectionName),
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,
-                CasbahBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
+                JavaDriverBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
-            new EntityBObjectCasbahDAOGroup[EntityType, IdType, IdType, IdType](this,
+            new EntityBObjectJavaDriverDAOGroup[EntityType, IdType, IdType, IdType](this,
                 underlyingCollection(collectionName),
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
@@ -60,23 +60,23 @@ final class CasbahBackend private[casbah] (override val config : MongoConfig)
     override def createDAOGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncDAOGroupWithoutEntity[IdType] = {
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
-            new BObjectCasbahDAOGroup[IdType, JavaObjectId](this,
+            new BObjectJavaDriverDAOGroup[IdType, JavaObjectId](this,
                 underlyingCollection(collectionName),
-                CasbahBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
+                JavaDriverBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
             val identityIdComposer = new IdentityIdComposer[IdType]
-            new BObjectCasbahDAOGroup[IdType, IdType](this,
+            new BObjectJavaDriverDAOGroup[IdType, IdType](this,
                 underlyingCollection(collectionName),
                 identityIdComposer)
         }
     }
 
     override final lazy val database = {
-        new CasbahDatabase(this)
+        new JavaDriverDatabase(this)
     }
 }
 
-private[casbah] object CasbahBackend {
+private[jdriver] object JavaDriverBackend {
 
     lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
         import j.JavaConversions._
@@ -98,13 +98,13 @@ private[casbah] object CasbahBackend {
 
 /**
  * Mix this trait into a subclass of [[org.beaucatcher.mongo.CollectionOperations]] to backend
- * the collection operations using Casbah
+ * the collection operations using JavaDriver
  */
-trait CasbahBackendProvider extends MongoBackendProvider {
+trait JavaDriverBackendProvider extends MongoBackendProvider {
     self : MongoConfigProvider =>
 
-    override lazy val backend : CasbahBackend = {
+    override lazy val backend : JavaDriverBackend = {
         require(mongoConfig != null)
-        new CasbahBackend(mongoConfig)
+        new JavaDriverBackend(mongoConfig)
     }
 }

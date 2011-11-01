@@ -1,4 +1,4 @@
-package org.beaucatcher.casbah
+package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
@@ -9,11 +9,11 @@ import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaComman
 import j.JavaConversions._
 
 /**
- * Base trait that chains SyncDAO methods to a Casbah collection, which must be provided
+ * Base trait that chains SyncDAO methods to a JavaDriver collection, which must be provided
  * by a subclass of this trait.
  */
-abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType, Any] {
-    override private[beaucatcher] def backend : CasbahBackend
+abstract trait JavaDriverSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, IdType, Any] {
+    override private[beaucatcher] def backend : JavaDriverBackend
     protected def collection : DBCollection
 
     private implicit def fields2dbobject(fields : Fields) : DBObject = {
@@ -45,7 +45,7 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
     private def withQueryFlags[R](maybeOverrideFlags : Option[Set[QueryFlag]])(body : => R) : R = {
         if (maybeOverrideFlags.isDefined) {
             // FIXME this is outrageously unthreadsafe but I'm not sure how to
-            // fix it given how Casbah works. It doesn't have API to override options
+            // fix it given how JavaDriver works. It doesn't have API to override options
             // for anything other than find() it looks like
             // so for now just always throw an exception
             val saved = collection.getOptions()
@@ -56,7 +56,7 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
 
             collection.resetOptions()
             collection.addOption(saved)
-            throw new UnsupportedOperationException("Casbah backend can't override query options on this operation")
+            throw new UnsupportedOperationException("JavaDriver backend can't override query options on this operation")
             //result
         } else {
             body
@@ -197,31 +197,31 @@ abstract trait CasbahSyncDAO[IdType <: Any] extends SyncDAO[DBObject, DBObject, 
     }
 }
 
-private[casbah] class BObjectCasbahQueryComposer extends QueryComposer[BObject, DBObject] {
-    import org.beaucatcher.casbah.Implicits._
+private[jdriver] class BObjectJavaDriverQueryComposer extends QueryComposer[BObject, DBObject] {
+    import org.beaucatcher.jdriver.Implicits._
 
     override def queryIn(q : BObject) : DBObject = new BObjectDBObject(q)
     override def queryOut(q : DBObject) : BObject = q
 }
 
-private[casbah] class BObjectCasbahEntityComposer extends EntityComposer[BObject, DBObject] {
-    import org.beaucatcher.casbah.Implicits._
+private[jdriver] class BObjectJavaDriverEntityComposer extends EntityComposer[BObject, DBObject] {
+    import org.beaucatcher.jdriver.Implicits._
 
     override def entityIn(o : BObject) : DBObject = new BObjectDBObject(o)
     override def entityOut(o : DBObject) : BObject = o
 }
 
 /**
- * A BObject DAO that specifically backends to a Casbah DAO.
+ * A BObject DAO that specifically backends to a JavaDriver DAO.
  * Subclass would provide the backend and could override the in/out type converters.
  */
-private[casbah] abstract trait BObjectCasbahSyncDAO[OuterIdType, InnerIdType]
+private[jdriver] abstract trait BObjectJavaDriverSyncDAO[OuterIdType, InnerIdType]
     extends BObjectComposedSyncDAO[OuterIdType, DBObject, DBObject, InnerIdType, Any] {
-    override protected val inner : CasbahSyncDAO[InnerIdType]
+    override protected val inner : JavaDriverSyncDAO[InnerIdType]
 
     override protected val queryComposer : QueryComposer[BObject, DBObject]
     override protected val entityComposer : EntityComposer[BObject, DBObject]
     override protected val idComposer : IdComposer[OuterIdType, InnerIdType]
     override protected val valueComposer : ValueComposer[BValue, Any]
-    override protected val exceptionMapper = casbahExceptionMapper
+    override protected val exceptionMapper = jdriverExceptionMapper
 }

@@ -6,22 +6,22 @@ import org.bson.BSONObject
 import org.bson.BSONException
 import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, MongoException => JavaMongoException, _ }
 
-package object casbah {
+package object jdriver {
     import j.JavaConversions._
 
     object Implicits {
-        private[casbah] implicit def asScalaBObject(bsonObj : BSONObject) = j.JavaConversions.asScalaBObject(bsonObj)
+        private[jdriver] implicit def asScalaBObject(bsonObj : BSONObject) = j.JavaConversions.asScalaBObject(bsonObj)
 
-        private[casbah] implicit def asScalaWriteResult(j : JavaWriteResult) : WriteResult = {
+        private[jdriver] implicit def asScalaWriteResult(j : JavaWriteResult) : WriteResult = {
             new WriteResult({ asScalaBObject(j.getLastError()) })
         }
 
-        private[casbah] implicit def asScalaCommandResult(j : JavaCommandResult) : CommandResult = {
+        private[jdriver] implicit def asScalaCommandResult(j : JavaCommandResult) : CommandResult = {
             new CommandResult({ asScalaBObject(j) })
         }
     }
 
-    private[casbah] trait BValueDBObject extends DBObject {
+    private[jdriver] trait BValueDBObject extends DBObject {
         private[this] var isPartial : Boolean = false
 
         override def isPartialObject() : Boolean = isPartial
@@ -35,15 +35,15 @@ package object casbah {
      * adds DBObject extensions to BSONObject.
      * This is an internal implementation class not exported by the library.
      */
-    private[casbah] class BObjectDBObject(b : BObject = BObject.empty) extends j.BObjectBSONObject(b) with BValueDBObject {
+    private[jdriver] class BObjectDBObject(b : BObject = BObject.empty) extends j.BObjectBSONObject(b) with BValueDBObject {
 
     }
 
-    private[casbah] class BArrayDBObject(b : BArray = BArray.empty) extends j.BArrayBSONObject(b) with BValueDBObject {
+    private[jdriver] class BArrayDBObject(b : BArray = BArray.empty) extends j.BArrayBSONObject(b) with BValueDBObject {
 
     }
 
-    private[casbah] val casbahExceptionMapper : PartialFunction[Throwable, MongoException] = {
+    private[jdriver] val jdriverExceptionMapper : PartialFunction[Throwable, MongoException] = {
         case ex : JavaMongoException.DuplicateKey => new DuplicateKeyMongoException(ex.getMessage, ex)
         case ex : JavaMongoException => new MongoException(ex.getMessage, ex)
         case ex : BSONException => new MongoException(ex.getMessage, ex)

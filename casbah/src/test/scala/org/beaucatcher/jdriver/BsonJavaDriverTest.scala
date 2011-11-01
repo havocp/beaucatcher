@@ -1,16 +1,16 @@
-package org.beaucatcher.casbah
+package org.beaucatcher.jdriver
 
 import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
-import org.beaucatcher.casbah.Implicits._
+import org.beaucatcher.jdriver.Implicits._
 import com.mongodb.BasicDBObject
 import java.util.Date
 import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
 import org.junit._
 
-class BsonCasbahTest {
+class BsonJavaDriverTest {
 
     @org.junit.Before
     def setup() {

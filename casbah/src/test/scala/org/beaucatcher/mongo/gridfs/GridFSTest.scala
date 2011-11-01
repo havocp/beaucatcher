@@ -4,13 +4,13 @@ import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.beaucatcher.mongo.gridfs._
-import org.beaucatcher.casbah.CasbahTestProvider
+import org.beaucatcher.jdriver.JavaDriverTestProvider
 import org.junit.Assert._
 import org.junit._
 import org.apache.commons.io._
 import java.io.OutputStream
 
-object TestFS extends GridFSOperations with CasbahTestProvider {
+object TestFS extends GridFSOperations with JavaDriverTestProvider {
     override def bucket = "testbucket"
 }
 

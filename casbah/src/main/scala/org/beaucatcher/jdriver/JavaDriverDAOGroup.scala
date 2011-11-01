@@ -1,11 +1,11 @@
-package org.beaucatcher.casbah
+package org.beaucatcher.jdriver
 
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import com.mongodb.DBObject
 import com.mongodb.DBCollection
 
-private[casbah] class InnerBValueValueComposer
+private[jdriver] class InnerBValueValueComposer
     extends ValueComposer[Any, BValue] {
 
     import j.JavaConversions._
@@ -14,7 +14,7 @@ private[casbah] class InnerBValueValueComposer
     override def valueOut(v : BValue) : Any = v.unwrappedAsJava
 }
 
-private[casbah] class OuterBValueValueComposer
+private[jdriver] class OuterBValueValueComposer
     extends ValueComposer[BValue, Any] {
 
     import j.JavaConversions._
@@ -23,33 +23,33 @@ private[casbah] class OuterBValueValueComposer
     override def valueOut(v : Any) : BValue = wrapJavaAsBValue(v)
 }
 
-private[casbah] class BObjectCasbahDAOGroup[BObjectIdType, CasbahIdType](
-    val backend : CasbahBackend,
+private[jdriver] class BObjectJavaDriverDAOGroup[BObjectIdType, JavaDriverIdType](
+    val backend : JavaDriverBackend,
     val collection : DBCollection,
-    private val bobjectCasbahIdComposer : IdComposer[BObjectIdType, CasbahIdType])
+    private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
     extends SyncDAOGroupWithoutEntity[BObjectIdType] {
     require(backend != null)
     require(collection != null)
 
-    /* Let's not allow changing the BObject-to-Casbah mapping since we want to
-     * get rid of Casbah's DBObject. That's why these are private.
+    /* Let's not allow changing the BObject-to-JavaDriver mapping since we want to
+     * get rid of JavaDriver's DBObject. That's why these are private.
      */
-    private lazy val bobjectCasbahQueryComposer : QueryComposer[BObject, DBObject] =
-        new BObjectCasbahQueryComposer()
-    private lazy val bobjectCasbahEntityComposer : EntityComposer[BObject, DBObject] =
-        new BObjectCasbahEntityComposer()
-    private lazy val bobjectCasbahValueComposer : ValueComposer[BValue, Any] =
+    private lazy val bobjectJavaDriverQueryComposer : QueryComposer[BObject, DBObject] =
+        new BObjectJavaDriverQueryComposer()
+    private lazy val bobjectJavaDriverEntityComposer : EntityComposer[BObject, DBObject] =
+        new BObjectJavaDriverEntityComposer()
+    private lazy val bobjectJavaDriverValueComposer : ValueComposer[BValue, Any] =
         new OuterBValueValueComposer()
 
     /**
-     *  This is the "raw" Casbah DAO, if you need to work with a DBObject for some reason.
+     *  This is the "raw" JavaDriver DAO, if you need to work with a DBObject for some reason.
      *  This is best avoided because the hope is that Hammersmith would allow us to
      *  eliminate this layer. In fact, we'll make this private...
      */
-    private lazy val casbahSyncDAO : CasbahSyncDAO[CasbahIdType] = {
+    private lazy val jdriverSyncDAO : JavaDriverSyncDAO[JavaDriverIdType] = {
         val outerCollection = collection
         val outerBackend = backend
-        new CasbahSyncDAO[CasbahIdType] {
+        new JavaDriverSyncDAO[JavaDriverIdType] {
             override val collection = outerCollection
             override val backend = outerBackend
         }
@@ -63,13 +63,13 @@ private[casbah] class BObjectCasbahDAOGroup[BObjectIdType, CasbahIdType](
      */
     override lazy val bobjectSyncDAO : BObjectSyncDAO[BObjectIdType] = {
         val outerBackend = backend
-        new BObjectCasbahSyncDAO[BObjectIdType, CasbahIdType] {
-            override val inner = casbahSyncDAO
+        new BObjectJavaDriverSyncDAO[BObjectIdType, JavaDriverIdType] {
+            override val inner = jdriverSyncDAO
             override val backend = outerBackend
-            override val queryComposer = bobjectCasbahQueryComposer
-            override val entityComposer = bobjectCasbahEntityComposer
-            override val idComposer = bobjectCasbahIdComposer
-            override val valueComposer = bobjectCasbahValueComposer
+            override val queryComposer = bobjectJavaDriverQueryComposer
+            override val entityComposer = bobjectJavaDriverEntityComposer
+            override val idComposer = bobjectJavaDriverIdComposer
+            override val valueComposer = bobjectJavaDriverValueComposer
         }
     }
 }
@@ -79,7 +79,7 @@ private[casbah] class BObjectCasbahDAOGroup[BObjectIdType, CasbahIdType](
  * nicest DAO at whatever level is convenient for whatever you're doing. You can also
  * override any of the conversions as the data makes its way up from MongoDB.
  *
- * The long-term idea is to get rid of the Casbah part, and the DAOGroup will
+ * The long-term idea is to get rid of the JavaDriver part, and the DAOGroup will
  * have a 2x2 of DAO flavors: sync vs. async, and BObject vs. case entity.
  *
  * Rather than a bunch of annotations specifying how to go from MongoDB to
@@ -87,14 +87,14 @@ private[casbah] class BObjectCasbahDAOGroup[BObjectIdType, CasbahIdType](
  * "composer" objects and do things like validation or dealing with legacy
  * object formats in there.
  */
-private[casbah] class EntityBObjectCasbahDAOGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, CasbahIdType](
-    override val backend : CasbahBackend,
+private[jdriver] class EntityBObjectJavaDriverDAOGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, JavaDriverIdType](
+    override val backend : JavaDriverBackend,
     override val collection : DBCollection,
     val entityBObjectQueryComposer : QueryComposer[BObject, BObject],
     val entityBObjectEntityComposer : EntityComposer[EntityType, BObject],
     val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],
-    private val bobjectCasbahIdComposer : IdComposer[BObjectIdType, CasbahIdType])
-    extends BObjectCasbahDAOGroup[BObjectIdType, CasbahIdType](backend, collection, bobjectCasbahIdComposer)
+    private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
+    extends BObjectJavaDriverDAOGroup[BObjectIdType, JavaDriverIdType](backend, collection, bobjectJavaDriverIdComposer)
     with SyncDAOGroup[EntityType, EntityIdType, BObjectIdType] {
     require(backend != null)
     require(collection != null)

@@ -1,8 +1,8 @@
-package org.beaucatcher.casbah
+package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
-import org.beaucatcher.casbah._
+import org.beaucatcher.jdriver._
 import org.beaucatcher.mongo._
 import org.junit.Assert._
 import org.junit._
@@ -13,7 +13,7 @@ package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
 
     object Foo extends CollectionOperationsWithCaseClass[Foo, ObjectId]
-        with CasbahTestProvider {
+        with JavaDriverTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
@@ -22,7 +22,7 @@ package foo {
     case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
 
     object FooWithIntId extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
-        with CasbahTestProvider {
+        with JavaDriverTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
             syncDAO[E].find(BObject("intField" -> 23))
         }
@@ -31,11 +31,11 @@ package foo {
     case class FooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) extends abstractfoo.AbstractFooWithOptionalField
 
     object FooWithOptionalField extends CollectionOperationsWithCaseClass[FooWithOptionalField, ObjectId]
-        with CasbahTestProvider {
+        with JavaDriverTestProvider {
     }
 
     object Bar extends CollectionOperationsWithoutEntity[ObjectId]
-        with CasbahTestProvider {
+        with JavaDriverTestProvider {
 
     }
 }
@@ -54,7 +54,7 @@ class DAOTest
         assertEquals(bvalue, wrapped)
 
         // and be sure the wrap/unwrap of BObject works
-        import org.beaucatcher.casbah.Implicits._
+        import org.beaucatcher.jdriver.Implicits._
         bvalue match {
             case o : BObject =>
                 val dbval : DBObject = new BObjectDBObject(o)

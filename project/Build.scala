@@ -97,7 +97,7 @@ object BeaucatcherBuild extends Build {
     lazy val casbah = Project("beaucatcher-casbah",
         file("casbah"),
         settings = projectSettings ++
-            makeGenerateBsonJavaSettings("org.beaucatcher.casbah") ++
+            makeGenerateBsonJavaSettings("org.beaucatcher.jdriver") ++
             Seq(libraryDependencies ++= Seq(mongoJavaDriver, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test")
 
     lazy val async = Project("beaucatcher-async",

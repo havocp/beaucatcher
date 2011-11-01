@@ -1,8 +1,8 @@
-package org.beaucatcher.casbah
+package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
-import org.beaucatcher.casbah._
+import org.beaucatcher.jdriver._
 import org.beaucatcher.mongo._
 import org.beaucatcher.mongo.JsonMethods
 import org.beaucatcher.bson.ClassAnalysis
@@ -15,7 +15,7 @@ package restdemo {
 
     object Foo
         extends CollectionOperationsWithCaseClass[Foo, ObjectId]
-        with CasbahTestProvider
+        with JavaDriverTestProvider
         with JsonMethods[Foo] {
         // the default collection name would conflict with the Foo
         // in DAOTest since tests are run concurrently;
@@ -34,7 +34,7 @@ package restdemo {
     case class FooWithIntId(_id : Int, aString : String, anInt : Int)
     object FooWithIntId
         extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
-        with CasbahTestProvider
+        with JavaDriverTestProvider
         with JsonMethods[FooWithIntId] {
         // the default collection name would conflict with the FooWithIntId
         // in DAOTest since tests are run concurrently;
