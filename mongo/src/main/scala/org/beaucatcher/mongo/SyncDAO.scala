@@ -215,9 +215,9 @@ trait ReadOnlySyncDAO[QueryType, EntityType, IdType, ValueType] {
  * which implements [[org.beaucatcher.mongo.CollectionOperations]]. You would then
  * write code such as:
  * {{{
- *    Foo.syncDAO[BObject].find() // obtain results as a BObject
- *    Foo.syncDAO[Foo].find()     // obtain results as a case class instance
- *    Foo.syncDAO.count()         // entity type not relevant
+ *    Foo.sync[BObject].find() // obtain results as a BObject
+ *    Foo.sync[Foo].find()     // obtain results as a case class instance
+ *    Foo.sync.count()         // entity type not relevant
  * }}}
  * This is only a convention though, of course there's more than one way to do it.
  *
@@ -461,6 +461,6 @@ trait SyncDAO[QueryType, EntityType, IdType, ValueType] extends ReadOnlySyncDAO[
      * Queries mongod for the indexes on this collection.
      */
     final def findIndexes() : Iterator[CollectionIndex] = {
-        database.system.indexes.syncDAO[CollectionIndex].find(BObject("ns" -> fullName))
+        database.system.indexes.sync[CollectionIndex].find(BObject("ns" -> fullName))
     }
 }

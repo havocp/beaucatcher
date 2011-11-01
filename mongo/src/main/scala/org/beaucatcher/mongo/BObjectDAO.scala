@@ -43,7 +43,7 @@ private[beaucatcher] abstract trait BObjectComposedSyncDAO[OuterIdType, InnerQue
         }
         builder += ("key" -> keys)
         val query = builder.result
-        database.system.indexes.syncDAO[BObject].insert(query)
+        database.system.indexes.sync[BObject].insert(query)
     }
 
     override def dropIndex(indexName : String) : CommandResult = {

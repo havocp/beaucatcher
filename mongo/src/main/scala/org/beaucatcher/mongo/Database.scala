@@ -74,7 +74,7 @@ trait SyncDatabase {
     }
 
     def collectionNames : Iterator[String] = {
-        database.system.namespaces.syncDAO[BObject].find(BObject.empty, IncludedFields("name")) map {
+        database.system.namespaces.sync[BObject].find(BObject.empty, IncludedFields("name")) map {
             obj =>
                 obj.getUnwrappedAs[String]("name")
         }

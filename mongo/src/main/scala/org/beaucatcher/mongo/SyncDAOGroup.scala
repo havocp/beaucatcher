@@ -17,7 +17,7 @@ private[beaucatcher] trait SyncDAOGroupWithoutEntity[BObjectIdType] {
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    def bobjectSyncDAO : BObjectSyncDAO[BObjectIdType]
+    def bobjectSync : BObjectSyncDAO[BObjectIdType]
 }
 
 /**
@@ -32,5 +32,5 @@ private[beaucatcher] trait SyncDAOGroup[EntityType <: AnyRef, EntityIdType, BObj
      *  This DAO works with a specified entity class, for typesafe access to fields
      *  from within Scala code.
      */
-    def entitySyncDAO : EntitySyncDAO[BObject, EntityType, EntityIdType]
+    def entitySync : EntitySyncDAO[BObject, EntityType, EntityIdType]
 }

@@ -13,7 +13,7 @@ package foohammersmith {
     object Foo extends CollectionOperationsWithCaseClass[Foo, ObjectId]
         with HammersmithTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
-            syncDAO[E].find(BObject("intField" -> 23))
+            sync[E].find(BObject("intField" -> 23))
         }
 
         System.setProperty("org.apache.commons.logging.simplelog.defaultlog", "debug")
@@ -24,7 +24,7 @@ package foohammersmith {
     object FooWithIntId extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
         with HammersmithTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
-            syncDAO[E].find(BObject("intField" -> 23))
+            sync[E].find(BObject("intField" -> 23))
         }
     }
 
@@ -46,7 +46,7 @@ class DAOTestHammersmith
     @Test
     def testCustomQueryReturnsVariousEntityTypes() {
         val foo = Foo(ObjectId(), 23, "woohoo")
-        Foo.syncDAO[Foo].save(foo)
+        Foo.sync[Foo].save(foo)
 
         val objects = Foo.customQuery[BObject].toIndexedSeq
         assertEquals(1, objects.size)
@@ -64,7 +64,7 @@ class DAOTestHammersmith
     @Test
     def testCustomQueryReturnsVariousEntityTypesWithIntId() {
         val foo = FooWithIntId(100, 23, "woohoo")
-        FooWithIntId.syncDAO[FooWithIntId].save(foo)
+        FooWithIntId.sync[FooWithIntId].save(foo)
 
         val objects = FooWithIntId.customQuery[BObject].toIndexedSeq
         assertEquals(1, objects.size)

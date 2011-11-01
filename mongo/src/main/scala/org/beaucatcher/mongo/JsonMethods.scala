@@ -34,7 +34,7 @@ import org.beaucatcher.bson.ClassAnalysis
  */
 trait JsonMethods[SchemaType <: Product] {
     /** Point this to a DAO to use to store BObject */
-    protected def jsonDAO : SyncDAO[BObject, BObject, _, _]
+    protected def jsonSync : SyncDAO[BObject, BObject, _, _]
     /** Since we're a trait, we don't have a manifest and you have to provide this */
     protected def jsonAnalysis : ClassAnalysis[SchemaType]
     /** If you want to override the JSON flavor, do so here */
@@ -182,7 +182,7 @@ trait JsonMethods[SchemaType <: Product] {
      */
     def createJson(json : String) : String = {
         val bobject = parseJson(None, json)
-        jsonDAO.save(bobject)
+        jsonSync.save(bobject)
         // FIXME here in theory we only have to return the new ID
         outgoingString(bobject)
     }
@@ -204,7 +204,7 @@ trait JsonMethods[SchemaType <: Product] {
      */
     def updateJson(path : String, json : String) : String = {
         val bobject = parseJson(Some(path), json)
-        jsonDAO.update(createQueryForObject(path), bobject)
+        jsonSync.update(createQueryForObject(path), bobject)
         // FIXME here in theory we only have to return the changed fields
         outgoingString(bobject)
     }
@@ -223,7 +223,7 @@ trait JsonMethods[SchemaType <: Product] {
     def readJson(path : Option[String]) : Option[String] = {
         if (path.isDefined) {
             // GET a single ID
-            jsonDAO.findOne(createQueryForObject(path.get)) match {
+            jsonSync.findOne(createQueryForObject(path.get)) match {
                 case Some(bobject) =>
                     Some(outgoingString(bobject))
                 case _ =>
@@ -231,7 +231,7 @@ trait JsonMethods[SchemaType <: Product] {
             }
         } else {
             // GET all objects
-            val all = jsonDAO.find(createQueryForAllObjects())
+            val all = jsonSync.find(createQueryForAllObjects())
             val b = JArray.newBuilder
             for (o <- all) {
                 b += modifyOutgoingJson(modifyOutgoingBson(o).toJValue(jsonFlavor))
@@ -244,7 +244,7 @@ trait JsonMethods[SchemaType <: Product] {
      * Intended to implement HTTP DELETE, deletes the object identified by the path.
      */
     def deleteJson(path : String) : Unit = {
-        jsonDAO.remove(createQueryForObject(path))
+        jsonSync.remove(createQueryForObject(path))
     }
 
     private def fromJValue(path : Option[String], jvalue : JValue) : BObject = {

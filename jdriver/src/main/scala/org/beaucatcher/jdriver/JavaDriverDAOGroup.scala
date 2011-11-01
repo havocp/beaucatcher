@@ -61,7 +61,7 @@ private[jdriver] class BObjectJavaDriverDAOGroup[BObjectIdType, JavaDriverIdType
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    override lazy val bobjectSyncDAO : BObjectSyncDAO[BObjectIdType] = {
+    override lazy val bobjectSync : BObjectSyncDAO[BObjectIdType] = {
         val outerBackend = backend
         new BObjectJavaDriverSyncDAO[BObjectIdType, JavaDriverIdType] {
             override val inner = jdriverSyncDAO
@@ -107,10 +107,10 @@ private[jdriver] class EntityBObjectJavaDriverDAOGroup[EntityType <: AnyRef : Ma
      *  from within Scala code. You also know that all the fields are present
      *  if the case class was successfully constructed.
      */
-    override lazy val entitySyncDAO : EntitySyncDAO[BObject, EntityType, EntityIdType] = {
+    override lazy val entitySync : EntitySyncDAO[BObject, EntityType, EntityIdType] = {
         val outerBackend = backend
         new EntityBObjectSyncDAO[EntityType, EntityIdType, BObjectIdType] {
-            override val inner = bobjectSyncDAO
+            override val inner = bobjectSync
             override val backend = outerBackend
             override val queryComposer = entityBObjectQueryComposer
             override val entityComposer = entityBObjectEntityComposer

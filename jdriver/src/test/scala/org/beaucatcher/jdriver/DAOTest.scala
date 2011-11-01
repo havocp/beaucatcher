@@ -15,7 +15,7 @@ package foo {
     object Foo extends CollectionOperationsWithCaseClass[Foo, ObjectId]
         with JavaDriverTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
-            syncDAO[E].find(BObject("intField" -> 23))
+            sync[E].find(BObject("intField" -> 23))
         }
     }
 
@@ -24,7 +24,7 @@ package foo {
     object FooWithIntId extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
         with JavaDriverTestProvider {
         def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
-            syncDAO[E].find(BObject("intField" -> 23))
+            sync[E].find(BObject("intField" -> 23))
         }
     }
 
@@ -68,7 +68,7 @@ class DAOTest
     @Test
     def testCustomQueryReturnsVariousEntityTypes() {
         val foo = Foo(ObjectId(), 23, "woohoo")
-        Foo.syncDAO[Foo].save(foo)
+        Foo.sync[Foo].save(foo)
 
         val objects = Foo.customQuery[BObject].toIndexedSeq
         assertEquals(1, objects.size)
@@ -86,7 +86,7 @@ class DAOTest
     @Test
     def testCustomQueryReturnsVariousEntityTypesWithIntId() {
         val foo = FooWithIntId(100, 23, "woohoo")
-        FooWithIntId.syncDAO[FooWithIntId].save(foo)
+        FooWithIntId.sync[FooWithIntId].save(foo)
 
         val objects = FooWithIntId.customQuery[BObject].toIndexedSeq
         assertEquals(1, objects.size)

@@ -28,7 +28,7 @@ private[gridfs] class GridFSCollections(backend : MongoBackend, val bucket : Str
         val ops = createCollectionOperationsWithEntity[GridFSFile, ObjectId](bucket + ".files", GridFSCollections.fileComposer)
 
         // this isn't in the gridfs spec but it is in the Java implementation
-        ops.syncDAO.ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
+        ops.sync.ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
 
         ops
     }
@@ -36,7 +36,7 @@ private[gridfs] class GridFSCollections(backend : MongoBackend, val bucket : Str
     lazy val chunks : CollectionOperationsWithoutEntityTrait[ObjectId] = {
         val ops = createCollectionOperationsWithoutEntity[ObjectId](bucket + ".chunks")
 
-        ops.syncDAO.ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
+        ops.sync.ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
 
         ops
     }
@@ -67,8 +67,8 @@ object GridFS {
 }
 
 sealed trait SyncGridFS extends GridFS {
-    private[gridfs] def filesDAO = files.syncDAO[GridFSFile]
-    private[gridfs] def chunksDAO = chunks.syncDAO
+    private[gridfs] def filesDAO = files.sync[GridFSFile]
+    private[gridfs] def chunksDAO = chunks.sync
 
     /**
      * Obtain a read-only data access object for the bucket.files collection.
@@ -94,7 +94,7 @@ sealed trait SyncGridFS extends GridFS {
     def remove(query : BObject) : WriteResult = {
         // this is intended to avoid needing the entire query result in memory;
         // we should iterate the cursor lazily in chunks, theoretically.
-        val ids = files.syncDAO[BObject].find(query, IncludedFields.idOnly)
+        val ids = files.sync[BObject].find(query, IncludedFields.idOnly)
         val results = ids map { idObj => removeById(idObj.getUnwrappedAs[ObjectId]("_id")) }
         // pick first failed result if any, otherwise an "ok"
         results.foldLeft(WriteResult(ok = true))({ (next, sofar) =>
@@ -110,8 +110,8 @@ sealed trait SyncGridFS extends GridFS {
     }
 
     def removeAll() : WriteResult = {
-        files.syncDAO.removeAll()
-        chunks.syncDAO.removeAll()
+        files.sync.removeAll()
+        chunks.sync.removeAll()
     }
 
     /**
