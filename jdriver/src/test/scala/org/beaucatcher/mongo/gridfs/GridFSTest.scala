@@ -18,7 +18,7 @@ class GridFSTest extends TestUtils {
     @org.junit.Before
     def setup() {
         TestFS.sync.removeAll()
-        assertEquals(0, TestFS.sync.dao.count())
+        assertEquals(0, TestFS.sync.collection.count())
     }
 
     @org.junit.After
@@ -31,13 +31,13 @@ class GridFSTest extends TestUtils {
         val f = GridFSFile()
         TestFS.sync.openForWriting(f).close()
         assertEquals(0, f.length)
-        assertTrue(TestFS.sync.dao.findOneById(f._id).isDefined)
+        assertTrue(TestFS.sync.collection.findOneById(f._id).isDefined)
         val stream = TestFS.sync.openForReading(f)
         val content = IOUtils.toString(stream)
         stream.close()
         assertEquals("", content)
         TestFS.sync.remove(f)
-        assertEquals(None, TestFS.sync.dao.findOneById(f._id))
+        assertEquals(None, TestFS.sync.collection.findOneById(f._id))
     }
 
     @Test
@@ -49,17 +49,17 @@ class GridFSTest extends TestUtils {
             val stream = TestFS.sync.openForWriting(f)
             stream.write(c)
             stream.close()
-            assertEquals(f._id, TestFS.sync.dao.findOneById(f._id).get._id)
+            assertEquals(f._id, TestFS.sync.collection.findOneById(f._id).get._id)
         }
         for (c <- 'a' to 'f') {
             val name = "contains-" + c
-            val f = TestFS.sync.dao.findOne(BObject("filename" -> name)).get
+            val f = TestFS.sync.collection.findOne(BObject("filename" -> name)).get
             val stream = TestFS.sync.openForReading(f)
             val content = IOUtils.toString(stream)
             stream.close()
             assertEquals(c + "", content)
             TestFS.sync.remove(f)
-            assertEquals(None, TestFS.sync.dao.findOneById(f._id))
+            assertEquals(None, TestFS.sync.collection.findOneById(f._id))
         }
     }
 
@@ -98,7 +98,7 @@ class GridFSTest extends TestUtils {
             val stream = TestFS.sync.openForWriting(f)
             writeCharVaryingBufferLengths(stream, c, 1000)
             stream.close()
-            val saved = TestFS.sync.dao.findOneById(f._id).get
+            val saved = TestFS.sync.collection.findOneById(f._id).get
             assertEquals(f._id, saved._id)
             // this assumes we only wrote ASCII chars
             assertEquals(1000, saved.length)
@@ -108,7 +108,7 @@ class GridFSTest extends TestUtils {
     private def readAndRemoveSmallChunkFiles() {
         for (c <- 'a' to 'f') {
             val name = "contains-" + c
-            val f = TestFS.sync.dao.findOne(BObject("filename" -> name)).get
+            val f = TestFS.sync.collection.findOne(BObject("filename" -> name)).get
             assertEquals(SMALL_CHUNK_SIZE, f.chunkSize)
             val stream = TestFS.sync.openForReading(f)
             val content = IOUtils.toString(stream)
@@ -117,7 +117,7 @@ class GridFSTest extends TestUtils {
             assertEquals(c, content(0))
             assertEquals(c, content(999))
             TestFS.sync.remove(f)
-            assertEquals(None, TestFS.sync.dao.findOneById(f._id))
+            assertEquals(None, TestFS.sync.collection.findOneById(f._id))
         }
     }
 
@@ -134,7 +134,7 @@ class GridFSTest extends TestUtils {
         assertEquals(metadata, f.metadata)
         TestFS.sync.openForWriting(f).close()
 
-        val reloaded = TestFS.sync.dao.findOneById(f._id).get
+        val reloaded = TestFS.sync.collection.findOneById(f._id).get
         assertEquals(metadata, reloaded.metadata)
 
         TestFS.sync.remove(f)
@@ -256,8 +256,8 @@ class GridFSTest extends TestUtils {
         val ourId = createOneByteFile("foo", "text/plain", Seq("bar"))
         val jId = javaCreateOneByteFile("foo", "text/plain", Seq("bar"))
 
-        val ourFile = TestFS.sync.dao.findOneById(ourId).get
-        val jFile = TestFS.sync.dao.findOneById(jId).get
+        val ourFile = TestFS.sync.collection.findOneById(ourId).get
+        val jFile = TestFS.sync.collection.findOneById(jId).get
 
         assertEquals(ourId, ourFile._id)
         assertEquals(jId, jFile._id)

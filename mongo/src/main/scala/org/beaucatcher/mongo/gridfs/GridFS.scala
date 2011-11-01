@@ -74,7 +74,7 @@ sealed trait SyncGridFS extends GridFS {
      * Obtain a read-only data access object for the bucket.files collection.
      * Use this to query for files.
      */
-    def dao : ReadOnlySyncDAO[BObject, GridFSFile, ObjectId, _] = filesDAO
+    def collection : ReadOnlySyncDAO[BObject, GridFSFile, ObjectId, _] = filesDAO
 
     /**
      * Delete one file by ID.
