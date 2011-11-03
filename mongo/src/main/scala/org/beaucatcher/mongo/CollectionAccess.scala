@@ -10,12 +10,12 @@ import scala.annotation.implicitNotFound
  * and a third when your entity class is a case class (which means it can
  * be automatically converted from BSON).
  */
-trait CollectionOperationsBaseTrait[IdType] {
+trait CollectionAccessBaseTrait[IdType] {
     self : MongoBackendProvider =>
 
     /**
      * Because traits can't have constructor arguments or context bounds, a subtype of this
-     * trait has to provide the manifest for the IdType. See [[org.beaucatcher.mongo.CollectionOperations]]
+     * trait has to provide the manifest for the IdType. See [[org.beaucatcher.mongo.CollectionAccess]]
      * which is an abstract class rather than a trait, and thus implements this method.
      */
     implicit protected def idTypeManifest : Manifest[IdType]
@@ -52,7 +52,7 @@ trait CollectionOperationsBaseTrait[IdType] {
 /**
  * Collection operations in terms of `BObject` only, with no mapping to another entity class.
  *
- * You generally want [[org.beaucatcher.mongo.CollectionOperationsWithoutEntity]] class rather than
+ * You generally want [[org.beaucatcher.mongo.CollectionAccessWithoutEntity]] class rather than
  * this trait; the trait exists only for the rare case where you need to extend another
  * class.
  *
@@ -64,7 +64,7 @@ trait CollectionOperationsBaseTrait[IdType] {
  * A subclass of this trait has to provide a [[org.beaucatcher.mongo.MongoBackend]] which has
  * a concrete connection to a specific MongoDB implementation.
  */
-trait CollectionOperationsWithoutEntityTrait[IdType] extends CollectionOperationsBaseTrait[IdType] {
+trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTrait[IdType] {
     self : MongoBackendProvider =>
 
     private lazy val collectionGroup : SyncCollectionGroupWithoutEntity[IdType] =
@@ -82,10 +82,10 @@ trait CollectionOperationsWithoutEntityTrait[IdType] extends CollectionOperation
 /**
  * Collection operations offered in terms of both `BObject` and some entity class,
  * which may or may not be a case class. You have to implement the conversion to and
- * from `BObject`. See also [[org.beaucatcher.mongo.CollectionOperationsWithCaseClass]] which
+ * from `BObject`. See also [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]] which
  * is fully automated.
  *
- * You generally want [[org.beaucatcher.mongo.CollectionOperations]] class rather than
+ * You generally want [[org.beaucatcher.mongo.CollectionAccess]] class rather than
  * this trait; the trait exists only for the rare case where you need to extend another
  * class.
  *
@@ -100,14 +100,14 @@ trait CollectionOperationsWithoutEntityTrait[IdType] extends CollectionOperation
  * Implementation note: many values in this class are lazy, because otherwise class and object
  * initialization has a lot of trouble (due to circular dependencies, or order of initialization anyway).
  */
-trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends CollectionOperationsBaseTrait[IdType] {
+trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAccessBaseTrait[IdType] {
     self : MongoBackendProvider =>
 
-    import CollectionOperationsTrait._
+    import CollectionAccessTrait._
 
     /**
      * Because traits can't have constructor arguments or context bounds, a subtype of this
-     * trait has to provide the manifest for the EntityType. See [[org.beaucatcher.mongo.CollectionOperations]]
+     * trait has to provide the manifest for the EntityType. See [[org.beaucatcher.mongo.CollectionAccess]]
      * which is an abstract class rather than a trait, and thus implements this method.
      */
     implicit protected def entityTypeManifest : Manifest[EntityType]
@@ -128,9 +128,9 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends Collection
 
     /**
      * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
-     * CollectionOperations object. Used as implicit argument to sync method.
+     * CollectionAccess object. Used as implicit argument to sync method.
      */
-    type SyncCollectionChooser[E, V] = GenericSyncCollectionChooser[E, IdType, V, CollectionOperationsTrait[EntityType, IdType]]
+    type SyncCollectionChooser[E, V] = GenericSyncCollectionChooser[E, IdType, V, CollectionAccessTrait[EntityType, IdType]]
 
     /**
      * This lets you write a function that generically works for either the entity (often case class) or
@@ -192,22 +192,22 @@ trait CollectionOperationsTrait[EntityType <: AnyRef, IdType] extends Collection
     protected def entityBObjectEntityComposer : EntityComposer[EntityType, BObject]
 }
 
-object CollectionOperationsTrait {
+object CollectionAccessTrait {
     // used as an implicit parameter to select the correct Collection based on requested query result type
-    @implicitNotFound(msg = "No synchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionOperations '${CO}') (implicit GenericSyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
+    @implicitNotFound(msg = "No synchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericSyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
     trait GenericSyncCollectionChooser[E, I, V, -CO] {
         def choose(ops : CO) : SyncCollection[BObject, E, I, V]
     }
 
-    implicit def createCollectionChooserForBObject[I] : GenericSyncCollectionChooser[BObject, I, BValue, CollectionOperationsTrait[_, I]] = {
-        new GenericSyncCollectionChooser[BObject, I, BValue, CollectionOperationsTrait[_, I]] {
-            def choose(ops : CollectionOperationsTrait[_, I]) = ops.bobjectSync
+    implicit def createCollectionChooserForBObject[I] : GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
+        new GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] {
+            def choose(ops : CollectionAccessTrait[_, I]) = ops.bobjectSync
         }
     }
 
-    implicit def createCollectionChooserForEntity[E <: AnyRef, I] : GenericSyncCollectionChooser[E, I, Any, CollectionOperationsTrait[E, I]] = {
-        new GenericSyncCollectionChooser[E, I, Any, CollectionOperationsTrait[E, I]] {
-            def choose(ops : CollectionOperationsTrait[E, I]) = ops.entitySync
+    implicit def createCollectionChooserForEntity[E <: AnyRef, I] : GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
+        new GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] {
+            def choose(ops : CollectionAccessTrait[E, I]) = ops.entitySync
         }
     }
 }
@@ -215,12 +215,12 @@ object CollectionOperationsTrait {
 /**
  * Collection operations offered in terms of both `BObject` and some entity case class.
  * The conversion from `BObject` to and from the case class is automatic.
- * In most cases, you want the abstract class [[org.beaucatcher.mongo.CollectionOperationsWithCaseClass]]
+ * In most cases, you want the abstract class [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]]
  * instead of this trait; the trait is only provided in case you need to derive from another class
  * so can't use the abstract class version.
  */
-trait CollectionOperationsWithCaseClassTrait[EntityType <: Product, IdType]
-    extends CollectionOperationsTrait[EntityType, IdType] {
+trait CollectionAccessWithCaseClassTrait[EntityType <: Product, IdType]
+    extends CollectionAccessTrait[EntityType, IdType] {
     self : MongoBackendProvider =>
 
     override protected lazy val entityBObjectEntityComposer : EntityComposer[EntityType, BObject] =
@@ -230,12 +230,12 @@ trait CollectionOperationsWithCaseClassTrait[EntityType <: Product, IdType]
 /**
  * Derive an object from this class and use it to access a collection,
  * treating the collection as a collection of `BObject`. Use
- * [[org.beaucatcher.mongo.CollectionOperations]] or
- * [[org.beaucatcher.mongo.CollectionOperationsWithCaseClass]]
+ * [[org.beaucatcher.mongo.CollectionAccess]] or
+ * [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]]
  * if you want to sometimes treat the collection as a collection of custom objects.
  */
-abstract class CollectionOperationsWithoutEntity[IdType : Manifest]
-    extends CollectionOperationsWithoutEntityTrait[IdType] {
+abstract class CollectionAccessWithoutEntity[IdType : Manifest]
+    extends CollectionAccessWithoutEntityTrait[IdType] {
     self : MongoBackendProvider =>
     override final val idTypeManifest = manifest[IdType]
 }
@@ -244,11 +244,11 @@ abstract class CollectionOperationsWithoutEntity[IdType : Manifest]
  * Derive an object (usually companion object to the `EntityType`) from this class
  * to treat the collection as a collection of `EntityType`. With this class,
  * you have to manually provide an [[org.beaucatcher.mongo.EntityComposer]] to convert
- * the entity to and from `BObject`. With [[org.beaucatcher.mongo.CollectionOperationsWithCaseClass]] the
+ * the entity to and from `BObject`. With [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]] the
  * conversion is automatic but your entity must be a case class.
  */
-abstract class CollectionOperations[EntityType <: AnyRef : Manifest, IdType : Manifest]
-    extends CollectionOperationsTrait[EntityType, IdType] {
+abstract class CollectionAccess[EntityType <: AnyRef : Manifest, IdType : Manifest]
+    extends CollectionAccessTrait[EntityType, IdType] {
     self : MongoBackendProvider =>
     override final val entityTypeManifest = manifest[EntityType]
     override final val idTypeManifest = manifest[IdType]
@@ -258,12 +258,12 @@ abstract class CollectionOperations[EntityType <: AnyRef : Manifest, IdType : Ma
  * Derive an object (usually companion object to the `EntityType`) from this class
  * to treat the collection as a collection of `EntityType`. With this class,
  * conversion to and from the `EntityType` is automatic, but the entity must be
- * a case class. With [[org.beaucatcher.mongo.CollectionOperations]] you can use
+ * a case class. With [[org.beaucatcher.mongo.CollectionAccess]] you can use
  * any class (non-case classes), but you have to write a converter.
  */
-abstract class CollectionOperationsWithCaseClass[EntityType <: Product : Manifest, IdType : Manifest]
-    extends CollectionOperations[EntityType, IdType]
-    with CollectionOperationsWithCaseClassTrait[EntityType, IdType] {
+abstract class CollectionAccessWithCaseClass[EntityType <: Product : Manifest, IdType : Manifest]
+    extends CollectionAccess[EntityType, IdType]
+    with CollectionAccessWithCaseClassTrait[EntityType, IdType] {
     self : MongoBackendProvider =>
 
 }

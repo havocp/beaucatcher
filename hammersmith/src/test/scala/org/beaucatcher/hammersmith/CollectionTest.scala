@@ -10,7 +10,7 @@ import org.junit._
 package foohammersmith {
     case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
 
-    object Foo extends CollectionOperationsWithCaseClass[Foo, ObjectId]
+    object Foo extends CollectionAccessWithCaseClass[Foo, ObjectId]
         with HammersmithTestProvider {
         def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
@@ -21,7 +21,7 @@ package foohammersmith {
 
     case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
 
-    object FooWithIntId extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
+    object FooWithIntId extends CollectionAccessWithCaseClass[FooWithIntId, Int]
         with HammersmithTestProvider {
         def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
@@ -30,7 +30,7 @@ package foohammersmith {
 
     case class FooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) extends abstractfoo.AbstractFooWithOptionalField
 
-    object FooWithOptionalField extends CollectionOperationsWithCaseClass[FooWithOptionalField, ObjectId]
+    object FooWithOptionalField extends CollectionAccessWithCaseClass[FooWithOptionalField, ObjectId]
         with HammersmithTestProvider {
     }
 }

@@ -4,25 +4,25 @@ import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 
 /**
- * Trait contains [[org.beaucatcher.mongo.CollectionOperations]] for some of mongo's
+ * Trait contains [[org.beaucatcher.mongo.CollectionAccess]] for some of mongo's
  * built-in collections. Obtain it through a [[org.beaucatcher.mongo.Database]] object,
  * you can't construct a [[org.beaucatcher.mongo.SystemCollections]] directly.
  */
 final class SystemCollections private[mongo] (backend : MongoBackend) {
-    private def createCollectionOperations[EntityType <: Product : Manifest, IdType : Manifest](name : String) = {
+    private def createCollectionAccess[EntityType <: Product : Manifest, IdType : Manifest](name : String) = {
         val b = backend
-        new CollectionOperationsWithCaseClass[EntityType, IdType] with MongoBackendProvider {
+        new CollectionAccessWithCaseClass[EntityType, IdType] with MongoBackendProvider {
             override val backend = b
             override val collectionName = name
         }
     }
 
-    lazy val indexes : CollectionOperationsTrait[CollectionIndex, String] = {
-        createCollectionOperations[CollectionIndex, String]("system.indexes")
+    lazy val indexes : CollectionAccessTrait[CollectionIndex, String] = {
+        createCollectionAccess[CollectionIndex, String]("system.indexes")
     }
 
-    lazy val namespaces : CollectionOperationsTrait[Namespace, String] = {
-        createCollectionOperations[Namespace, String]("system.namespaces")
+    lazy val namespaces : CollectionAccessTrait[Namespace, String] = {
+        createCollectionAccess[Namespace, String]("system.namespaces")
     }
 
     // TODO system.users

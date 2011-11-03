@@ -28,10 +28,10 @@ package abstractfoo {
 
 import abstractfoo._
 
-abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionOperationsTrait[Foo, ObjectId],
-    FooWithIntId : CollectionOperationsTrait[FooWithIntId, Int],
-    FooWithOptionalField : CollectionOperationsTrait[FooWithOptionalField, ObjectId],
-    Bar : CollectionOperationsWithoutEntityTrait[ObjectId])
+abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionAccessTrait[Foo, ObjectId],
+    FooWithIntId : CollectionAccessTrait[FooWithIntId, Int],
+    FooWithOptionalField : CollectionAccessTrait[FooWithOptionalField, ObjectId],
+    Bar : CollectionAccessWithoutEntityTrait[ObjectId])
     extends TestUtils {
 
     protected def newFoo(id : ObjectId, i : Int, s : String) : Foo

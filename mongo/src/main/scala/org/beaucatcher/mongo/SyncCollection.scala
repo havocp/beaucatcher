@@ -208,11 +208,11 @@ trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
  * for that, for now.
  *
  * The recommended way to obtain an instance of [[org.beaucatcher.mongo.SyncCollection]]
- * is from the `sync` property on [[org.beaucatcher.mongo.CollectionOperations]],
+ * is from the `sync` property on [[org.beaucatcher.mongo.CollectionAccess]],
  * which would in turn be implemented by the companion object of a case class
  * representing an object in a collection. For example you might have `case class Foo`
  * representing objects in the `foo` collection, with a companion object `object Foo`
- * which implements [[org.beaucatcher.mongo.CollectionOperations]]. You would then
+ * which implements [[org.beaucatcher.mongo.CollectionAccess]]. You would then
  * write code such as:
  * {{{
  *    Foo.sync[BObject].find() // obtain results as a BObject

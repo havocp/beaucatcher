@@ -7,25 +7,25 @@ import java.io._
 
 // access to implementation collections, can be shared among GridFS objects for same bucket
 private[gridfs] class GridFSCollections(backend : MongoBackend, val bucket : String) {
-    private def createCollectionOperationsWithEntity[EntityType <: AnyRef : Manifest, IdType : Manifest](name : String, composer : EntityComposer[EntityType, BObject]) = {
+    private def createCollectionAccessWithEntity[EntityType <: AnyRef : Manifest, IdType : Manifest](name : String, composer : EntityComposer[EntityType, BObject]) = {
         val b = backend
-        new CollectionOperations[EntityType, IdType] with MongoBackendProvider {
+        new CollectionAccess[EntityType, IdType] with MongoBackendProvider {
             override val backend = b
             override val collectionName = name
             override val entityBObjectEntityComposer = composer
         }
     }
 
-    private def createCollectionOperationsWithoutEntity[IdType : Manifest](name : String) = {
+    private def createCollectionAccessWithoutEntity[IdType : Manifest](name : String) = {
         val b = backend
-        new CollectionOperationsWithoutEntity[IdType] with MongoBackendProvider {
+        new CollectionAccessWithoutEntity[IdType] with MongoBackendProvider {
             override val backend = b
             override val collectionName = name
         }
     }
 
-    lazy val files : CollectionOperationsTrait[GridFSFile, ObjectId] = {
-        val ops = createCollectionOperationsWithEntity[GridFSFile, ObjectId](bucket + ".files", GridFSCollections.fileComposer)
+    lazy val files : CollectionAccessTrait[GridFSFile, ObjectId] = {
+        val ops = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files", GridFSCollections.fileComposer)
 
         // this isn't in the gridfs spec but it is in the Java implementation
         ops.sync.ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
@@ -33,8 +33,8 @@ private[gridfs] class GridFSCollections(backend : MongoBackend, val bucket : Str
         ops
     }
 
-    lazy val chunks : CollectionOperationsWithoutEntityTrait[ObjectId] = {
-        val ops = createCollectionOperationsWithoutEntity[ObjectId](bucket + ".chunks")
+    lazy val chunks : CollectionAccessWithoutEntityTrait[ObjectId] = {
+        val ops = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks")
 
         ops.sync.ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
 
@@ -57,8 +57,8 @@ object GridFSCollections {
 trait GridFS {
     def bucket : String
 
-    protected def files : CollectionOperationsTrait[GridFSFile, ObjectId]
-    protected def chunks : CollectionOperationsWithoutEntityTrait[ObjectId]
+    protected def files : CollectionAccessTrait[GridFSFile, ObjectId]
+    protected def chunks : CollectionAccessWithoutEntityTrait[ObjectId]
 }
 
 object GridFS {
@@ -133,7 +133,7 @@ sealed trait SyncGridFS extends GridFS {
 object SyncGridFS {
     /**
      * Manually creates a SyncGridFS. You could also create an object that
-     * extends GridFSOperations and use the "sync" field in that object.
+     * extends GridFSAccess and use the "sync" field in that object.
      */
     def apply(backend : MongoBackend, bucket : String) : SyncGridFS = {
         new ConcreteSyncGridFS(new GridFSCollections(backend, bucket))
@@ -147,17 +147,17 @@ private class ConcreteSyncGridFS(collections : GridFSCollections) extends SyncGr
     override protected def chunks = collections.chunks
 }
 
-trait GridFSOperationsTrait {
+trait GridFSAccessTrait {
     def bucket : String = GridFS.DEFAULT_BUCKET
     def sync : SyncGridFS
 }
 
 /**
  * This is intended to be subclassed by a global object that you then use
- * to access a given gridfs. "object MyFS extends GridFSOperations"
+ * to access a given gridfs. "object MyFS extends GridFSAccess"
  * Override "def bucket" to specify a non-default bucket.
  */
-abstract class GridFSOperations extends GridFSOperationsTrait {
+abstract class GridFSAccess extends GridFSAccessTrait {
     self : MongoBackendProvider =>
 
     // this is shared between the sync and async access objects

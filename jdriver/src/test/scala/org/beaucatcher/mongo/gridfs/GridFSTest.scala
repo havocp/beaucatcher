@@ -10,7 +10,7 @@ import org.junit._
 import org.apache.commons.io._
 import java.io.OutputStream
 
-object TestFS extends GridFSOperations with JavaDriverTestProvider {
+object TestFS extends GridFSAccess with JavaDriverTestProvider {
     override def bucket = "testbucket"
 }
 

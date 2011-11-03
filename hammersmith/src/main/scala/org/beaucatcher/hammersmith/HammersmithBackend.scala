@@ -89,7 +89,7 @@ private[hammersmith] object HammersmithBackend {
 }
 
 /**
- * Mix this trait into a subclass of [[org.beaucatcher.mongo.CollectionOperations]] to backend
+ * Mix this trait into a subclass of [[org.beaucatcher.mongo.CollectionAccess]] to backend
  * the collection operations using Hammersmith
  */
 trait HammersmithBackendProvider extends MongoBackendProvider {

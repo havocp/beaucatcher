@@ -14,7 +14,7 @@ package restdemo {
     case class Foo(_id : ObjectId, aString : String, anInt : Int)
 
     object Foo
-        extends CollectionOperationsWithCaseClass[Foo, ObjectId]
+        extends CollectionAccessWithCaseClass[Foo, ObjectId]
         with JavaDriverTestProvider
         with JsonMethods[Foo] {
         // the default collection name would conflict with the Foo
@@ -33,7 +33,7 @@ package restdemo {
 
     case class FooWithIntId(_id : Int, aString : String, anInt : Int)
     object FooWithIntId
-        extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
+        extends CollectionAccessWithCaseClass[FooWithIntId, Int]
         with JavaDriverTestProvider
         with JsonMethods[FooWithIntId] {
         // the default collection name would conflict with the FooWithIntId

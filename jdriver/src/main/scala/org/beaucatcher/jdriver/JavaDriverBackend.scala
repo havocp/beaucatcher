@@ -97,7 +97,7 @@ private[jdriver] object JavaDriverBackend {
 }
 
 /**
- * Mix this trait into a subclass of [[org.beaucatcher.mongo.CollectionOperations]] to backend
+ * Mix this trait into a subclass of [[org.beaucatcher.mongo.CollectionAccess]] to backend
  * the collection operations using JavaDriver
  */
 trait JavaDriverBackendProvider extends MongoBackendProvider {

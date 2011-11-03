@@ -12,7 +12,7 @@ import com.mongodb.DBObject
 package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
 
-    object Foo extends CollectionOperationsWithCaseClass[Foo, ObjectId]
+    object Foo extends CollectionAccessWithCaseClass[Foo, ObjectId]
         with JavaDriverTestProvider {
         def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
@@ -21,7 +21,7 @@ package foo {
 
     case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
 
-    object FooWithIntId extends CollectionOperationsWithCaseClass[FooWithIntId, Int]
+    object FooWithIntId extends CollectionAccessWithCaseClass[FooWithIntId, Int]
         with JavaDriverTestProvider {
         def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
@@ -30,11 +30,11 @@ package foo {
 
     case class FooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) extends abstractfoo.AbstractFooWithOptionalField
 
-    object FooWithOptionalField extends CollectionOperationsWithCaseClass[FooWithOptionalField, ObjectId]
+    object FooWithOptionalField extends CollectionAccessWithCaseClass[FooWithOptionalField, ObjectId]
         with JavaDriverTestProvider {
     }
 
-    object Bar extends CollectionOperationsWithoutEntity[ObjectId]
+    object Bar extends CollectionAccessWithoutEntity[ObjectId]
         with JavaDriverTestProvider {
 
     }
