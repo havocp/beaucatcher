@@ -196,18 +196,18 @@ object CollectionAccessTrait {
     // used as an implicit parameter to select the correct Collection based on requested query result type
     @implicitNotFound(msg = "No synchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericSyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
     trait GenericSyncCollectionChooser[E, I, V, -CO] {
-        def choose(ops : CO) : SyncCollection[BObject, E, I, V]
+        def choose(access : CO) : SyncCollection[BObject, E, I, V]
     }
 
     implicit def createCollectionChooserForBObject[I] : GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
         new GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] {
-            def choose(ops : CollectionAccessTrait[_, I]) = ops.bobjectSync
+            def choose(access : CollectionAccessTrait[_, I]) = access.bobjectSync
         }
     }
 
     implicit def createCollectionChooserForEntity[E <: AnyRef, I] : GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
         new GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] {
-            def choose(ops : CollectionAccessTrait[E, I]) = ops.entitySync
+            def choose(access : CollectionAccessTrait[E, I]) = access.entitySync
         }
     }
 }

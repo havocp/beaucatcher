@@ -25,20 +25,20 @@ private[gridfs] class GridFSCollections(backend : MongoBackend, val bucket : Str
     }
 
     lazy val files : CollectionAccessTrait[GridFSFile, ObjectId] = {
-        val ops = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files", GridFSCollections.fileComposer)
+        val access = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files", GridFSCollections.fileComposer)
 
         // this isn't in the gridfs spec but it is in the Java implementation
-        ops.sync.ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
+        access.sync.ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
 
-        ops
+        access
     }
 
     lazy val chunks : CollectionAccessWithoutEntityTrait[ObjectId] = {
-        val ops = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks")
+        val access = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks")
 
-        ops.sync.ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
+        access.sync.ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
 
-        ops
+        access
     }
 
 }
