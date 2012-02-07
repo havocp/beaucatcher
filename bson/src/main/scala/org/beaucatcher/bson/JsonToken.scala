@@ -80,7 +80,7 @@ object JsonToken {
     }
 
     private def pullString(input : Iterator[Char]) : StringValue = {
-        val sb = new StringBuffer()
+        val sb = new StringBuilder()
         var c = '\0' // value doesn't get used
         do {
             c = nextOrElse(input, parseError("End of input but string quote was still open"))
@@ -110,7 +110,7 @@ object JsonToken {
                                 sb.appendCodePoint(Integer.parseInt(digits, 16))
                             } catch {
                                 case e : NumberFormatException =>
-                                    parseError("Malformed hex digits after \\u escape in string: '%s'".format(digits))
+                                    parseError("Malformed hex digits after \\u escape in string: '%s'".format(digits), e)
                             }
                         }
                         case whatever =>
