@@ -80,7 +80,7 @@ object JsonToken {
     }
 
     private def pullString(input : Iterator[Char]) : StringValue = {
-        val sb = new StringBuilder()
+        val sb = new java.lang.StringBuilder()
         var c = '\0' // value doesn't get used
         do {
             c = nextOrElse(input, parseError("End of input but string quote was still open"))
