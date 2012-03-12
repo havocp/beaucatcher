@@ -3,8 +3,8 @@ import Keys._
 
 object BuildSettings {
     val buildOrganization = "org.beaucatcher"
-    val buildVersion = "0.3.1"
-    val buildScalaVersion = "2.9.0-1"
+    val buildVersion = "0.3.1-SNAPSHOT"
+    val buildScalaVersion = "2.9.1"
 
     val globalSettings = Seq(
         organization := buildOrganization,
@@ -60,7 +60,7 @@ object Dependencies {
     // Dependencies in "test" configuration
     object Test {
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test"
-        val liftJson = "net.liftweb" %% "lift-json" % "2.4-SNAPSHOT" % "test"
+        val liftJson = "net.liftweb" %% "lift-json" % "2.4" % "test"
         val slf4j = "org.slf4j" % "slf4j-api" % "1.6.0"
         val mongoJavaDriver = Dependencies.mongoJavaDriver % "test"
         val commonsIO = "commons-io" % "commons-io" % "2.1" % "test"
