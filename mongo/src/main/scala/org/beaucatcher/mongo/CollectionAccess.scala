@@ -67,16 +67,24 @@ trait CollectionAccessBaseTrait[IdType] {
 trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTrait[IdType] {
     self : MongoBackendProvider =>
 
-    private lazy val collectionGroup : SyncCollectionGroupWithoutEntity[IdType] =
+    private lazy val collectionGroup : CollectionGroupWithoutEntity[IdType] =
         backend.createCollectionGroupWithoutEntity(collectionName)
 
     private[mongo] lazy val bobjectSync : SyncCollection[BObject, BObject, IdType, BValue] =
-        collectionGroup.bobjectSync
+        collectionGroup.newBObjectSync
+
+    private[mongo] lazy val bobjectAsync : AsyncCollection[BObject, BObject, IdType, BValue] =
+        collectionGroup.newBObjectAsync
 
     /**
      * Obtains the `SyncCollection` for this collection.
      */
     def sync : SyncCollection[BObject, BObject, IdType, BValue] = bobjectSync
+
+    /**
+     * Obtains the `AsyncCollection` for this collection.
+     */
+    def async : AsyncCollection[BObject, BObject, IdType, BValue] = bobjectAsync
 }
 
 /**
@@ -112,7 +120,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      */
     implicit protected def entityTypeManifest : Manifest[EntityType]
 
-    private lazy val collectionGroup : SyncCollectionGroup[EntityType, IdType, IdType] = {
+    private lazy val collectionGroup : CollectionGroup[EntityType, IdType, IdType] = {
         require(entityTypeManifest != null)
         backend.createCollectionGroup(collectionName, entityBObjectQueryComposer,
             entityBObjectEntityComposer)
@@ -120,11 +128,19 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     /** Synchronous Collection returning BObject values from the collection */
     private[mongo] final lazy val bobjectSync : BObjectSyncCollection[IdType] =
-        collectionGroup.bobjectSync
+        collectionGroup.newBObjectSync
 
     /** Synchronous Collection returning case class entity values from the collection */
     private[mongo] final lazy val entitySync : EntitySyncCollection[BObject, EntityType, IdType] =
-        collectionGroup.entitySync
+        collectionGroup.newEntitySync
+
+    /** Asynchronous Collection returning BObject values from the collection */
+    private[mongo] final lazy val bobjectAsync : BObjectAsyncCollection[IdType] =
+        collectionGroup.newBObjectAsync
+
+    /** Asynchronous Collection returning case class entity values from the collection */
+    private[mongo] final lazy val entityAsync : EntityAsyncCollection[BObject, EntityType, IdType] =
+        collectionGroup.newEntityAsync
 
     /**
      * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
@@ -175,6 +191,54 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
     def sync : SyncCollection[BObject, _, IdType, _] = bobjectSync
 
     /**
+     * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
+     * CollectionAccess object. Used as implicit argument to async method.
+     */
+    type AsyncCollectionChooser[E, V] = GenericAsyncCollectionChooser[E, IdType, V, CollectionAccessTrait[EntityType, IdType]]
+
+    /**
+     * This lets you write a function that generically works for either the entity (often case class) or
+     * BObject results. So for example you can implement query logic that supports
+     * both kinds of result.
+     * {{{
+     *    async[BObject].find() // returns BObject results
+     *    async[MyCaseClass].find() // returns MyCaseClass results
+     *    def myQuery[E] = async[E].find(... query ...) // generic query
+     * }}}
+     * With methods such as distinct(), you probably need the `async[E,V]` flavor that lets you specify
+     * the type of field values.
+     * With methods that don't return objects, such as count(), you can use the `async` flavor with no
+     * type parameters.
+     */
+    def async[E](implicit chooser : AsyncCollectionChooser[E, _]) : AsyncCollection[BObject, E, IdType, _] = {
+        chooser.choose(this)
+    }
+
+    /**
+     * This lets you specify the field value type of the asynchronous Collection you are asking for;
+     * the only time this matters right now is if you're using the distinct() method
+     * on the Collection since it returns field values. You would use it like
+     * {{{
+     *    async[BObject,BValue].distinct("foo") // returns Seq[BValue]
+     *    async[MyCaseClass,Any].distinct("foo") // returns Seq[Any]
+     * }}}
+     * Otherwise, you can use the `async[E]` version that only requires you to specify
+     * the entity type, or the `async` version with no type parameters at all.
+     */
+    def async[E, V](implicit chooser : AsyncCollectionChooser[E, V], ignored : DummyImplicit) : AsyncCollection[BObject, E, IdType, V] = {
+        chooser.choose(this)
+    }
+
+    /**
+     * If the type of entity returned doesn't matter, then you can use this overload
+     * of async which does not require you to specify an entity type.
+     * If you're calling a method that does return objects or field values, then you
+     * need to use `async[E]` or `async[E,V]` to specify the object type or field
+     * value type.
+     */
+    def async : AsyncCollection[BObject, _, IdType, _] = bobjectAsync
+
+    /**
      * There probably isn't a reason to override this, but it would modify a query
      * as it went from the case class Collection to the BObject Collection.
      */
@@ -199,15 +263,33 @@ object CollectionAccessTrait {
         def choose(access : CO) : SyncCollection[BObject, E, I, V]
     }
 
-    implicit def createCollectionChooserForBObject[I] : GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
+    implicit def createSyncCollectionChooserForBObject[I] : GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
         new GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] {
             def choose(access : CollectionAccessTrait[_, I]) = access.bobjectSync
         }
     }
 
-    implicit def createCollectionChooserForEntity[E <: AnyRef, I] : GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
+    implicit def createSyncCollectionChooserForEntity[E <: AnyRef, I] : GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
         new GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] {
             def choose(access : CollectionAccessTrait[E, I]) = access.entitySync
+        }
+    }
+
+    // used as an implicit parameter to select the correct Collection based on requested query result type
+    @implicitNotFound(msg = "No asynchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericAsyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
+    trait GenericAsyncCollectionChooser[E, I, V, -CO] {
+        def choose(access : CO) : AsyncCollection[BObject, E, I, V]
+    }
+
+    implicit def createAsyncCollectionChooserForBObject[I] : GenericAsyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
+        new GenericAsyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] {
+            def choose(access : CollectionAccessTrait[_, I]) = access.bobjectAsync
+        }
+    }
+
+    implicit def createAsyncCollectionChooserForEntity[E <: AnyRef, I] : GenericAsyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
+        new GenericAsyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] {
+            def choose(access : CollectionAccessTrait[E, I]) = access.entityAsync
         }
     }
 }

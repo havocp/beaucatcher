@@ -84,18 +84,20 @@ object BeaucatcherBuild extends Build {
             Seq(libraryDependencies := Seq(scalap, commonsCodec, jodaTime,
                     Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver)))
 
-    lazy val bsonJava = Project("beaucatcher-bson-java",
-        file("bson-java"),
-        settings = projectSettings ++
-            Seq(libraryDependencies := Seq(mongoJavaDriver))) dependsOn (bson % "compile->compile;test->test")
-
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
         settings = projectSettings ++
               Seq(libraryDependencies ++= Seq(akkaActor))) dependsOn (bson % "compile->compile;test->test")
 
+    // non-mongo aspects of mongo-java-driver
+    lazy val bsonJava = Project("beaucatcher-bson-java",
+        file("bson-java"),
+        settings = projectSettings ++
+            Seq(libraryDependencies := Seq(mongoJavaDriver))) dependsOn (bson % "compile->compile;test->test")
+
+    // backend for beaucatcher-mongo based on mongo-java-driver
     lazy val jdriver = Project("beaucatcher-java-driver",
         file("jdriver"),
         settings = projectSettings ++
-              Seq(libraryDependencies ++= Seq(mongoJavaDriver, Test.commonsIO))) dependsOn (bsonJava, mongo % "compile->compile;test->test")
+              Seq(libraryDependencies ++= Seq(Test.commonsIO))) dependsOn (bsonJava, mongo % "compile->compile;test->test")
 }

@@ -36,7 +36,7 @@ final class JavaDriverBackend private[jdriver] (override val config : MongoConfi
 
     override final def createCollectionGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
-        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncCollectionGroup[EntityType, IdType, IdType] = {
+        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : CollectionGroup[EntityType, IdType, IdType] = {
         val identityIdComposer = new IdentityIdComposer[IdType]
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
@@ -57,7 +57,7 @@ final class JavaDriverBackend private[jdriver] (override val config : MongoConfi
         }
     }
 
-    override def createCollectionGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncCollectionGroupWithoutEntity[IdType] = {
+    override def createCollectionGroupWithoutEntity[IdType : Manifest](collectionName : String) : CollectionGroupWithoutEntity[IdType] = {
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
             new BObjectJavaDriverCollectionGroup[IdType, JavaObjectId](this,

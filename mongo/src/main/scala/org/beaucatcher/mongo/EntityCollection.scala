@@ -3,14 +3,6 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 
 /**
- * A Sync Collection parameterized to support returning some kind of domain object ("entity").
- */
-abstract trait EntitySyncCollection[OuterQueryType, EntityType <: AnyRef, IdType]
-    extends SyncCollection[OuterQueryType, EntityType, IdType, Any] {
-
-}
-
-/**
  * The general type of an entity Collection that backends to another Collection.
  * This is an internal implementation class not exported from the library.
  */

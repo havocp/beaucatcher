@@ -1,6 +1,7 @@
 package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
+import akka.actor.ActorSystem
 
 /**
  * An interface specifying a Collection objects to be provided that do not rely
@@ -8,7 +9,7 @@ import org.beaucatcher.bson._
  * BObject-based.
  * For now there's just one, the synchronous one.
  */
-private[beaucatcher] trait SyncCollectionGroupWithoutEntity[BObjectIdType] {
+private[beaucatcher] trait CollectionGroupWithoutEntity[BObjectIdType] {
     /**
      *  This Collection works with a traversable immutable BSON tree (BObject), which is probably
      *  the best representation if you want to convert to JSON. You can also use
@@ -17,7 +18,9 @@ private[beaucatcher] trait SyncCollectionGroupWithoutEntity[BObjectIdType] {
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    def bobjectSync : BObjectSyncCollection[BObjectIdType]
+    def newBObjectSync : BObjectSyncCollection[BObjectIdType]
+
+    def newBObjectAsync(implicit system : ActorSystem) : BObjectAsyncCollection[BObjectIdType]
 }
 
 /**
@@ -25,12 +28,14 @@ private[beaucatcher] trait SyncCollectionGroupWithoutEntity[BObjectIdType] {
  * For now, the two flavors are one that returns [[org.beaucatcher.bson.BObject]] results
  * and another that returns an application-specified case class.
  */
-private[beaucatcher] trait SyncCollectionGroup[EntityType <: AnyRef, EntityIdType, BObjectIdType]
-    extends SyncCollectionGroupWithoutEntity[BObjectIdType] {
+private[beaucatcher] trait CollectionGroup[EntityType <: AnyRef, EntityIdType, BObjectIdType]
+    extends CollectionGroupWithoutEntity[BObjectIdType] {
 
     /**
      *  This Collection works with a specified entity class, for typesafe access to fields
      *  from within Scala code.
      */
-    def entitySync : EntitySyncCollection[BObject, EntityType, EntityIdType]
+    def newEntitySync : EntitySyncCollection[BObject, EntityType, EntityIdType]
+
+    def newEntityAsync(implicit system : ActorSystem) : EntityAsyncCollection[BObject, EntityType, EntityIdType]
 }

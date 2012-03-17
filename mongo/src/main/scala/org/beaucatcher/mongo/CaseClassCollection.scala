@@ -4,14 +4,6 @@ import org.beaucatcher.bson.ClassAnalysis
 import org.beaucatcher.bson._
 
 /**
- * A Sync Collection parameterized to support returning case class entities.
- */
-abstract trait CaseClassSyncCollection[OuterQueryType, EntityType <: Product, IdType]
-    extends EntitySyncCollection[OuterQueryType, EntityType, IdType] {
-
-}
-
-/**
  * The general type of a case class Collection that backends to another Collection.
  * This is an internal implementation class not exported from the library.
  */

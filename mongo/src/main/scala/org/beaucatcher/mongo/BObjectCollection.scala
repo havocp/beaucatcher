@@ -3,12 +3,6 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 
-/**
- * A Sync Collection parameterized to work with BObject
- */
-abstract trait BObjectSyncCollection[IdType] extends SyncCollection[BObject, BObject, IdType, BValue] {
-}
-
 /** A BObject Collection that backends to another Collection. This is an internal implementation class not exported from the library. */
 private[beaucatcher] abstract trait BObjectComposedSyncCollection[OuterIdType, InnerQueryType, InnerEntityType, InnerIdType, InnerValueType]
     extends BObjectSyncCollection[OuterIdType]

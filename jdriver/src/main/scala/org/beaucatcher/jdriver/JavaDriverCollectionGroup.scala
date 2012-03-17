@@ -4,6 +4,7 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import com.mongodb.DBObject
 import com.mongodb.DBCollection
+import akka.actor.ActorSystem
 
 private[jdriver] class InnerBValueValueComposer
     extends ValueComposer[Any, BValue] {
@@ -27,7 +28,7 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
     val backend : JavaDriverBackend,
     val collection : DBCollection,
     private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
-    extends SyncCollectionGroupWithoutEntity[BObjectIdType] {
+    extends CollectionGroupWithoutEntity[BObjectIdType] {
     require(backend != null)
     require(collection != null)
 
@@ -61,7 +62,7 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    override lazy val bobjectSync : BObjectSyncCollection[BObjectIdType] = {
+    override def newBObjectSync : BObjectSyncCollection[BObjectIdType] = {
         val outerBackend = backend
         new BObjectJavaDriverSyncCollection[BObjectIdType, JavaDriverIdType] {
             override val inner = jdriverSyncCollection
@@ -72,6 +73,15 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
             override val valueComposer = bobjectJavaDriverValueComposer
         }
     }
+
+    /**
+     *  This Collection works with a traversable immutable BSON tree (BObject), which is probably
+     *  the best representation if you want to convert to JSON. This is intended to be the "raw"
+     *  format that we'd build off the wire using Hammersmith, rather than DBObject,
+     *  because it's easier to work with and immutable.
+     */
+    override def newBObjectAsync(implicit system : ActorSystem) : BObjectAsyncCollection[BObjectIdType] =
+        AsyncCollection.fromSync(newBObjectSync)
 }
 
 /**
@@ -95,7 +105,7 @@ private[jdriver] class EntityBObjectJavaDriverCollectionGroup[EntityType <: AnyR
     val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],
     private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
     extends BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDriverIdType](backend, collection, bobjectJavaDriverIdComposer)
-    with SyncCollectionGroup[EntityType, EntityIdType, BObjectIdType] {
+    with CollectionGroup[EntityType, EntityIdType, BObjectIdType] {
     require(backend != null)
     require(collection != null)
     require(entityBObjectQueryComposer != null)
@@ -107,15 +117,24 @@ private[jdriver] class EntityBObjectJavaDriverCollectionGroup[EntityType <: AnyR
      *  from within Scala code. You also know that all the fields are present
      *  if the case class was successfully constructed.
      */
-    override lazy val entitySync : EntitySyncCollection[BObject, EntityType, EntityIdType] = {
+    override def newEntitySync : EntitySyncCollection[BObject, EntityType, EntityIdType] = {
         val outerBackend = backend
         new EntityBObjectSyncCollection[EntityType, EntityIdType, BObjectIdType] {
-            override val inner = bobjectSync
+            override val inner = newBObjectSync
             override val backend = outerBackend
             override val queryComposer = entityBObjectQueryComposer
             override val entityComposer = entityBObjectEntityComposer
             override val idComposer = entityBObjectIdComposer
             override val valueComposer = new InnerBValueValueComposer()
         }
+    }
+
+    /**
+     *  This Collection works with a specified case class, for typesafe access to fields
+     *  from within Scala code. You also know that all the fields are present
+     *  if the case class was successfully constructed.
+     */
+    override def newEntityAsync(implicit system : ActorSystem) : EntityAsyncCollection[BObject, EntityType, EntityIdType] = {
+        AsyncCollection.fromSync(newEntitySync)
     }
 }

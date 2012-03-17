@@ -1,5 +1,6 @@
 package org.beaucatcher.mongo
 import org.beaucatcher.bson.BObject
+import akka.actor.ActorSystem
 
 /**
  * A mixin trait that provides a [[org.beaucatcher.mongo.MongoBackend]] to the class
@@ -7,6 +8,8 @@ import org.beaucatcher.bson.BObject
  */
 trait MongoBackendProvider {
     def backend : MongoBackend
+
+    final implicit def actorSystem : ActorSystem = backend.actorSystem
 }
 
 /**
@@ -27,10 +30,15 @@ trait MongoBackend {
 
     def createCollectionGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         entityBObjectQueryComposer : QueryComposer[BObject, BObject],
-        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : SyncCollectionGroup[EntityType, IdType, IdType]
+        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : CollectionGroup[EntityType, IdType, IdType]
 
-    def createCollectionGroupWithoutEntity[IdType : Manifest](collectionName : String) : SyncCollectionGroupWithoutEntity[IdType]
+    def createCollectionGroupWithoutEntity[IdType : Manifest](collectionName : String) : CollectionGroupWithoutEntity[IdType]
 
     def database : Database
     def config : MongoConfig
+
+    // FIXME this should probably be somehow possible to pass in
+    private lazy val theActorSystem = ActorSystem("beaucatcher")
+
+    final def actorSystem : ActorSystem = theActorSystem
 }
