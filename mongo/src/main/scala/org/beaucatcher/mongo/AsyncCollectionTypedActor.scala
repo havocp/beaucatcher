@@ -118,6 +118,10 @@ final private class AsyncCollectionWrappingSync[QueryType, EntityType, IdType, V
     final override def entityToUpdateQuery(entity : EntityType) : QueryType =
         underlying.entityToUpdateQuery(entity)
 
+    // FIXME
+    // 1. it's unclear why we need an actor, when the implementation uses Future({}) to dispatch
+    //    every method anyway
+    // 2. we have no way to stop this actor (need a close() on collections I guess)
     final val actor : AsyncCollectionTypedActor[QueryType, EntityType, IdType, ValueType] = {
         val props = TypedProps(classOf[AsyncCollectionTypedActor[QueryType, EntityType, IdType, ValueType]],
             new AsyncCollectionImpl[QueryType, EntityType, IdType, ValueType](underlying))
