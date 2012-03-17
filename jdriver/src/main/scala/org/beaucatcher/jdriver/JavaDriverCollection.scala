@@ -81,14 +81,14 @@ abstract trait JavaDriverSyncCollection[IdType <: Any] extends SyncCollection[DB
         }
     }
 
-    override def distinct(key : String, options : DistinctOptions[DBObject]) : Seq[Any] = {
+    override def distinct(key : String, options : DistinctOptions[DBObject]) : Iterator[Any] = {
         import scala.collection.JavaConverters._
 
         withQueryFlags(options.overrideQueryFlags) {
             if (options.query.isDefined)
-                collection.distinct(key, options.query.get).asScala
+                collection.distinct(key, options.query.get).asScala.iterator
             else
-                collection.distinct(key).asScala
+                collection.distinct(key).asScala.iterator
         }
     }
 

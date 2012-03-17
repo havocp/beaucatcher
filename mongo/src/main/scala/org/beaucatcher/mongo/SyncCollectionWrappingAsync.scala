@@ -39,8 +39,8 @@ final private class SyncCollectionWrappingAsync[QueryType, EntityType, IdType, V
     final override def count(query : QueryType, options : CountOptions) : Long =
         block(underlying.count(query, options))
 
-    final override def distinct(key : String, options : DistinctOptions[QueryType]) : Seq[ValueType] =
-        block(underlying.distinct(key, options))
+    final override def distinct(key : String, options : DistinctOptions[QueryType]) : Iterator[ValueType] =
+        block(underlying.distinct(key, options)).map(block(_))
 
     final override def find(query : QueryType, options : FindOptions) : Iterator[EntityType] =
         block(underlying.find(query, options)).map(block(_))

@@ -38,7 +38,7 @@ private[beaucatcher] abstract trait ComposedSyncCollection[OuterQueryType, Outer
         inner.count(queryIn(query), options)
     }
 
-    override def distinct(key : String, options : DistinctOptions[OuterQueryType]) : Seq[OuterValueType] = withExceptionsMapped {
+    override def distinct(key : String, options : DistinctOptions[OuterQueryType]) : Iterator[OuterValueType] = withExceptionsMapped {
         inner.distinct(key, options.convert(queryIn(_))) map { valueOut(_) }
     }
 

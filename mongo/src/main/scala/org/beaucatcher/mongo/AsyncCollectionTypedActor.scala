@@ -9,7 +9,7 @@ private trait AsyncCollectionTypedActor[QueryType, EntityType, IdType, ValueType
 
     def count(query : QueryType, options : CountOptions) : Future[Long]
 
-    def distinct(key : String, options : DistinctOptions[QueryType]) : Future[Seq[ValueType]]
+    def distinct(key : String, options : DistinctOptions[QueryType]) : Future[Iterator[Future[ValueType]]]
 
     def find(query : QueryType, options : FindOptions) : Future[Iterator[Future[EntityType]]]
 
@@ -41,8 +41,11 @@ final private class AsyncCollectionImpl[QueryType, EntityType, IdType, ValueType
         Future({ Future.blocking(); underlying.count(query, options) })
     }
 
-    final override def distinct(key : String, options : DistinctOptions[QueryType]) : Future[Seq[ValueType]] = {
-        Future({ Future.blocking(); underlying.distinct(key, options) })
+    final override def distinct(key : String, options : DistinctOptions[QueryType]) : Future[Iterator[Future[ValueType]]] = {
+        // FIXME this can block when getting batches
+        Future({ Future.blocking(); underlying.distinct(key, options) }) map { i =>
+            i.map(Promise.successful(_))
+        }
     }
 
     final override def find(query : QueryType, options : FindOptions) : Future[Iterator[Future[EntityType]]] = {
@@ -131,7 +134,7 @@ final private class AsyncCollectionWrappingSync[QueryType, EntityType, IdType, V
     final override def count(query : QueryType, options : CountOptions) : Future[Long] =
         actor.count(query, options)
 
-    final override def distinct(key : String, options : DistinctOptions[QueryType]) : Future[Seq[ValueType]] =
+    final override def distinct(key : String, options : DistinctOptions[QueryType]) : Future[Iterator[Future[ValueType]]] =
         actor.distinct(key, options)
 
     final override def find(query : QueryType, options : FindOptions) : Future[Iterator[Future[EntityType]]] =

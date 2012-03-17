@@ -170,13 +170,12 @@ trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
 
     def count(query : QueryType, options : CountOptions) : Long
 
-    // FIXME shouldn't distinct return an iterator not a seq for scalability (so it can be lazy?)
-    final def distinct(key : String) : Seq[ValueType] =
+    final def distinct(key : String) : Iterator[ValueType] =
         distinct(key, DistinctOptions.empty)
-    final def distinct[A <% QueryType](key : String, query : A) : Seq[ValueType] =
+    final def distinct[A <% QueryType](key : String, query : A) : Iterator[ValueType] =
         distinct(key, DistinctOptions[QueryType](query = Some(query)))
 
-    def distinct(key : String, options : DistinctOptions[QueryType]) : Seq[ValueType]
+    def distinct(key : String, options : DistinctOptions[QueryType]) : Iterator[ValueType]
 
     final def find() : Iterator[EntityType] =
         find(emptyQuery, FindOptions.empty)

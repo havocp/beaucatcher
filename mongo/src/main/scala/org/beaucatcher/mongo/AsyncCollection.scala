@@ -31,13 +31,12 @@ trait ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
 
     def count(query : QueryType, options : CountOptions) : Future[Long]
 
-    // FIXME shouldn't distinct return an iterator not a seq for scalability (so it can be lazy?)
-    final def distinct(key : String) : Future[Seq[ValueType]] =
+    final def distinct(key : String) : Future[Iterator[Future[ValueType]]] =
         distinct(key, DistinctOptions.empty)
-    final def distinct[A <% QueryType](key : String, query : A) : Future[Seq[ValueType]] =
+    final def distinct[A <% QueryType](key : String, query : A) : Future[Iterator[Future[ValueType]]] =
         distinct(key, DistinctOptions[QueryType](query = Some(query)))
 
-    def distinct(key : String, options : DistinctOptions[QueryType]) : Future[Seq[ValueType]]
+    def distinct(key : String, options : DistinctOptions[QueryType]) : Future[Iterator[Future[ValueType]]]
 
     final def find() : Future[Iterator[Future[EntityType]]] =
         find(emptyQuery, FindOptions.empty)

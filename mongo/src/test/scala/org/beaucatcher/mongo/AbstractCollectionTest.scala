@@ -187,14 +187,14 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         create1234()
         assertEquals(8, Foo.sync.count())
 
-        val allIds = Foo.sync[BObject, BValue].distinct("_id")
+        val allIds = Foo.sync[BObject, BValue].distinct("_id").toSeq
         assertEquals(8, allIds.length)
-        val allInts = Foo.sync[BObject, BValue].distinct("intField")
+        val allInts = Foo.sync[BObject, BValue].distinct("intField").toSeq
         assertEquals(4, allInts.length)
         for (i <- 1 to 4) {
             assertTrue(allInts.find(_.unwrapped == i).isDefined)
         }
-        val allStrings = Foo.sync[BObject, BValue].distinct("stringField")
+        val allStrings = Foo.sync[BObject, BValue].distinct("stringField").toSeq
         assertEquals(4, allStrings.length)
         for (i <- 1 to 4) {
             assertTrue(allStrings.find(_.unwrapped == i.toString).isDefined)
