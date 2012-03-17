@@ -243,6 +243,9 @@ trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
  *   returned in the old (or new) object returned from the method.
  */
 trait SyncCollection[QueryType, EntityType, IdType, ValueType] extends ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
+    private[mongo] def underlyingAsync : Option[AsyncCollection[QueryType, EntityType, IdType, ValueType]] =
+        None
+
     /**
      * $findAndReplaceDocs
      *
@@ -462,5 +465,13 @@ trait SyncCollection[QueryType, EntityType, IdType, ValueType] extends ReadOnlyS
      */
     final def findIndexes() : Iterator[CollectionIndex] = {
         database.system.indexes.sync[CollectionIndex].find(BObject("ns" -> fullName))
+    }
+}
+
+object SyncCollection {
+    def fromAsync[QueryType, EntityType, IdType, ValueType](async : AsyncCollection[QueryType, EntityType, IdType, ValueType]) : SyncCollection[QueryType, EntityType, IdType, ValueType] = {
+        async.underlyingSync.getOrElse({
+            new SyncCollectionWrappingAsync(async)
+        })
     }
 }

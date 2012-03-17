@@ -6,6 +6,10 @@ import akka.dispatch.Future
 import akka.actor.ActorSystem
 
 trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
+
+    private[mongo] def underlyingSync : Option[SyncCollection[QueryType, EntityType, IdType, ValueType]] =
+        None
+
     private[beaucatcher] def backend : MongoBackend
 
     /** The database containing the collection */
@@ -162,6 +166,8 @@ trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
 
 object AsyncCollection {
     def fromSync[QueryType, EntityType, IdType, ValueType](sync : SyncCollection[QueryType, EntityType, IdType, ValueType])(implicit system : ActorSystem) : AsyncCollection[QueryType, EntityType, IdType, ValueType] = {
-        new AsyncCollectionWrappingSync(sync, system)
+        sync.underlyingAsync.getOrElse({
+            new AsyncCollectionWrappingSync(sync, system)
+        })
     }
 }

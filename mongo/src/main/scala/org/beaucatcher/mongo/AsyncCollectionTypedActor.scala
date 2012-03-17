@@ -34,7 +34,7 @@ private trait AsyncCollectionTypedActor[QueryType, EntityType, IdType, ValueType
     def findIndexes() : Future[Iterator[Future[CollectionIndex]]]
 }
 
-private class AsyncCollectionImpl[QueryType, EntityType, IdType, ValueType](val underlying : SyncCollection[QueryType, EntityType, IdType, ValueType]) extends AsyncCollectionTypedActor[QueryType, EntityType, IdType, ValueType] {
+final private class AsyncCollectionImpl[QueryType, EntityType, IdType, ValueType](val underlying : SyncCollection[QueryType, EntityType, IdType, ValueType]) extends AsyncCollectionTypedActor[QueryType, EntityType, IdType, ValueType] {
     import TypedActor.dispatcher
 
     final override def count(query : QueryType, options : CountOptions) : Future[Long] = {
@@ -96,9 +96,12 @@ private class AsyncCollectionImpl[QueryType, EntityType, IdType, ValueType](val 
     }
 }
 
-private class AsyncCollectionWrappingSync[QueryType, EntityType, IdType, ValueType](val underlying : SyncCollection[QueryType, EntityType, IdType, ValueType],
+final private class AsyncCollectionWrappingSync[QueryType, EntityType, IdType, ValueType](val underlying : SyncCollection[QueryType, EntityType, IdType, ValueType],
     val system : ActorSystem)
     extends AsyncCollection[QueryType, EntityType, IdType, ValueType] {
+
+    private[mongo] final override def underlyingSync =
+        Some(underlying)
 
     final override def backend =
         underlying.backend
