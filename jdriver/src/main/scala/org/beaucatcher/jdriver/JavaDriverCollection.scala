@@ -6,7 +6,7 @@ import org.beaucatcher.mongo.wire._
 import org.bson.BSONObject
 import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, _ }
 
-import j.JavaConversions._
+import JavaConversions._
 
 /**
  * Base trait that chains SyncCollection methods to a JavaDriver collection, which must be provided

@@ -79,7 +79,7 @@ final class JavaDriverBackend private[jdriver] (override val config : MongoConfi
 private[jdriver] object JavaDriverBackend {
 
     lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
-        import j.JavaConversions._
+        import JavaConversions._
         override def idIn(id : ObjectId) : JavaObjectId = id
         override def idOut(id : JavaObjectId) : ObjectId = id
     }

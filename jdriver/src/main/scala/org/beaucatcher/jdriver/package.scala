@@ -7,10 +7,10 @@ import org.bson.BSONException
 import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, MongoException => JavaMongoException, _ }
 
 package object jdriver {
-    import j.JavaConversions._
+    import JavaConversions._
 
     object Implicits {
-        private[jdriver] implicit def asScalaBObject(bsonObj : BSONObject) = j.JavaConversions.asScalaBObject(bsonObj)
+        private[jdriver] implicit def asScalaBObject(bsonObj : BSONObject) = JavaConversions.asScalaBObject(bsonObj)
 
         private[jdriver] implicit def asScalaWriteResult(j : JavaWriteResult) : WriteResult = {
             new WriteResult({ asScalaBObject(j.getLastError()) })
@@ -35,11 +35,11 @@ package object jdriver {
      * adds DBObject extensions to BSONObject.
      * This is an internal implementation class not exported by the library.
      */
-    private[jdriver] class BObjectDBObject(b : BObject = BObject.empty) extends j.BObjectBSONObject(b) with BValueDBObject {
+    private[jdriver] class BObjectDBObject(b : BObject = BObject.empty) extends BObjectBSONObject(b) with BValueDBObject {
 
     }
 
-    private[jdriver] class BArrayDBObject(b : BArray = BArray.empty) extends j.BArrayBSONObject(b) with BValueDBObject {
+    private[jdriver] class BArrayDBObject(b : BArray = BArray.empty) extends BArrayBSONObject(b) with BValueDBObject {
 
     }
 

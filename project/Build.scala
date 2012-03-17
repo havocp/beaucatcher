@@ -17,7 +17,7 @@ object BuildSettings {
             val baseDir = new File(ref.build)
             Some(Resolver.file("gh-pages", new File(baseDir, "../beaucatcher-web/repository")))
         },
-        resolvers := Seq(Resolvers.scalaToolsSnapshotsRepo, Resolvers.akkaRepo, Resolvers.twttrRepo))
+        resolvers := Seq(Resolvers.scalaToolsSnapshotsRepo, Resolvers.typesafeRepo, Resolvers.twttrRepo))
 
     val projectSettings = Defaults.defaultSettings ++ globalSettings
 }
@@ -44,7 +44,7 @@ object ShellPrompt {
 }
 
 object Resolvers {
-    val akkaRepo = "Akka Repo" at "http://akka.io/repository"
+    val typesafeRepo = "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/"
     val scalaToolsSnapshotsRepo = "Scala Tools Snapshots" at "http://scala-tools.org/repo-snapshots/"
     val twttrRepo = "Twitter Public Repo" at "http://maven.twttr.com"
 }
@@ -52,9 +52,8 @@ object Resolvers {
 object Dependencies {
     val scalap = "org.scala-lang" % "scalap" % BuildSettings.buildScalaVersion
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
-    val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.6.5"
-    val akkaActor = "se.scalablesolutions.akka" % "akka-actor" % "1.1"
-    val hammersmithLib = "com.mongodb.async" %% "mongo-driver" % "0.2.7"
+    val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.7.3"
+    val akkaActor = "com.typesafe.akka" % "akka-actor" % "2.0"
     val jodaTime = "joda-time" % "joda-time" % "1.6.2"
 
     // Dependencies in "test" configuration
@@ -77,7 +76,7 @@ object BeaucatcherBuild extends Build {
     lazy val root = Project("beaucatcher",
         file("."),
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (bson, bsonJava, mongo, async, jdriver)
+            Seq(publishArtifact := false)) aggregate (bson, bsonJava, mongo, jdriver)
 
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),
@@ -97,103 +96,10 @@ object BeaucatcherBuild extends Build {
     lazy val jdriver = Project("beaucatcher-java-driver",
         file("jdriver"),
         settings = projectSettings ++
-            makeGenerateBsonJavaSettings("org.beaucatcher.jdriver") ++
-            Seq(libraryDependencies ++= Seq(mongoJavaDriver, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test")
+              Seq(libraryDependencies ++= Seq(mongoJavaDriver, Test.commonsIO))) dependsOn (bsonJava, mongo % "compile->compile;test->test")
 
     lazy val async = Project("beaucatcher-async",
         file("async"),
         settings = projectSettings ++
             Seq(libraryDependencies := Seq(akkaActor))) dependsOn (mongo % "compile->compile;test->test")
-
-    lazy val hammersmith = Project("beaucatcher-hammersmith",
-        file("hammersmith"),
-        settings = projectSettings ++
-            makeGenerateBsonJavaSettings("org.beaucatcher.hammersmith") ++
-            Seq(libraryDependencies := Seq(hammersmithLib))) dependsOn (async % "compile->compile;test->test")
-
-    lazy val benchmark = Project("beaucatcher-benchmark",
-        file("benchmark"),
-        settings = projectSettings ++
-            Seq(fork in run := true, javaOptions in run := Seq("-Xmx2G"))) dependsOn (hammersmith, jdriver)
-
-    def makeGenerateBsonJavaSettings(packageName: String) = {
-        Seq(
-            generateBsonJava <<= (streams, scalaSource in Compile) map {
-                (streams, srcDir) =>
-                    generateBsonJavaTask(streams, srcDir, packageName)
-            },
-            sources in Compile <<= (generateBsonJava, sources in Compile) map {
-                (generated, sources) =>
-                    (sources ++ generated).distinct
-            })
-    }
-
-    // This is wonky; the issue is that hammersmith and casbah each
-    // pull in mongo-java-driver upstream, and hammersmith (for now) even
-    // has part of mongo-java-driver internally as a lib/, so they may
-    // not match the mongo-java-driver we download. Thus we don't want
-    // to use the beaucatcher-bson-java jar, but instead we generate
-    // source and recompile it against whatever comes with hammersmith
-    // and casbah. Pretty weird hack, but no way to generate a shared
-    // binary against two possibly ABI-incompatible mongo-java-driver
-    // I guess
-    val generateBsonJava = TaskKey[Seq[File]]("generate-bson-java", "Generate private copy of bson-java sources in hammersmith and casbah projects")
-
-    def generateBsonJavaTask(streams: TaskStreams, srcDir: File, packageName: String) = {
-        // there is probably a better way to do this
-        val bsonJavaDir = srcDir /  "../../../../bson-java/src/main/scala"
-        val bsonJavaSources = PathFinder(bsonJavaDir) ** new SimpleFileFilter({ f =>
-            f.getName.endsWith(".scala")
-        })
-
-        val lastPackageComponent = packageName.substring(packageName.lastIndexOf('.') + 1)
-
-        val generatedBuilder = Seq.newBuilder[File]
-        val targetDir = srcDir / packageName.replaceAll("""\.""", "/") / "j"
-        IO.createDirectory(targetDir)
-
-        for (src <- bsonJavaSources.get) {
-            val template = IO.read(src asFile)
-            val target = targetDir / src.getName
-            val newContent = template.
-                replaceAll("""package org\.beaucatcher\.bson""",
-                           "package " + packageName + ".j\n" +
-                       "import org.beaucatcher.bson._\n").
-                replaceAll("""object """, "private[" + lastPackageComponent + "] object ")
-            val oldContent = try {
-                IO.read(target asFile)
-            } catch {
-                case e: java.io.IOException => ""
-            }
-            if (newContent != oldContent) {
-                streams.log.info("Generated " + target)
-                IO.write(target asFile, newContent)
-            }
-            generatedBuilder += target
-        }
-
-        val pkgFile = targetDir / "package.scala"
-
-        val pkgContent = """
-package %s
-
-package object j {
-}
-""".format(packageName, packageName)
-
-        val oldPkgContent = try {
-            IO.read(pkgFile asFile)
-        } catch {
-            case e: java.io.FileNotFoundException => ""
-        }
-
-        if (oldPkgContent != pkgContent) {
-            IO.write(pkgFile asFile, pkgContent)
-            streams.log.info("Generated " + pkgFile)
-        }
-
-        generatedBuilder += pkgFile
-
-        generatedBuilder.result
-    }
 }

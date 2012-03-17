@@ -8,7 +8,7 @@ import com.mongodb.DBCollection
 private[jdriver] class InnerBValueValueComposer
     extends ValueComposer[Any, BValue] {
 
-    import j.JavaConversions._
+    import JavaConversions._
 
     override def valueIn(v : Any) : BValue = wrapJavaAsBValue(v)
     override def valueOut(v : BValue) : Any = v.unwrappedAsJava
@@ -17,7 +17,7 @@ private[jdriver] class InnerBValueValueComposer
 private[jdriver] class OuterBValueValueComposer
     extends ValueComposer[BValue, Any] {
 
-    import j.JavaConversions._
+    import JavaConversions._
 
     override def valueIn(v : BValue) : Any = v.unwrappedAsJava
     override def valueOut(v : Any) : BValue = wrapJavaAsBValue(v)

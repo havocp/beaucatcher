@@ -48,7 +48,7 @@ class CollectionTest
 
     override def roundTripThroughJava(bvalue : BValue) {
         // be sure we can round-trip through Java
-        import j.JavaConversions._
+        import JavaConversions._
         val jvalue = bvalue.unwrappedAsJava
         val wrapped = wrapJavaAsBValue(jvalue)
         assertEquals(bvalue, wrapped)
