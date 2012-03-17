@@ -1,8 +1,9 @@
 Beaucatcher is a Scala library for JSON parsing/rendering _and_ for
 using MongoDB collections.
 
-It wraps and builds on a "driver library" (select Casbah or
-Hammersmith by mixing in the trait for the one you want).
+It wraps and builds on a "driver library" (currently, always
+mongo-java-driver, but could have a Hammersmith option in the
+future).
 
 Please see http://beaucatcher.org/ for a high-level description,
 rationale, list of what works and what doesn't, and all that.
@@ -45,12 +46,12 @@ essentially these things:
    basic). BSON and JSON are handled in a uniform way, so converting
    from one to the other is fast and there aren't two APIs to learn.
  - a JSON parser and renderer.
- - sync and async "DAO" traits, that have find() and all those methods
+ - sync and async Collection traits, that have find() and all those methods
    with their accompanying options.
- - a `CollectionOperations` trait that's essentially a set of DAOs,
-   matrix of (result-type x asyncness). The idea is that for a
-   collection, you define a case class with its schema, and have its
-   companion object extend `CollectionOperationsWithCaseClass`
+ - a `CollectionAccess` trait that gives you a set of Collection,
+   in a matrix of (result-type x asyncness). The idea is that for a
+   collection, you define a case class as its schema, and have its
+   companion object extend `CollectionAccessWithCaseClass`
  - a `JsonMethods` trait that implements CRUD operations based on
    JSON strings for the collection; you might hook this up to your
    incoming HTTP requests. You could have a companion object extend
@@ -156,7 +157,7 @@ Unlike Salat:
    to add safe numeric conversions, like putting Int in Long.)
  - there are no annotations, so you can't ignore fields or anything like that
  - there's no global hash lookup of graters, you would have to build
-   that yourself or use the DAO stuff described below.
+   that yourself or use the Collection stuff described below.
  - without the global hash, case class fields inside case classes can't
    really work, so you have to resolve "joins" by hand right now
 
@@ -167,19 +168,18 @@ Usage looks like:
     assertEquals(Map("foo" -> 42, "bar" -> "brown fox"), map)
 
 The `ClassAnalysis` needs to be cached somehow since it's expensive.
-The DAO objects described next will do this for you.
+The Collection objects described next will do this for you.
 
 ## Data access
 
  - sometimes you want a BSON or JSON tree to manipulate, sometimes you
    want a JSON string, and sometimes you want a typesafe class instead
    of a *SON blob.
- - the basic data access interface (see SyncDAO.scala) has type
-   parameters for the query, entity, and id types.
- - typically you would use a pipeline of DAO objects, where the DAO
-   that gives you back case classes builds on the DAO that gives
-   you back `BObject`. See CollectionOperations.scala for a trait that
-   gives you the DAO pipeline.
+ - the basic data access interface (see SyncCollection.scala,
+   AsyncCollection.scala) has type parameters for the query,
+   entity, and id types.
+ - you typically use a `CollectionAccess` object which provides
+   both `BObject` and case class collections, both sync and async
  - you can then choose to query for either a raw BSON tree or
    the case class, and write generic queries that support both.
  - you can override and customize the BSON-to-case-class conversion
@@ -192,19 +192,15 @@ The DAO objects described next will do this for you.
 Data access starts with an abstract trait that defines an interface
 with `find()`, `insert()`, `remove()`, etc.:
 
-    abstract trait SyncDAO[QueryType, EntityType, IdType]
+    abstract trait SyncCollection[QueryType, EntityType, IdType, ValueType]
 
-There are subtypes of the trait for `BObject` and case class entity
-types.
-
-Then there's a `CollectionOperations` trait, with some subclasses that
-connect to Casbah. This trait sets up both a `BObject` and a custom
-class DAO. You might use it like this:
+A `CollectionAccess` trait sets up both a `BObject` Collection and
+a custom class Collection, both sync and async. You might use it
+like this:
 
     trait MyAppMongoProvider
        extends MongoConfigProvider
-       // note here you select Casbah vs. Hammersmith
-       with CasbahBackendProvider {
+       with JavaDriverBackendProvider {
        override val mongoConfig = new SimpleMongoConfig("mydbname", "localhost", 27017)
     }
 
@@ -212,23 +208,23 @@ class DAO. You might use it like this:
         case class Foo(_id : ObjectId, intField : Int, stringField : String)
 
         object Foo
-            extends CollectionOperationsWithCaseClass[Foo, ObjectId]
+            extends CollectionAccessWithCaseClass[Foo, ObjectId]
             with MyAppMongoProvider {
-            def customQuery[E](implicit chooser : SyncDAOChooser[E, _]) = {
-                syncDAO[E].find(BObject("intField" -> 23))
+            def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
+                sync[E].find(BObject("intField" -> 23))
             }
         }
     }
 
-Notice the `syncDAO[E]` value, where `E` would be either the
+Notice the `sync[E]` value, where `E` would be either the
 `Foo` case class, or `BObject`. If the call you're making doesn't
 return objects, you can omit the type parameter and just write:
 
-    Foo.syncDAO.count()
+    Foo.sync.count()
 
 or whatever.
 
-The purpose of `syncDAO[E]` is to let you write one query, and use it
+The purpose of `sync[E]` is to let you write one query, and use it
 to get back either a `BObject` or a case class depending on what
 you're doing. You probably want a `BObject` in order to dump some JSON
 out over HTTP, but a case class if you're going to write some code in
@@ -236,8 +232,8 @@ Scala to manipulate the object.
 
 If you wanted to change the mapping from the `BObject` layer to the
 case class layer, you can override the "composers" included in the
-`CasbahCollectionOperations`. For example, there's a field
-`caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]`
+`CollectionAccess`. For example, there's a field
+`entityBObjectEntityComposer : EntityComposer[EntityType, BObject]`
 that converts between the case class and the `BObject`. The idea is
 that you could do things such as rename fields in here, making it an
 alternative to annotations for that.
@@ -245,8 +241,8 @@ alternative to annotations for that.
 ## Custom class rather than case class
 
 If you'd rather use an arbitrary custom class instead of a case class
-with a Mongo collection, then extend `CollectionOperations` rather
-than `CollectionOperationsWithCaseClass` and implement the field
+with a Mongo collection, then extend `CollectionAccess` rather
+than `CollectionAccessWithCaseClass` and implement the field
 `entityBObjectEntityComposer` which must be a "composer" object that
 has two methods, `entityIn` to go from your entity object to
 `BObject`, and `entityOut` to go the other way.
@@ -302,18 +298,18 @@ If you want to sort or add hints or things like that you have to
 manually build the appropriate query object, so for example if the
 query is:
 
-    dao.find(BObject("a" -> 42))
+    collection.find(BObject("a" -> 42))
 
 if you want to sort you have to do this for now:
 
-    dao.find(BObject("query" -> BObject("a" -> 42),
-                     "orderby" -> BObject("whatever" -> 1)))
+    collection.find(BObject("query" -> BObject("a" -> 42),
+                            "orderby" -> BObject("whatever" -> 1)))
 
 Casbah does this with cursors instead (`find()` returns a cursor,
-which you can call `sort()` on, which then modifies the query before
-sending it off) but that approach seems tricky for an async flavor of
-the API, so Beaucatcher just uses the native MongoDB approach just as
-MongoDB would send it on the wire.
+which you can call `sort()` on, which then modifies the query
+before sending it off) but that approach seems tricky for an async
+flavor of the API, so Beaucatcher uses the native MongoDB approach
+just as MongoDB would send it on the wire.
 
 If you aren't sure how to do something, often the unit tests will have
 an example.
