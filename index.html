@@ -62,9 +62,10 @@
     </p>
     <p>
      Beaucatcher wraps and builds on a "driver library"
-     (<a href="https://github.com/mongodb/casbah">Casbah</a>
-     or <a href="https://github.com/bwmcadams/hammersmith">Hammersmith</a>); it
-     does not implement the MongoDB wire protocol natively.
+     (<a href="https://github.com/mongodb/mongo-java-driver">Java Driver</a> or
+     in the
+     future <a href="https://github.com/bwmcadams/hammersmith">Hammersmith</a>);
+     it does not implement the MongoDB wire protocol natively.
     </p>
     <p>
      The JSON/BSON library is in a separate jar that doesn't depend
@@ -96,49 +97,41 @@ to hack on the library itself (which should be simple!).
 </p>
 
 <p>
-The thorny bits are in the driver code (Casbah or Hammersmith), and you can
-always drop down and use Casbah or Hammersmith directly if you have trouble, so
-you can think of Beaucatcher as the convenience wrapper you don't have to write
-yourself.
+The thorny bits are in the driver code (mongo-java-driver or Hammersmith), and
+you can always drop down and use the underlying library directly if you have
+trouble, so you can think of Beaucatcher as the convenience wrapper you don't
+have to write yourself.
 </p>
 
 <p>Here's some stuff that seems to be in good shape:
 <ul>
 <li>BSON/JSON AST and parser are comprehensive and have solid test coverage.</li>
-<li>Complete set of synchronous DAO operations (all the MongoDB query and update types, with the options they support).</li>
-<li>Solid test coverage of synchronous DAO operations.</li>
-<li>CollectionOperations class; derive your case class companion object from it, to get a syncDAO[T] field.</li>
+<li>Complete set of synchronous collection operations (all the MongoDB query and update types, with the options they support).</li>
+<li>Solid test coverage of synchronous collection operations.</li>
+<li>CollectionAccess class; derive your case class companion object from it, then you'll have sync and async collection fields.</li>
 <li>Validation of JSON against a case class.</li>
-<li>Select Casbah or Hammersmith by mixing in the right trait to your
-CollectionOperations object.
-</li>
 </ul>
 </p>
 
 <p>In short I think it's pretty good as a JSON-friendly case-class-friendly
-convenience wrapper for Casbah's synchronous API, and the same API works on
-Hammersmith too.</p>
+convenience wrapper for mongo-java-driver's synchronous API, and the same API
+could support Hammersmith or whatever else too.</p>
 
 <p>Here's some stuff that needs doing, much of it simple, if you need a
 particular thing then let me know:
 <ul>
-<li>A nice example app using akka-mist to illustrate (and test) a JSON API.</li>
-<li>Implement AsyncDAO for Casbah, not just Hammersmith.</li>
-<li>Add asyncDAO[T] to CollectionOperations.</li>
 <li>There's no control over flags such as Tailable, AwaitData.</li>
-<li>There's no support for setting a WriteConcern (Safe mode is hardcoded).</li>
+<li>There's no support for setting a WriteConcern (Safe mode is hardcoded). Put a default in the config file and then allow overriding.</li>
 <li>There's no way to explicitly close a cursor.</li>
 <li>Optimization: clean up intermediate representations. This includes a custom serializer in Hammersmith, or perhaps two (one to go to BObject, one to go straight to case class).</li>
 <li>Optimization: chill out thread handoffs. Right now library boundaries are creating threads in the async case, i.e. there are threads in Hammersmith and then Akka threads in Beaucatcher itself and then probably web threads. In principle we only need one thread per request.</li>
 <li>Optimization: profile and see what actually needs optimizing.</li>
-<li>There's an Akka Actor version of the DAO internally; should it be public API?</li>
-<li>Could have some kind of query DSL for BObject. This seems hard to make too fancy without a Lift-style ActiveRecord setup.</li>
+<li>Could have some kind of query DSL for BObject. This seems hard to make too fancy without a Lift-style ActiveRecord setup. See latest Rogue?</li>
 <li>Haven't figured out exactly how collections will get initialized on
 application load (or on first use of the collection). For example, where do you
-create indexes. For now can be done by hand as you would with Casbah. One option
-is scanning of case classes to figure out what your collections are as in Salat
-or JPA, but I'm not sure that's the right approach for Beaucatcher.
+create indexes. This should maybe be handled in a Play plugin for example (for Play).
 </li>
+<li>A Play 2 plugin?</li>
 <li>It's software, this list has no end ;-)</li>
 </ul>
 </p>
@@ -205,8 +198,8 @@ XML conversion, it just has a parser and AST.</li>
 <li>doesn't have a lot of the more advanced ORM type functionality of Salat.
 Beaucatcher just does a dead-stupid mapping from BSON to case class, where your
 case class fields have to match the types in the BSON exactly. You can override
-a method to massage the BSON as it goes to/from the case class, but that's about
-it.
+a method to massage the BSON as it goes to/from the case class, so you can code
+whatever, but there's no declarative approach to it.
 </li>
 
 <li>doesn't have quite a few things found in BlueEyes, such as the query
@@ -226,13 +219,6 @@ Lift Record to get the schema from at compile time.
 I'm not necessarily against any of these features (the point of Beaucatcher
 isn't necessarily to be "stripped down") but I just haven't thought about them
 or it seems like they should be part of a higher layer like a web framework.
-</p>
-
-<p>
-Beaucatcher might work well with
-say <a href="http://scala.playframework.org/">Play Scala</a>
-or <a href="http://akka.io/docs/akka/1.1.3/scala/http.html">Akka http</a> since
-those lack an official way to do JSON or MongoDB.
 </p>
 
     <h2>Download</h2>
