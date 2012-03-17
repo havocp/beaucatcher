@@ -91,15 +91,11 @@ object BeaucatcherBuild extends Build {
 
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
-        settings = projectSettings) dependsOn (bson % "compile->compile;test->test")
+        settings = projectSettings ++
+              Seq(libraryDependencies ++= Seq(akkaActor))) dependsOn (bson % "compile->compile;test->test")
 
     lazy val jdriver = Project("beaucatcher-java-driver",
         file("jdriver"),
         settings = projectSettings ++
               Seq(libraryDependencies ++= Seq(mongoJavaDriver, Test.commonsIO))) dependsOn (bsonJava, mongo % "compile->compile;test->test")
-
-    lazy val async = Project("beaucatcher-async",
-        file("async"),
-        settings = projectSettings ++
-            Seq(libraryDependencies := Seq(akkaActor))) dependsOn (mongo % "compile->compile;test->test")
 }

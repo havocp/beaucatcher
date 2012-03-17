@@ -1,11 +1,11 @@
-package org.beaucatcher.async
+package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
-import org.beaucatcher.mongo._
 import akka.dispatch.Future
+import akka.actor.ActorSystem
 
-abstract trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
+trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
     private[beaucatcher] def backend : MongoBackend
 
     /** The database containing the collection */
@@ -16,6 +16,12 @@ abstract trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
     def fullName : String
 
     def emptyQuery : QueryType
+
+    def entityToUpsertableObject(entity : EntityType) : QueryType
+
+    def entityToModifierObject(entity : EntityType) : QueryType
+
+    def entityToUpdateQuery(entity : EntityType) : QueryType
 
     final def count() : Future[Long] =
         count(emptyQuery)
@@ -61,6 +67,8 @@ abstract trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
 
     def findOneById(id : IdType, options : FindOneByIdOptions) : Future[Option[EntityType]]
 
+    def findAndModify(query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) : Future[Option[EntityType]]
+
     final def findAndReplace[A <% QueryType](query : A, o : EntityType) : Future[Option[EntityType]] =
         findAndModify(query : QueryType, Some(entityToModifierObject(o)),
             FindAndModifyOptions.empty)
@@ -105,13 +113,6 @@ abstract trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
     final def findAndRemove[A <% QueryType, B <% QueryType](query : A, sort : B) : Future[Option[EntityType]] =
         findAndModify(query : QueryType, None, FindAndModifyOptions[QueryType](sort = Some(sort), flags = Set(FindAndModifyRemove)))
 
-    def entityToUpsertableObject(entity : EntityType) : QueryType
-    def entityToModifierObject(entity : EntityType) : QueryType
-
-    def entityToUpdateQuery(entity : EntityType) : QueryType
-
-    def findAndModify(query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) : Future[Option[EntityType]]
-
     def insert(o : EntityType) : Future[WriteResult]
 
     final def save(o : EntityType) : Future[WriteResult] =
@@ -123,11 +124,13 @@ abstract trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
 
     final def update[A <% QueryType, B <% QueryType](query : A, modifier : B) : Future[WriteResult] =
         update(query : QueryType, modifier, UpdateOptions.empty)
+
+    def update(query : QueryType, modifier : QueryType, options : UpdateOptions) : Future[WriteResult]
+
     final def updateUpsert[A <% QueryType, B <% QueryType](query : A, modifier : B) : Future[WriteResult] =
         update(query : QueryType, modifier, UpdateOptions.upsert)
     final def updateMulti[A <% QueryType, B <% QueryType](query : A, modifier : B) : Future[WriteResult] =
         update(query : QueryType, modifier, UpdateOptions.multi)
-    def update(query : QueryType, modifier : QueryType, options : UpdateOptions) : Future[WriteResult]
 
     def remove(query : QueryType) : Future[WriteResult]
 
@@ -139,7 +142,6 @@ abstract trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
      */
     final def ensureIndex(keys : QueryType) : Future[WriteResult] =
         ensureIndex(keys, IndexOptions.empty)
-
     /**
      * Creates the given index on the collection, using custom options.
      */
@@ -159,5 +161,7 @@ abstract trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
 }
 
 object AsyncCollection {
-
+    def fromSync[QueryType, EntityType, IdType, ValueType](sync : SyncCollection[QueryType, EntityType, IdType, ValueType])(implicit system : ActorSystem) : AsyncCollection[QueryType, EntityType, IdType, ValueType] = {
+        new AsyncCollectionWrappingSync(sync, system)
+    }
 }
