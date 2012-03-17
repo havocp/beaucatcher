@@ -2,6 +2,7 @@ package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
+import akka.dispatch.Future
 
 /**
  * Trait contains [[org.beaucatcher.mongo.CollectionAccess]] for some of mongo's
@@ -33,6 +34,24 @@ case class CreateCollectionOptions(autoIndexId : Option[Boolean] = None, capped 
 
 private[beaucatcher] object CreateCollectionOptions {
     final val empty = CreateCollectionOptions(None, None, None, None, None)
+
+    private[beaucatcher] def buildCommand(name : String, options : CreateCollectionOptions) : BObject = {
+        val builder = BObject.newBuilder
+        // the Mongo docs say "createCollection" but driver uses "create"
+        builder += ("create" -> name)
+        // use "match" here so it will break if we modify CreateCollectionOptions fields
+        options match {
+            case CreateCollectionOptions(autoIndexId, capped, max, size, overrideQueryFlags) =>
+                autoIndexId foreach { v => builder += ("autoIndexId" -> v) }
+                capped foreach { v => builder += ("capped" -> v) }
+                max foreach { v => builder += ("max" -> v) }
+                size foreach { v => builder += ("size" -> v) }
+                builder.result
+            case _ =>
+                throw new IllegalStateException("should not be reached")
+        }
+        builder.result
+    }
 }
 
 case class CommandOptions(overrideQueryFlags : Option[Set[QueryFlag]] = None)
@@ -57,20 +76,7 @@ trait SyncDatabase {
     }
 
     final def createCollection(name : String, options : CreateCollectionOptions) : CommandResult = {
-        val builder = BObject.newBuilder
-        // the Mongo docs say "createCollection" but driver uses "create"
-        builder += ("create" -> name)
-        // use "match" here so it will break if we modify CreateCollectionOptions fields
-        options match {
-            case CreateCollectionOptions(autoIndexId, capped, max, size, overrideQueryFlags) =>
-                autoIndexId foreach { v => builder += ("autoIndexId" -> v) }
-                capped foreach { v => builder += ("capped" -> v) }
-                max foreach { v => builder += ("max" -> v) }
-                size foreach { v => builder += ("size" -> v) }
-                command(builder.result, CommandOptions(overrideQueryFlags))
-            case _ =>
-                throw new IllegalStateException("should not be reached")
-        }
+        command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
     }
 
     def collectionNames : Iterator[String] = {
@@ -85,6 +91,38 @@ trait SyncDatabase {
     }
 }
 
+trait AsyncDatabase {
+    protected def database : Database
+
+    // TODO authenticate()
+    // TODO addUser(), removeUser()
+    // TODO eval()
+
+    final def command(cmd : BObject) : Future[CommandResult] = command(cmd, CommandOptions.empty)
+
+    def command(cmd : BObject, options : CommandOptions) : Future[CommandResult]
+
+    final def createCollection(name : String) : Future[CommandResult] = {
+        createCollection(name, CreateCollectionOptions.empty)
+    }
+
+    final def createCollection(name : String, options : CreateCollectionOptions) : Future[CommandResult] = {
+        command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
+    }
+
+    def collectionNames : Future[Iterator[Future[String]]] = {
+        database.system.namespaces.async[BObject].find(BObject.empty, IncludedFields("name")) map { i =>
+            i.map({ f =>
+                f.map(_.getUnwrappedAs[String]("name"))
+            })
+        }
+    }
+
+    def dropDatabase() : Future[CommandResult] = {
+        command(BObject("dropDatabase" -> 1))
+    }
+}
+
 trait Database {
     protected def backend : MongoBackend
 
@@ -93,4 +131,6 @@ trait Database {
     lazy val system : SystemCollections = new SystemCollections(backend)
 
     def sync : SyncDatabase
+
+    def async : AsyncDatabase
 }
