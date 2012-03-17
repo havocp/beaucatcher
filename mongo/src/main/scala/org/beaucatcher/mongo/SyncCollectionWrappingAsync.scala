@@ -15,7 +15,7 @@ final private class SyncCollectionWrappingAsync[QueryType, EntityType, IdType, V
         Await.result(future, timeout)
     }
 
-    private[mongo] final override def underlyingAsync =
+    private[beaucatcher] final override def underlyingAsync =
         Some(underlying)
 
     final override def backend =

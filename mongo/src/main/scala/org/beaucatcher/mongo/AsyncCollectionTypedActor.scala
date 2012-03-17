@@ -100,7 +100,7 @@ final private class AsyncCollectionWrappingSync[QueryType, EntityType, IdType, V
     val system : ActorSystem)
     extends AsyncCollection[QueryType, EntityType, IdType, ValueType] {
 
-    private[mongo] final override def underlyingSync =
+    private[beaucatcher] final override def underlyingSync =
         Some(underlying)
 
     final override def backend =

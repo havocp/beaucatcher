@@ -139,6 +139,11 @@ object IndexOptions {
 }
 
 trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
+
+    /** Internal method to be sure we don't have more than 1 level of sync/async wrappers */
+    private[beaucatcher] def underlyingAsync : Option[ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType]] =
+        None
+
     private[beaucatcher] def backend : MongoBackend
 
     /** The database containing the collection */
@@ -199,6 +204,13 @@ trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
         findOneById(id, FindOneByIdOptions(fields = fields.toOption))
 
     def findOneById(id : IdType, options : FindOneByIdOptions) : Option[EntityType]
+
+    /**
+     * Queries mongod for the indexes on this collection.
+     */
+    final def findIndexes() : Iterator[CollectionIndex] = {
+        database.system.indexes.sync[CollectionIndex].find(BObject("ns" -> fullName))
+    }
 }
 
 /**
@@ -242,8 +254,10 @@ trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
  *   If specified, the `fields` parameter determines which fields are
  *   returned in the old (or new) object returned from the method.
  */
-trait SyncCollection[QueryType, EntityType, IdType, ValueType] extends ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
-    private[mongo] def underlyingAsync : Option[AsyncCollection[QueryType, EntityType, IdType, ValueType]] =
+trait SyncCollection[QueryType, EntityType, IdType, ValueType]
+    extends ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
+
+    private[beaucatcher] override def underlyingAsync : Option[AsyncCollection[QueryType, EntityType, IdType, ValueType]] =
         None
 
     /**
@@ -459,17 +473,10 @@ trait SyncCollection[QueryType, EntityType, IdType, ValueType] extends ReadOnlyS
      * Removes the given index from the collection.
      */
     def dropIndex(name : String) : CommandResult
-
-    /**
-     * Queries mongod for the indexes on this collection.
-     */
-    final def findIndexes() : Iterator[CollectionIndex] = {
-        database.system.indexes.sync[CollectionIndex].find(BObject("ns" -> fullName))
-    }
 }
 
 object SyncCollection {
-    def fromAsync[QueryType, EntityType, IdType, ValueType](async : AsyncCollection[QueryType, EntityType, IdType, ValueType]) : SyncCollection[QueryType, EntityType, IdType, ValueType] = {
+    private[beaucatcher] def fromAsync[QueryType, EntityType, IdType, ValueType](async : AsyncCollection[QueryType, EntityType, IdType, ValueType]) : SyncCollection[QueryType, EntityType, IdType, ValueType] = {
         async.underlyingSync.getOrElse({
             new SyncCollectionWrappingAsync(async)
         })

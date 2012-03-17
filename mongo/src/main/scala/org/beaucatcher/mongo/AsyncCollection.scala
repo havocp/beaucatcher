@@ -5,9 +5,10 @@ import org.beaucatcher.bson.Implicits._
 import akka.dispatch.Future
 import akka.actor.ActorSystem
 
-trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
+trait ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
 
-    private[mongo] def underlyingSync : Option[SyncCollection[QueryType, EntityType, IdType, ValueType]] =
+    /** Internal method to be sure we don't have more than 1 level of sync/async wrappers */
+    private[beaucatcher] def underlyingSync : Option[ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]] =
         None
 
     private[beaucatcher] def backend : MongoBackend
@@ -20,12 +21,6 @@ trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
     def fullName : String
 
     def emptyQuery : QueryType
-
-    def entityToUpsertableObject(entity : EntityType) : QueryType
-
-    def entityToModifierObject(entity : EntityType) : QueryType
-
-    def entityToUpdateQuery(entity : EntityType) : QueryType
 
     final def count() : Future[Long] =
         count(emptyQuery)
@@ -70,6 +65,24 @@ trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
         findOneById(id, FindOneByIdOptions(fields = fields.toOption))
 
     def findOneById(id : IdType, options : FindOneByIdOptions) : Future[Option[EntityType]]
+
+    /**
+     * Queries mongod for the indexes on this collection.
+     */
+    def findIndexes() : Future[Iterator[Future[CollectionIndex]]]
+}
+
+trait AsyncCollection[QueryType, EntityType, IdType, ValueType]
+    extends ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
+
+    private[beaucatcher] override def underlyingSync : Option[SyncCollection[QueryType, EntityType, IdType, ValueType]] =
+        None
+
+    def entityToUpsertableObject(entity : EntityType) : QueryType
+
+    def entityToModifierObject(entity : EntityType) : QueryType
+
+    def entityToUpdateQuery(entity : EntityType) : QueryType
 
     def findAndModify(query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) : Future[Option[EntityType]]
 
@@ -157,15 +170,10 @@ trait AsyncCollection[QueryType, EntityType, IdType, ValueType] {
      * Removes the given index from the collection.
      */
     def dropIndex(name : String) : Future[CommandResult]
-
-    /**
-     * Queries mongod for the indexes on this collection.
-     */
-    def findIndexes() : Future[Iterator[Future[CollectionIndex]]]
 }
 
 object AsyncCollection {
-    def fromSync[QueryType, EntityType, IdType, ValueType](sync : SyncCollection[QueryType, EntityType, IdType, ValueType])(implicit system : ActorSystem) : AsyncCollection[QueryType, EntityType, IdType, ValueType] = {
+    private[beaucatcher] def fromSync[QueryType, EntityType, IdType, ValueType](sync : SyncCollection[QueryType, EntityType, IdType, ValueType])(implicit system : ActorSystem) : AsyncCollection[QueryType, EntityType, IdType, ValueType] = {
         sync.underlyingAsync.getOrElse({
             new AsyncCollectionWrappingSync(sync, system)
         })
