@@ -16,8 +16,8 @@ trait MongoBackendProvider {
  * A [[org.beaucatcher.mongo.MongoBackend]] represents an underlying Mongo protocol implementation, a connection
  * pool, and a single named database on that connection. The backend lets you work with the database and with
  * collections inside that database. To use a backend you need to use a concrete subclass such as
- * [[org.beaucatcher.casbah.CasbahMongoBackend]], often via a [[org.beaucatcher.mongo.MongoBackendProvider]] such as
- * [[org.beaucatcher.casbah.CasbahBackendProvider]].
+ * [[org.beaucatcher.jdriver.JavaMongoBackend]], often via a [[org.beaucatcher.mongo.MongoBackendProvider]] such as
+ * [[org.beaucatcher.jdriver.JavaBackendProvider]].
  */
 trait MongoBackend {
     type ConnectionType
