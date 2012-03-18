@@ -17,16 +17,9 @@ final class JavaDriverContext private[jdriver] (override val driver : JavaDriver
     extends Context {
 
     private lazy val jdriverURI = new MongoURI(config.url)
-    private lazy val connection = {
-        val c = new Mongo(new MongoURI(config.url))
-        // things are awfully race-prone without Safe, and you
-        // don't get constraint violations for example.
-        // Also since we do async with threads (with AsyncCollection)
-        // there is no real reason for people to use fire-and-forget
-        // with the Java driver itself, right?
-        c.setWriteConcern(WriteConcern.SAFE)
-        c
-    }
+
+    private lazy val driverConnection = JavaDriverConnection.acquireConnection(ConnectionInfo(jdriverURI))
+    private def connection = driverConnection.underlying
 
     override type DriverType = JavaDriver
     override type DatabaseType = Database // we have no jdriver-specific Database stuff
@@ -51,6 +44,6 @@ final class JavaDriverContext private[jdriver] (override val driver : JavaDriver
     }
 
     override def close() : Unit = {
-        throw new BugInSomethingMongoException("Need to implement close()"); // FIXME
+        JavaDriverConnection.releaseConnection(driverConnection)
     }
 }
