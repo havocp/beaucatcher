@@ -66,16 +66,6 @@ private[jdriver] object JavaDriver {
         override def idOut(id : JavaObjectId) : ObjectId = id
     }
 
-    val connections = new MongoConnectionStore[Mongo] {
-        override def create(address : MongoConnectionAddress) = {
-            val c = new Mongo(new MongoURI(address.url))
-            // things are awfully race-prone without Safe, and you
-            // don't get constraint violations for example
-            c.setWriteConcern(WriteConcern.SAFE)
-            c
-        }
-    }
-
 }
 
 /**

@@ -49,35 +49,3 @@ case class SimpleMongoConfig(val databaseName : String,
 case class UrlMongoConfig(override val url : String)
     extends MongoConfig {
 }
-
-// FIXME this url really has to be normalized to strip out database and collection
-// so it represents only a set of hosts and potentially any connection-wide options
-private[beaucatcher] case class MongoConnectionAddress(url : String)
-
-private[beaucatcher] abstract class MongoConnectionStore[ConnectionType] {
-    private val map = new ConcurrentHashMap[MongoConnectionAddress, ConnectionType]
-    private val creationLock = new Lock
-
-    protected def create(address : MongoConnectionAddress) : ConnectionType
-
-    def ensure(address : MongoConnectionAddress) : ConnectionType = {
-        val c = map.get(address)
-        if (c != null) {
-            c
-        } else {
-            creationLock.acquire()
-            try {
-                val beatenToIt = map.get(address)
-                if (beatenToIt != null) {
-                    beatenToIt
-                } else {
-                    val created = create(address)
-                    map.put(address, created)
-                    created
-                }
-            } finally {
-                creationLock.release()
-            }
-        }
-    }
-}

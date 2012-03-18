@@ -17,7 +17,13 @@ final class JavaDriverContext private[jdriver] (override val driver : JavaDriver
     extends Context {
 
     private lazy val jdriverURI = new MongoURI(config.url)
-    private lazy val connection = JavaDriver.connections.ensure(MongoConnectionAddress(config.url))
+    private lazy val connection = {
+        val c = new Mongo(new MongoURI(config.url))
+        // things are awfully race-prone without Safe, and you
+        // don't get constraint violations for example
+        c.setWriteConcern(WriteConcern.SAFE)
+        c
+    }
 
     override type DriverType = JavaDriver
     override type DatabaseType = Database // we have no jdriver-specific Database stuff
