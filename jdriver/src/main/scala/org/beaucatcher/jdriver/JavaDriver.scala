@@ -5,34 +5,16 @@ import org.beaucatcher.mongo._
 import com.mongodb._
 import org.bson.types.{ ObjectId => JavaObjectId, _ }
 import org.joda.time.DateTime
+import akka.actor.ActorSystem
 
 /**
- * [[org.beaucatcher.jdriver.JavaDriverBackend]] is final with a private constructor - there's no way to create one
+ * [[org.beaucatcher.jdriver.JavaDriver]] is final with a private constructor - there's no way to create one
  * directly. However, a [[org.beaucatcher.jdriver.JavaDriverBackendProvider]] exposes a [[org.beaucatcher.jdriver.JavaDriverBackend]] and
  * you may want to use `provider.backend.underlyingConnection`, `underlyingDB`, or `underlyingCollection`
  * to get at JavaDriver methods directly.
  */
-final class JavaDriverBackend private[jdriver] (override val config : MongoConfig)
-    extends MongoBackend {
-
-    private lazy val jdriverURI = new MongoURI(config.url)
-    private lazy val connection = JavaDriverBackend.connections.ensure(MongoConnectionAddress(config.url))
-
-    override type ConnectionType = Mongo
-    override type DatabaseType = DB
-    override type CollectionType = DBCollection
-
-    override def underlyingConnection : Mongo = connection
-    override def underlyingDatabase : DB = connection.getDB(jdriverURI.getDatabase())
-    override def underlyingCollection(name : String) : DBCollection = {
-        if (name == null)
-            throw new IllegalArgumentException("null collection name")
-        val db : DB = underlyingDatabase
-        assert(db != null)
-        val coll : DBCollection = db.getCollection(name)
-        assert(coll != null)
-        coll
-    }
+final class JavaDriver private[jdriver] ()
+    extends Driver {
 
     override final def createCollectionGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
@@ -42,14 +24,14 @@ final class JavaDriverBackend private[jdriver] (override val config : MongoConfi
         if (idManifest <:< manifest[ObjectId]) {
             // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
             new EntityBObjectJavaDriverCollectionGroup[EntityType, IdType, IdType, JavaObjectId](this,
-                underlyingCollection(collectionName),
+                collectionName,
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,
-                JavaDriverBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
+                JavaDriver.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
             new EntityBObjectJavaDriverCollectionGroup[EntityType, IdType, IdType, IdType](this,
-                underlyingCollection(collectionName),
+                collectionName,
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,
@@ -61,22 +43,22 @@ final class JavaDriverBackend private[jdriver] (override val config : MongoConfi
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
             new BObjectJavaDriverCollectionGroup[IdType, JavaObjectId](this,
-                underlyingCollection(collectionName),
-                JavaDriverBackend.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
+                collectionName,
+                JavaDriver.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
             val identityIdComposer = new IdentityIdComposer[IdType]
             new BObjectJavaDriverCollectionGroup[IdType, IdType](this,
-                underlyingCollection(collectionName),
+                collectionName,
                 identityIdComposer)
         }
     }
 
-    override final lazy val database = {
-        new JavaDriverDatabase(this)
+    def newContext(config : MongoConfig, system : ActorSystem) : Context = {
+        new JavaDriverContext(this, config, system)
     }
 }
 
-private[jdriver] object JavaDriverBackend {
+private[jdriver] object JavaDriver {
 
     lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
         import JavaConversions._
@@ -100,11 +82,9 @@ private[jdriver] object JavaDriverBackend {
  * Mix this trait into a subclass of [[org.beaucatcher.mongo.CollectionAccess]] to backend
  * the collection operations using JavaDriver
  */
-trait JavaDriverBackendProvider extends MongoBackendProvider {
-    self : MongoConfigProvider =>
+trait JavaDriverProvider extends DriverProvider {
 
-    override lazy val backend : JavaDriverBackend = {
-        require(mongoConfig != null)
-        new JavaDriverBackend(mongoConfig)
+    override lazy val mongoDriver : JavaDriver = {
+        new JavaDriver()
     }
 }

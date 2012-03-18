@@ -6,37 +6,45 @@ import org.beaucatcher.bson.Implicits._
 import java.io._
 
 // access to implementation collections, can be shared among GridFS objects for same bucket
-private[gridfs] class GridFSCollections(backend : MongoBackend, val bucket : String) {
-    private def createCollectionAccessWithEntity[EntityType <: AnyRef : Manifest, IdType : Manifest](name : String, composer : EntityComposer[EntityType, BObject]) = {
-        val b = backend
-        new CollectionAccess[EntityType, IdType] with MongoBackendProvider {
-            override val backend = b
+private[gridfs] class GridFSCollections(driver : Driver, val bucket : String) {
+    private def createCollectionAccessWithEntity[EntityType <: AnyRef : Manifest, IdType : Manifest](name : String, composer : EntityComposer[EntityType, BObject],
+        migrateCallback : (CollectionAccess[EntityType, IdType], Context) => Unit) = {
+        val d = driver
+        new CollectionAccess[EntityType, IdType] with DriverProvider {
+            override val mongoDriver = d
             override val collectionName = name
             override val entityBObjectEntityComposer = composer
+            override def migrate(implicit context : Context) = migrateCallback(this, context)
         }
     }
 
-    private def createCollectionAccessWithoutEntity[IdType : Manifest](name : String) = {
-        val b = backend
-        new CollectionAccessWithoutEntity[IdType] with MongoBackendProvider {
-            override val backend = b
+    private def createCollectionAccessWithoutEntity[IdType : Manifest](name : String,
+        migrateCallback : (CollectionAccessWithoutEntity[IdType], Context) => Unit) = {
+        val d = driver
+        new CollectionAccessWithoutEntity[IdType] with DriverProvider {
+            override val mongoDriver = d
             override val collectionName = name
+
+            override def migrate(implicit context : Context) = migrateCallback(this, context)
         }
     }
 
     lazy val files : CollectionAccessTrait[GridFSFile, ObjectId] = {
-        val access = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files", GridFSCollections.fileComposer)
-
-        // this isn't in the gridfs spec but it is in the Java implementation
-        access.sync.ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
+        val access = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files",
+            GridFSCollections.fileComposer,
+            { (access, context) =>
+                // this isn't in the gridfs spec but it is in the Java implementation
+                access.sync(context).ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
+            })
 
         access
     }
 
     lazy val chunks : CollectionAccessWithoutEntityTrait[ObjectId] = {
-        val access = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks")
-
-        access.sync.ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
+        val access = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks",
+            { (access, context) =>
+                access.sync(context).ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
+            })
 
         access
     }
@@ -67,6 +75,10 @@ object GridFS {
 }
 
 sealed trait SyncGridFS extends GridFS {
+    def context : Context
+
+    private[this] implicit final def implicitContext = context
+
     private[gridfs] def filesCollection = files.sync[GridFSFile]
     private[gridfs] def chunksCollection = chunks.sync
 
@@ -135,13 +147,13 @@ object SyncGridFS {
      * Manually creates a SyncGridFS. You could also create an object that
      * extends GridFSAccess and use the "sync" field in that object.
      */
-    def apply(backend : MongoBackend, bucket : String) : SyncGridFS = {
-        new ConcreteSyncGridFS(new GridFSCollections(backend, bucket))
+    def apply(bucket : String)(implicit context : Context) : SyncGridFS = {
+        new ConcreteSyncGridFS(new GridFSCollections(context.driver, bucket), context)
     }
 }
 
 // this concrete class backends to the private GridFSCollections
-private class ConcreteSyncGridFS(collections : GridFSCollections) extends SyncGridFS {
+private class ConcreteSyncGridFS(collections : GridFSCollections, override val context : Context) extends SyncGridFS {
     override def bucket = collections.bucket
     override protected def files = collections.files
     override protected def chunks = collections.chunks
@@ -149,7 +161,7 @@ private class ConcreteSyncGridFS(collections : GridFSCollections) extends SyncGr
 
 trait GridFSAccessTrait {
     def bucket : String = GridFS.DEFAULT_BUCKET
-    def sync : SyncGridFS
+    def sync(implicit context : Context) : SyncGridFS
 }
 
 /**
@@ -158,12 +170,12 @@ trait GridFSAccessTrait {
  * Override "def bucket" to specify a non-default bucket.
  */
 abstract class GridFSAccess extends GridFSAccessTrait {
-    self : MongoBackendProvider =>
+    self : DriverProvider =>
 
     // this is shared between the sync and async access objects
-    private lazy val collections = new GridFSCollections(backend, bucket)
+    private lazy val collections = new GridFSCollections(mongoDriver, bucket)
 
-    override lazy val sync : SyncGridFS = new ConcreteSyncGridFS(collections)
+    override def sync(implicit context : Context) : SyncGridFS = new ConcreteSyncGridFS(collections, context)
 }
 
 class GridFSMongoException(message : String, cause : Throwable) extends MongoException(message, cause) {

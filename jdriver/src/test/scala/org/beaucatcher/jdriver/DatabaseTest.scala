@@ -7,6 +7,6 @@ import org.beaucatcher.mongo._
 import org.junit.Assert._
 import org.junit._
 
-class DatabaseTest extends AbstractDatabaseTest with JavaDriverDatabaseTestProvider {
+class DatabaseTest extends AbstractDatabaseTest with JavaDriverTestDatabaseContextProvider {
 
 }

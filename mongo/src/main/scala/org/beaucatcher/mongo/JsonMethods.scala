@@ -34,7 +34,7 @@ import org.beaucatcher.bson.ClassAnalysis
  */
 trait JsonMethods[SchemaType <: Product] {
     /** Point this to a Collection to use to store BObject */
-    protected def jsonSync : SyncCollection[BObject, BObject, _, _]
+    protected def jsonSync(implicit context : Context) : SyncCollection[BObject, BObject, _, _]
     /** Since we're a trait, we don't have a manifest and you have to provide this */
     protected def jsonAnalysis : ClassAnalysis[SchemaType]
     /** If you want to override the JSON flavor, do so here */
@@ -180,7 +180,7 @@ trait JsonMethods[SchemaType <: Product] {
      * newly-created ID for the object.
      * See updateJson for most other details.
      */
-    def createJson(json : String) : String = {
+    def createJson(json : String)(implicit context : Context) : String = {
         val bobject = parseJson(None, json)
         jsonSync.save(bobject)
         // FIXME here in theory we only have to return the new ID
@@ -202,7 +202,7 @@ trait JsonMethods[SchemaType <: Product] {
      * The returned-back new object is modified by
      * the same methods that affect getJson()'s returned object.
      */
-    def updateJson(path : String, json : String) : String = {
+    def updateJson(path : String, json : String)(implicit context : Context) : String = {
         val bobject = parseJson(Some(path), json)
         jsonSync.update(createQueryForObject(path), bobject)
         // FIXME here in theory we only have to return the changed fields
@@ -220,7 +220,7 @@ trait JsonMethods[SchemaType <: Product] {
      *
      * If no path is provided, then this reads all objects as defined by createQueryForAllObjects().
      */
-    def readJson(path : Option[String]) : Option[String] = {
+    def readJson(path : Option[String])(implicit context : Context) : Option[String] = {
         if (path.isDefined) {
             // GET a single ID
             jsonSync.findOne(createQueryForObject(path.get)) match {
@@ -243,7 +243,7 @@ trait JsonMethods[SchemaType <: Product] {
     /**
      * Intended to implement HTTP DELETE, deletes the object identified by the path.
      */
-    def deleteJson(path : String) : Unit = {
+    def deleteJson(path : String)(implicit context : Context) : Unit = {
         jsonSync.remove(createQueryForObject(path))
     }
 

@@ -11,7 +11,7 @@ import scala.annotation.implicitNotFound
  * be automatically converted from BSON).
  */
 trait CollectionAccessBaseTrait[IdType] {
-    self : MongoBackendProvider =>
+    self : DriverProvider =>
 
     /**
      * Because traits can't have constructor arguments or context bounds, a subtype of this
@@ -42,11 +42,10 @@ trait CollectionAccessBaseTrait[IdType] {
 
     /**
      * This method performs any one-time-on-startup setup for the collection, such as ensuring an index.
-     * The app will need to somehow arrange to call this for each collection to use this feature.
+     * The app will need to somehow arrange to call this for each context for now, but the
+     * library should do it the first time each Context is used - FIXME
      */
-    def migrate() : Unit = {}
-
-    final def database = backend.database
+    def migrate(implicit context : Context) : Unit = {}
 }
 
 /**
@@ -65,26 +64,22 @@ trait CollectionAccessBaseTrait[IdType] {
  * a concrete connection to a specific MongoDB implementation.
  */
 trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTrait[IdType] {
-    self : MongoBackendProvider =>
+    self : DriverProvider =>
 
     private lazy val collectionGroup : CollectionGroupWithoutEntity[IdType] =
-        backend.createCollectionGroupWithoutEntity(collectionName)
-
-    private[mongo] lazy val bobjectSync : SyncCollection[BObject, BObject, IdType, BValue] =
-        collectionGroup.newBObjectSync
-
-    private[mongo] lazy val bobjectAsync : AsyncCollection[BObject, BObject, IdType, BValue] =
-        collectionGroup.newBObjectAsync
+        mongoDriver.createCollectionGroupWithoutEntity(collectionName)
 
     /**
      * Obtains the `SyncCollection` for this collection.
      */
-    def sync : SyncCollection[BObject, BObject, IdType, BValue] = bobjectSync
+    def sync(implicit context : Context) : SyncCollection[BObject, BObject, IdType, BValue] =
+        collectionGroup.newBObjectSync
 
     /**
      * Obtains the `AsyncCollection` for this collection.
      */
-    def async : AsyncCollection[BObject, BObject, IdType, BValue] = bobjectAsync
+    def async(implicit context : Context) : AsyncCollection[BObject, BObject, IdType, BValue] =
+        collectionGroup.newBObjectAsync
 }
 
 /**
@@ -109,7 +104,7 @@ trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTra
  * initialization has a lot of trouble (due to circular dependencies, or order of initialization anyway).
  */
 trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAccessBaseTrait[IdType] {
-    self : MongoBackendProvider =>
+    self : DriverProvider =>
 
     import CollectionAccessTrait._
 
@@ -122,24 +117,24 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     private lazy val collectionGroup : CollectionGroup[EntityType, IdType, IdType] = {
         require(entityTypeManifest != null)
-        backend.createCollectionGroup(collectionName, entityBObjectQueryComposer,
+        mongoDriver.createCollectionGroup(collectionName, entityBObjectQueryComposer,
             entityBObjectEntityComposer)
     }
 
     /** Synchronous Collection returning BObject values from the collection */
-    private[mongo] final lazy val bobjectSync : BObjectSyncCollection[IdType] =
+    private[mongo] final def bobjectSync(implicit context : Context) : BObjectSyncCollection[IdType] =
         collectionGroup.newBObjectSync
 
     /** Synchronous Collection returning case class entity values from the collection */
-    private[mongo] final lazy val entitySync : EntitySyncCollection[BObject, EntityType, IdType] =
+    private[mongo] final def entitySync(implicit context : Context) : EntitySyncCollection[BObject, EntityType, IdType] =
         collectionGroup.newEntitySync
 
     /** Asynchronous Collection returning BObject values from the collection */
-    private[mongo] final lazy val bobjectAsync : BObjectAsyncCollection[IdType] =
+    private[mongo] final def bobjectAsync(implicit context : Context) : BObjectAsyncCollection[IdType] =
         collectionGroup.newBObjectAsync
 
     /** Asynchronous Collection returning case class entity values from the collection */
-    private[mongo] final lazy val entityAsync : EntityAsyncCollection[BObject, EntityType, IdType] =
+    private[mongo] final def entityAsync(implicit context : Context) : EntityAsyncCollection[BObject, EntityType, IdType] =
         collectionGroup.newEntityAsync
 
     /**
@@ -162,7 +157,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * With methods that don't return objects, such as count(), you can use the `sync` flavor with no
      * type parameters.
      */
-    def sync[E](implicit chooser : SyncCollectionChooser[E, _]) : SyncCollection[BObject, E, IdType, _] = {
+    def sync[E](implicit context : Context, chooser : SyncCollectionChooser[E, _]) : SyncCollection[BObject, E, IdType, _] = {
         chooser.choose(this)
     }
 
@@ -177,7 +172,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * Otherwise, you can use the `sync[E]` version that only requires you to specify
      * the entity type, or the `sync` version with no type parameters at all.
      */
-    def sync[E, V](implicit chooser : SyncCollectionChooser[E, V], ignored : DummyImplicit) : SyncCollection[BObject, E, IdType, V] = {
+    def sync[E, V](implicit context : Context, chooser : SyncCollectionChooser[E, V], ignored : DummyImplicit) : SyncCollection[BObject, E, IdType, V] = {
         chooser.choose(this)
     }
 
@@ -188,7 +183,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * need to use `sync[E]` or `sync[E,V]` to specify the object type or field
      * value type.
      */
-    def sync : SyncCollection[BObject, _, IdType, _] = bobjectSync
+    def sync(implicit context : Context) : SyncCollection[BObject, _, IdType, _] = bobjectSync
 
     /**
      * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
@@ -210,7 +205,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * With methods that don't return objects, such as count(), you can use the `async` flavor with no
      * type parameters.
      */
-    def async[E](implicit chooser : AsyncCollectionChooser[E, _]) : AsyncCollection[BObject, E, IdType, _] = {
+    def async[E](implicit context : Context, chooser : AsyncCollectionChooser[E, _]) : AsyncCollection[BObject, E, IdType, _] = {
         chooser.choose(this)
     }
 
@@ -225,7 +220,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * Otherwise, you can use the `async[E]` version that only requires you to specify
      * the entity type, or the `async` version with no type parameters at all.
      */
-    def async[E, V](implicit chooser : AsyncCollectionChooser[E, V], ignored : DummyImplicit) : AsyncCollection[BObject, E, IdType, V] = {
+    def async[E, V](implicit context : Context, chooser : AsyncCollectionChooser[E, V], ignored : DummyImplicit) : AsyncCollection[BObject, E, IdType, V] = {
         chooser.choose(this)
     }
 
@@ -236,7 +231,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * need to use `async[E]` or `async[E,V]` to specify the object type or field
      * value type.
      */
-    def async : AsyncCollection[BObject, _, IdType, _] = bobjectAsync
+    def async(implicit context : Context) : AsyncCollection[BObject, _, IdType, _] = bobjectAsync
 
     /**
      * There probably isn't a reason to override this, but it would modify a query
@@ -260,36 +255,36 @@ object CollectionAccessTrait {
     // used as an implicit parameter to select the correct Collection based on requested query result type
     @implicitNotFound(msg = "No synchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericSyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
     trait GenericSyncCollectionChooser[E, I, V, -CO] {
-        def choose(access : CO) : SyncCollection[BObject, E, I, V]
+        def choose(access : CO)(implicit context : Context) : SyncCollection[BObject, E, I, V]
     }
 
     implicit def createSyncCollectionChooserForBObject[I] : GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
         new GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] {
-            def choose(access : CollectionAccessTrait[_, I]) = access.bobjectSync
+            def choose(access : CollectionAccessTrait[_, I])(implicit context : Context) = access.bobjectSync
         }
     }
 
     implicit def createSyncCollectionChooserForEntity[E <: AnyRef, I] : GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
         new GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] {
-            def choose(access : CollectionAccessTrait[E, I]) = access.entitySync
+            def choose(access : CollectionAccessTrait[E, I])(implicit context : Context) = access.entitySync
         }
     }
 
     // used as an implicit parameter to select the correct Collection based on requested query result type
     @implicitNotFound(msg = "No asynchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericAsyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
     trait GenericAsyncCollectionChooser[E, I, V, -CO] {
-        def choose(access : CO) : AsyncCollection[BObject, E, I, V]
+        def choose(access : CO)(implicit context : Context) : AsyncCollection[BObject, E, I, V]
     }
 
     implicit def createAsyncCollectionChooserForBObject[I] : GenericAsyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
         new GenericAsyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] {
-            def choose(access : CollectionAccessTrait[_, I]) = access.bobjectAsync
+            def choose(access : CollectionAccessTrait[_, I])(implicit context : Context) = access.bobjectAsync
         }
     }
 
     implicit def createAsyncCollectionChooserForEntity[E <: AnyRef, I] : GenericAsyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
         new GenericAsyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] {
-            def choose(access : CollectionAccessTrait[E, I]) = access.entityAsync
+            def choose(access : CollectionAccessTrait[E, I])(implicit context : Context) = access.entityAsync
         }
     }
 }
@@ -303,7 +298,7 @@ object CollectionAccessTrait {
  */
 trait CollectionAccessWithCaseClassTrait[EntityType <: Product, IdType]
     extends CollectionAccessTrait[EntityType, IdType] {
-    self : MongoBackendProvider =>
+    self : DriverProvider =>
 
     override protected lazy val entityBObjectEntityComposer : EntityComposer[EntityType, BObject] =
         new CaseClassBObjectEntityComposer[EntityType]
@@ -318,7 +313,7 @@ trait CollectionAccessWithCaseClassTrait[EntityType <: Product, IdType]
  */
 abstract class CollectionAccessWithoutEntity[IdType : Manifest]
     extends CollectionAccessWithoutEntityTrait[IdType] {
-    self : MongoBackendProvider =>
+    self : DriverProvider =>
     override final val idTypeManifest = manifest[IdType]
 }
 
@@ -331,7 +326,7 @@ abstract class CollectionAccessWithoutEntity[IdType : Manifest]
  */
 abstract class CollectionAccess[EntityType <: AnyRef : Manifest, IdType : Manifest]
     extends CollectionAccessTrait[EntityType, IdType] {
-    self : MongoBackendProvider =>
+    self : DriverProvider =>
     override final val entityTypeManifest = manifest[EntityType]
     override final val idTypeManifest = manifest[IdType]
 }
@@ -346,6 +341,6 @@ abstract class CollectionAccess[EntityType <: AnyRef : Manifest, IdType : Manife
 abstract class CollectionAccessWithCaseClass[EntityType <: Product : Manifest, IdType : Manifest]
     extends CollectionAccess[EntityType, IdType]
     with CollectionAccessWithCaseClassTrait[EntityType, IdType] {
-    self : MongoBackendProvider =>
+    self : DriverProvider =>
 
 }

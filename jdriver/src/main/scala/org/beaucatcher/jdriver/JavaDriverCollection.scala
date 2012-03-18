@@ -13,7 +13,9 @@ import JavaConversions._
  * by a subclass of this trait.
  */
 abstract trait JavaDriverSyncCollection[IdType <: Any] extends SyncCollection[DBObject, DBObject, IdType, Any] {
-    override private[beaucatcher] def backend : JavaDriverBackend
+
+    override private[beaucatcher] def context : JavaDriverContext
+
     protected def collection : DBCollection
 
     private implicit def fields2dbobject(fields : Fields) : DBObject = {

@@ -3,7 +3,6 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import akka.dispatch.Future
-import akka.actor.ActorSystem
 
 trait ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
 
@@ -11,10 +10,12 @@ trait ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
     private[beaucatcher] def underlyingSync : Option[ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]] =
         None
 
-    private[beaucatcher] def backend : MongoBackend
+    private[beaucatcher] def context : Context
+
+    protected[this] implicit final def implicitContext = context
 
     /** The database containing the collection */
-    final def database : Database = backend.database
+    final def database : Database = context.database
 
     def name : String
 
@@ -172,9 +173,9 @@ trait AsyncCollection[QueryType, EntityType, IdType, ValueType]
 }
 
 object AsyncCollection {
-    private[beaucatcher] def fromSync[QueryType, EntityType, IdType, ValueType](sync : SyncCollection[QueryType, EntityType, IdType, ValueType])(implicit system : ActorSystem) : AsyncCollection[QueryType, EntityType, IdType, ValueType] = {
+    private[beaucatcher] def fromSync[QueryType, EntityType, IdType, ValueType](sync : SyncCollection[QueryType, EntityType, IdType, ValueType])(implicit context : Context) : AsyncCollection[QueryType, EntityType, IdType, ValueType] = {
         sync.underlyingAsync.getOrElse({
-            new AsyncCollectionWrappingSync(sync, system)
+            new AsyncCollectionWrappingSync(sync, context.actorSystem)
         })
     }
 }

@@ -15,7 +15,7 @@ package restdemo {
 
     object Foo
         extends CollectionAccessWithCaseClass[Foo, ObjectId]
-        with JavaDriverTestProvider
+        with JavaDriverProvider
         with JsonMethods[Foo] {
         // the default collection name would conflict with the Foo
         // in CollectionTest since tests are run concurrently;
@@ -23,7 +23,7 @@ package restdemo {
         override val collectionName = "restfoo"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[Foo])
-        override def jsonSync : SyncCollection[BObject, BObject, _, _] = sync[BObject]
+        override def jsonSync(implicit context : Context) : SyncCollection[BObject, BObject, _, _] = sync[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         // This object inherits a complete Collection for BObject and for the Foo case class,
@@ -34,7 +34,7 @@ package restdemo {
     case class FooWithIntId(_id : Int, aString : String, anInt : Int)
     object FooWithIntId
         extends CollectionAccessWithCaseClass[FooWithIntId, Int]
-        with JavaDriverTestProvider
+        with JavaDriverProvider
         with JsonMethods[FooWithIntId] {
         // the default collection name would conflict with the FooWithIntId
         // in CollectionTest since tests are run concurrently;
@@ -42,7 +42,7 @@ package restdemo {
         override val collectionName = "restfooWithIntId"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[FooWithIntId])
-        override def jsonSync : SyncCollection[BObject, BObject, _, _] = sync[BObject]
+        override def jsonSync(implicit context : Context) : SyncCollection[BObject, BObject, _, _] = sync[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         override def parseJValueIdFromPath(path : String) : BInt32 = {
@@ -67,8 +67,11 @@ package restdemo {
     }
 }
 
-class JsonMethodsTest {
+class JsonMethodsTest
+    extends JavaDriverTestContextProvider {
     import restdemo._
+
+    protected implicit def context : Context = mongoContext
 
     @org.junit.Before
     def setup() {

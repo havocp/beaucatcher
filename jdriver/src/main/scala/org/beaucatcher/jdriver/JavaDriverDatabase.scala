@@ -10,7 +10,7 @@ private[jdriver] class JavaDriverSyncDatabase(override protected val database : 
     override def command(cmd : BObject, options : CommandOptions) : CommandResult = {
         import Implicits._
 
-        val jdriverDB = database.backend.underlyingDatabase
+        val jdriverDB = database.context.underlyingDatabase
         val flags : Int = JavaDriverDatabase.commandFlags(options)
         jdriverDB.command(new BObjectDBObject(cmd), flags)
     }
@@ -20,18 +20,20 @@ private[jdriver] class JavaDriverAsyncDatabase(override protected val database :
     override def command(cmd : BObject, options : CommandOptions) : Future[CommandResult] = {
         import Implicits._
 
-        val jdriverDB = database.backend.underlyingDatabase
+        val jdriverDB = database.context.underlyingDatabase
         val flags : Int = JavaDriverDatabase.commandFlags(options)
-        Future({ jdriverDB.command(new BObjectDBObject(cmd), flags) } : CommandResult)(database.backend.actorSystem.dispatcher)
+        Future({ jdriverDB.command(new BObjectDBObject(cmd), flags) } : CommandResult)(database.context.actorSystem.dispatcher)
     }
 }
 
-private[jdriver] class JavaDriverDatabase(override protected[jdriver] val backend : JavaDriverBackend) extends Database {
+private[jdriver] class JavaDriverDatabase(override val context : JavaDriverContext) extends Database {
+    override def driver = context.driver
+
     override lazy val sync = new JavaDriverSyncDatabase(this)
 
     override lazy val async = new JavaDriverAsyncDatabase(this)
 
-    override def name = backend.underlyingDatabase.getName()
+    override def name = context.underlyingDatabase.getName()
 }
 
 private[jdriver] object JavaDriverDatabase {

@@ -18,9 +18,9 @@ private[beaucatcher] trait CollectionGroupWithoutEntity[BObjectIdType] {
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    def newBObjectSync : BObjectSyncCollection[BObjectIdType]
+    def newBObjectSync(implicit context : Context) : BObjectSyncCollection[BObjectIdType]
 
-    def newBObjectAsync(implicit system : ActorSystem) : BObjectAsyncCollection[BObjectIdType]
+    def newBObjectAsync(implicit context : Context) : BObjectAsyncCollection[BObjectIdType]
 }
 
 /**
@@ -35,7 +35,7 @@ private[beaucatcher] trait CollectionGroup[EntityType <: AnyRef, EntityIdType, B
      *  This Collection works with a specified entity class, for typesafe access to fields
      *  from within Scala code.
      */
-    def newEntitySync : EntitySyncCollection[BObject, EntityType, EntityIdType]
+    def newEntitySync(implicit context : Context) : EntitySyncCollection[BObject, EntityType, EntityIdType]
 
-    def newEntityAsync(implicit system : ActorSystem) : EntityAsyncCollection[BObject, EntityType, EntityIdType]
+    def newEntityAsync(implicit context : Context) : EntityAsyncCollection[BObject, EntityType, EntityIdType]
 }

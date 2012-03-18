@@ -18,8 +18,8 @@ final private class SyncCollectionWrappingAsync[QueryType, EntityType, IdType, V
     private[beaucatcher] final override def underlyingAsync =
         Some(underlying)
 
-    final override def backend =
-        underlying.backend
+    final override def context =
+        underlying.context
 
     final override def name =
         underlying.name

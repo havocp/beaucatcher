@@ -25,12 +25,12 @@ private[jdriver] class OuterBValueValueComposer
 }
 
 private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDriverIdType](
-    val backend : JavaDriverBackend,
-    val collection : DBCollection,
+    val driver : JavaDriver,
+    val collectionName : String,
     private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
     extends CollectionGroupWithoutEntity[BObjectIdType] {
-    require(backend != null)
-    require(collection != null)
+    require(driver != null)
+    require(collectionName != null)
 
     /* Let's not allow changing the BObject-to-JavaDriver mapping since we want to
      * get rid of JavaDriver's DBObject. That's why these are private.
@@ -47,12 +47,12 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
      *  This is best avoided because the hope is that Hammersmith would allow us to
      *  eliminate this layer. In fact, we'll make this private...
      */
-    private lazy val jdriverSyncCollection : JavaDriverSyncCollection[JavaDriverIdType] = {
-        val outerCollection = collection
-        val outerBackend = backend
+    private def jdriverSyncCollection(implicit context : JavaDriverContext) : JavaDriverSyncCollection[JavaDriverIdType] = {
+        val outerContext = context
+        val outerCollection = context.underlyingCollection(collectionName)
         new JavaDriverSyncCollection[JavaDriverIdType] {
+            override val context = outerContext
             override val collection = outerCollection
-            override val backend = outerBackend
         }
     }
 
@@ -62,11 +62,12 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    override def newBObjectSync : BObjectSyncCollection[BObjectIdType] = {
-        val outerBackend = backend
+    override def newBObjectSync(implicit context : Context) : BObjectSyncCollection[BObjectIdType] = {
+        import Implicits._
+        implicit val jContext = context.asJavaContext
         new BObjectJavaDriverSyncCollection[BObjectIdType, JavaDriverIdType] {
             override val inner = jdriverSyncCollection
-            override val backend = outerBackend
+            override val context = jContext
             override val queryComposer = bobjectJavaDriverQueryComposer
             override val entityComposer = bobjectJavaDriverEntityComposer
             override val idComposer = bobjectJavaDriverIdComposer
@@ -80,7 +81,7 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
      *  format that we'd build off the wire using Hammersmith, rather than DBObject,
      *  because it's easier to work with and immutable.
      */
-    override def newBObjectAsync(implicit system : ActorSystem) : BObjectAsyncCollection[BObjectIdType] =
+    override def newBObjectAsync(implicit context : Context) : BObjectAsyncCollection[BObjectIdType] =
         AsyncCollection.fromSync(newBObjectSync)
 }
 
@@ -98,16 +99,16 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
  * object formats in there.
  */
 private[jdriver] class EntityBObjectJavaDriverCollectionGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, JavaDriverIdType](
-    override val backend : JavaDriverBackend,
-    override val collection : DBCollection,
+    override val driver : JavaDriver,
+    override val collectionName : String,
     val entityBObjectQueryComposer : QueryComposer[BObject, BObject],
     val entityBObjectEntityComposer : EntityComposer[EntityType, BObject],
     val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],
     private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
-    extends BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDriverIdType](backend, collection, bobjectJavaDriverIdComposer)
+    extends BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDriverIdType](driver, collectionName, bobjectJavaDriverIdComposer)
     with CollectionGroup[EntityType, EntityIdType, BObjectIdType] {
-    require(backend != null)
-    require(collection != null)
+    require(driver != null)
+    require(collectionName != null)
     require(entityBObjectQueryComposer != null)
     require(entityBObjectEntityComposer != null)
     require(entityBObjectIdComposer != null)
@@ -117,11 +118,10 @@ private[jdriver] class EntityBObjectJavaDriverCollectionGroup[EntityType <: AnyR
      *  from within Scala code. You also know that all the fields are present
      *  if the case class was successfully constructed.
      */
-    override def newEntitySync : EntitySyncCollection[BObject, EntityType, EntityIdType] = {
-        val outerBackend = backend
+    override def newEntitySync(implicit outerContext : Context) : EntitySyncCollection[BObject, EntityType, EntityIdType] = {
         new EntityBObjectSyncCollection[EntityType, EntityIdType, BObjectIdType] {
-            override val inner = newBObjectSync
-            override val backend = outerBackend
+            override val context = outerContext
+            override val inner = newBObjectSync(context)
             override val queryComposer = entityBObjectQueryComposer
             override val entityComposer = entityBObjectEntityComposer
             override val idComposer = entityBObjectIdComposer
@@ -134,7 +134,7 @@ private[jdriver] class EntityBObjectJavaDriverCollectionGroup[EntityType <: AnyR
      *  from within Scala code. You also know that all the fields are present
      *  if the case class was successfully constructed.
      */
-    override def newEntityAsync(implicit system : ActorSystem) : EntityAsyncCollection[BObject, EntityType, EntityIdType] = {
+    override def newEntityAsync(implicit context : Context) : EntityAsyncCollection[BObject, EntityType, EntityIdType] = {
         AsyncCollection.fromSync(newEntitySync)
     }
 }

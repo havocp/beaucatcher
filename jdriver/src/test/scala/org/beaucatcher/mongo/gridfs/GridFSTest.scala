@@ -4,17 +4,25 @@ import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.beaucatcher.mongo.gridfs._
-import org.beaucatcher.jdriver.JavaDriverTestProvider
+import org.beaucatcher.jdriver.JavaDriverProvider
+import org.beaucatcher.jdriver.JavaDriverTestContextProvider
 import org.junit.Assert._
 import org.junit._
 import org.apache.commons.io._
 import java.io.OutputStream
 
-object TestFS extends GridFSAccess with JavaDriverTestProvider {
+object TestFS
+    extends GridFSAccess
+    with JavaDriverProvider {
     override def bucket = "testbucket"
 }
 
-class GridFSTest extends TestUtils {
+class GridFSTest
+    extends TestUtils
+    with JavaDriverTestContextProvider {
+
+    private implicit def context = mongoContext
+
     @org.junit.Before
     def setup() {
         TestFS.sync.removeAll()
@@ -145,7 +153,7 @@ class GridFSTest extends TestUtils {
         import com.mongodb.util._
         import com.mongodb.gridfs._
 
-        val uri = new MongoURI(TestFS.backend.config.url)
+        val uri = new MongoURI(context.config.url)
         val mongo = new Mongo(uri)
         val db = mongo.getDB(uri.getDatabase())
         val fs = new GridFS(db, TestFS.bucket)

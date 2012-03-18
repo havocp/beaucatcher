@@ -144,10 +144,12 @@ trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
     private[beaucatcher] def underlyingAsync : Option[ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType]] =
         None
 
-    private[beaucatcher] def backend : MongoBackend
+    private[beaucatcher] def context : Context
+
+    protected[this] implicit final def implicitContext = context
 
     /** The database containing the collection */
-    final def database : Database = backend.database
+    final def database : Database = context.database
 
     /** The name of the collection */
     def name : String

@@ -10,6 +10,21 @@ package object jdriver {
     import JavaConversions._
 
     object Implicits {
+        private[jdriver] class EnrichedContext(context : Context) {
+            def asJavaContext() = {
+                context match {
+                    case null =>
+                        throw new BugInSomethingMongoException("null mongo.Context")
+                    case j : JavaDriverContext =>
+                        j
+                    case wrong =>
+                        throw new BugInSomethingMongoException("mongo.Context passed to jdriver is not from jdriver; context type is " + wrong.getClass.getSimpleName)
+                }
+            }
+        }
+
+        private[jdriver] implicit def context2enriched(context : Context) = new EnrichedContext(context)
+
         private[jdriver] implicit def asScalaBObject(bsonObj : BSONObject) = JavaConversions.asScalaBObject(bsonObj)
 
         private[jdriver] implicit def asScalaWriteResult(j : JavaWriteResult) : WriteResult = {

@@ -13,8 +13,8 @@ package foo {
     case class Foo(_id : ObjectId, intField : Int, stringField : String) extends abstractfoo.AbstractFoo
 
     object Foo extends CollectionAccessWithCaseClass[Foo, ObjectId]
-        with JavaDriverTestProvider {
-        def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
+        with JavaDriverProvider {
+        def customQuery[E](implicit context : Context, chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
         }
     }
@@ -22,8 +22,8 @@ package foo {
     case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
 
     object FooWithIntId extends CollectionAccessWithCaseClass[FooWithIntId, Int]
-        with JavaDriverTestProvider {
-        def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
+        with JavaDriverProvider {
+        def customQuery[E](implicit context : Context, chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
         }
     }
@@ -31,17 +31,18 @@ package foo {
     case class FooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) extends abstractfoo.AbstractFooWithOptionalField
 
     object FooWithOptionalField extends CollectionAccessWithCaseClass[FooWithOptionalField, ObjectId]
-        with JavaDriverTestProvider {
+        with JavaDriverProvider {
     }
 
     object Bar extends CollectionAccessWithoutEntity[ObjectId]
-        with JavaDriverTestProvider {
+        with JavaDriverProvider {
 
     }
 }
 
 class CollectionTest
-    extends AbstractCollectionTest[Foo, FooWithIntId, FooWithOptionalField](Foo, FooWithIntId, FooWithOptionalField, Bar) {
+    extends AbstractCollectionTest[Foo, FooWithIntId, FooWithOptionalField](Foo, FooWithIntId, FooWithOptionalField, Bar)
+    with JavaDriverTestContextProvider {
     override def newFoo(_id : ObjectId, intField : Int, stringField : String) = Foo(_id, intField, stringField)
     override def newFooWithIntId(_id : Int, intField : Int, stringField : String) = FooWithIntId(_id, intField, stringField)
     override def newFooWithOptionalField(_id : ObjectId, intField : Int, stringField : Option[String]) = FooWithOptionalField(_id, intField, stringField)

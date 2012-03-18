@@ -9,11 +9,11 @@ import akka.dispatch.Future
  * built-in collections. Obtain it through a [[org.beaucatcher.mongo.Database]] object,
  * you can't construct a [[org.beaucatcher.mongo.SystemCollections]] directly.
  */
-final class SystemCollections private[mongo] (backend : MongoBackend) {
+final class SystemCollections private[mongo] (driver : Driver) {
     private def createCollectionAccess[EntityType <: Product : Manifest, IdType : Manifest](name : String) = {
-        val b = backend
-        new CollectionAccessWithCaseClass[EntityType, IdType] with MongoBackendProvider {
-            override val backend = b
+        val d = driver
+        new CollectionAccessWithCaseClass[EntityType, IdType] with DriverProvider {
+            override val mongoDriver = d
             override val collectionName = name
         }
     }
@@ -63,6 +63,8 @@ private[beaucatcher] object CommandOptions {
 trait SyncDatabase {
     protected def database : Database
 
+    private implicit def context = database.context
+
     // TODO authenticate()
     // TODO addUser(), removeUser()
     // TODO eval()
@@ -94,6 +96,8 @@ trait SyncDatabase {
 trait AsyncDatabase {
     protected def database : Database
 
+    private implicit def context = database.context
+
     // TODO authenticate()
     // TODO addUser(), removeUser()
     // TODO eval()
@@ -124,11 +128,13 @@ trait AsyncDatabase {
 }
 
 trait Database {
-    protected def backend : MongoBackend
+    protected def driver : Driver
+
+    def context : Context
 
     def name : String
 
-    lazy val system : SystemCollections = new SystemCollections(backend)
+    lazy val system : SystemCollections = new SystemCollections(driver)
 
     def sync : SyncDatabase
 

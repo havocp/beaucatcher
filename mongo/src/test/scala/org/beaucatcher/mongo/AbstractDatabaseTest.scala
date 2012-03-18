@@ -8,10 +8,10 @@ import org.junit._
 
 abstract class AbstractDatabaseTest
     extends TestUtils {
-    self : MongoBackendProvider =>
+    self : ContextProvider =>
 
     // has to be lazy to get right initialization order
-    lazy val db = backend.database
+    lazy val db = mongoContext.database
 
     @org.junit.Before
     def setup() {

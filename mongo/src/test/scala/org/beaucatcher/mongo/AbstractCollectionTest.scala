@@ -34,6 +34,9 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
     Bar : CollectionAccessWithoutEntityTrait[ObjectId])
     extends TestUtils {
 
+    self : ContextProvider =>
+
+    protected implicit def context : Context = mongoContext
     protected def newFoo(id : ObjectId, i : Int, s : String) : Foo
     protected def newFooWithIntId(id : Int, i : Int, s : String) : FooWithIntId
     protected def newFooWithOptionalField(id : ObjectId, i : Int, s : Option[String]) : FooWithOptionalField
@@ -61,8 +64,8 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
     @Test
     def testFullName() = {
-        assertEquals(Foo.database.name + "." + Foo.collectionName, Foo.sync.fullName)
-        assertEquals(Bar.database.name + "." + Bar.collectionName, Bar.sync.fullName)
+        assertEquals(context.database.name + "." + Foo.collectionName, Foo.sync.fullName)
+        assertEquals(context.database.name + "." + Bar.collectionName, Bar.sync.fullName)
     }
 
     @Test
