@@ -42,10 +42,18 @@ trait CollectionAccessBaseTrait[IdType] {
 
     /**
      * This method performs any one-time-on-startup setup for the collection, such as ensuring an index.
-     * The app will need to somehow arrange to call this for each context for now, but the
-     * library should do it the first time each Context is used - FIXME
+     * It's automatically called once per [[org.beaucatcher.mongo.Context]].
+     * Be sure to block (use the sync collections) so the migration is complete when this method returns.
      */
     def migrate(implicit context : Context) : Unit = {}
+
+    private[this] val migrator = new Migrator()
+    private[this] val migratorFunction : (Context) => Unit = migrate(_)
+
+    // this needs to be called before returning any collection
+    protected[beaucatcher] def ensureMigrated(context : Context) : Unit = {
+        migrator.ensureMigrated(context, collectionName, migratorFunction)
+    }
 }
 
 /**
@@ -72,14 +80,18 @@ trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTra
     /**
      * Obtains the `SyncCollection` for this collection.
      */
-    def sync(implicit context : Context) : SyncCollection[BObject, BObject, IdType, BValue] =
+    def sync(implicit context : Context) : SyncCollection[BObject, BObject, IdType, BValue] = {
+        ensureMigrated(context)
         collectionGroup.newBObjectSync
+    }
 
     /**
      * Obtains the `AsyncCollection` for this collection.
      */
-    def async(implicit context : Context) : AsyncCollection[BObject, BObject, IdType, BValue] =
+    def async(implicit context : Context) : AsyncCollection[BObject, BObject, IdType, BValue] = {
+        ensureMigrated(context)
         collectionGroup.newBObjectAsync
+    }
 }
 
 /**
@@ -122,20 +134,28 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
     }
 
     /** Synchronous Collection returning BObject values from the collection */
-    private[mongo] final def bobjectSync(implicit context : Context) : BObjectSyncCollection[IdType] =
+    private[mongo] final def bobjectSync(implicit context : Context) : BObjectSyncCollection[IdType] = {
+        ensureMigrated(context)
         collectionGroup.newBObjectSync
+    }
 
     /** Synchronous Collection returning case class entity values from the collection */
-    private[mongo] final def entitySync(implicit context : Context) : EntitySyncCollection[BObject, EntityType, IdType] =
+    private[mongo] final def entitySync(implicit context : Context) : EntitySyncCollection[BObject, EntityType, IdType] = {
+        ensureMigrated(context)
         collectionGroup.newEntitySync
+    }
 
     /** Asynchronous Collection returning BObject values from the collection */
-    private[mongo] final def bobjectAsync(implicit context : Context) : BObjectAsyncCollection[IdType] =
+    private[mongo] final def bobjectAsync(implicit context : Context) : BObjectAsyncCollection[IdType] = {
+        ensureMigrated(context)
         collectionGroup.newBObjectAsync
+    }
 
     /** Asynchronous Collection returning case class entity values from the collection */
-    private[mongo] final def entityAsync(implicit context : Context) : EntityAsyncCollection[BObject, EntityType, IdType] =
+    private[mongo] final def entityAsync(implicit context : Context) : EntityAsyncCollection[BObject, EntityType, IdType] = {
+        ensureMigrated(context)
         collectionGroup.newEntityAsync
+    }
 
     /**
      * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this

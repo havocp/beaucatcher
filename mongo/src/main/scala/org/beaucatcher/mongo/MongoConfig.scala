@@ -1,6 +1,4 @@
 package org.beaucatcher.mongo
-import java.util.concurrent.ConcurrentHashMap
-import scala.concurrent.Lock
 
 /**
  * A mixin trait that provides a [[org.beaucatcher.mongo.MongoConfig]] to the class

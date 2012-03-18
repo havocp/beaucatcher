@@ -20,7 +20,10 @@ final class JavaDriverContext private[jdriver] (override val driver : JavaDriver
     private lazy val connection = {
         val c = new Mongo(new MongoURI(config.url))
         // things are awfully race-prone without Safe, and you
-        // don't get constraint violations for example
+        // don't get constraint violations for example.
+        // Also since we do async with threads (with AsyncCollection)
+        // there is no real reason for people to use fire-and-forget
+        // with the Java driver itself, right?
         c.setWriteConcern(WriteConcern.SAFE)
         c
     }

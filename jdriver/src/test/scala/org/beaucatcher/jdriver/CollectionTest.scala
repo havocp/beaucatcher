@@ -17,6 +17,12 @@ package foo {
         def customQuery[E](implicit context : Context, chooser : SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
         }
+
+        override def migrate(implicit context : Context) : Unit = {
+            // we're mostly doing this just to test that migrate() gets called
+            // and works
+            sync.ensureIndex(BObject("intField" -> 1))
+        }
     }
 
     case class FooWithIntId(_id : Int, intField : Int, stringField : String) extends abstractfoo.AbstractFooWithIntId
