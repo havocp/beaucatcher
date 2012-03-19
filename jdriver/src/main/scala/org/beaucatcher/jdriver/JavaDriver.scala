@@ -9,9 +9,9 @@ import akka.actor.ActorSystem
 
 /**
  * [[org.beaucatcher.jdriver.JavaDriver]] is final with a private constructor - there's no way to create one
- * directly. However, a [[org.beaucatcher.jdriver.JavaDriverBackendProvider]] exposes a [[org.beaucatcher.jdriver.JavaDriverBackend]] and
- * you may want to use `provider.backend.underlyingConnection`, `underlyingDB`, or `underlyingCollection`
- * to get at JavaDriver methods directly.
+ * directly. If you're creating an [[org.beaucatcher.mongo.CollectionAccess]] object then mix in
+ * [[org.beaucatcher.jdriver.JavaDriverProvider]]. Otherwise the [[org.beaucatcher.jdriver.JavaDriver]]
+ * companion object has a field called `instance` with a driver instance.
  */
 final class JavaDriver private[jdriver] ()
     extends Driver {
@@ -58,14 +58,15 @@ final class JavaDriver private[jdriver] ()
     }
 }
 
-private[jdriver] object JavaDriver {
+object JavaDriver {
 
-    lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
+    private[jdriver] lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
         import JavaConversions._
         override def idIn(id : ObjectId) : JavaObjectId = id
         override def idOut(id : JavaObjectId) : ObjectId = id
     }
 
+    lazy val instance = new JavaDriver()
 }
 
 /**
@@ -74,7 +75,6 @@ private[jdriver] object JavaDriver {
  */
 trait JavaDriverProvider extends DriverProvider {
 
-    override lazy val mongoDriver : JavaDriver = {
-        new JavaDriver()
-    }
+    override def mongoDriver : JavaDriver =
+        JavaDriver.instance
 }

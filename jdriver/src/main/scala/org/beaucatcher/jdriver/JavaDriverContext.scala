@@ -9,7 +9,9 @@ import akka.actor.ActorSystem
 
 /**
  * [[org.beaucatcher.jdriver.JavaDriverContext]] is final with a private constructor - there's no way to create one
- * directly. Instead you call newContext() on the [[org.beaucatcher.jdriver.JavaDriver]].
+ * directly. Instead you call newContext() on [[org.beaucatcher.jdriver.JavaDriver]].
+ * The [[org.beaucatcher.jdriver.JavaDriver]] companion object has a singleton `instance`
+ * you could use for this, `JavaDriver.instance.newContext()`.
  */
 final class JavaDriverContext private[jdriver] (override val driver : JavaDriver,
     override val config : MongoConfig,

@@ -10,7 +10,7 @@ import scala.annotation.implicitNotFound
  * and the Akka ActorSystem.
  *
  * Implementations of [[org.beaucatcher.mongo.Context]] are provided by a "driver" such
- * as [[org.beaucatcher.jdriver.JavaContext]]
+ * as [[org.beaucatcher.jdriver.JavaDriverContext]].
  *
  * This object is normally passed around as an implicit.
  */
