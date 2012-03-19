@@ -110,6 +110,7 @@ have to write yourself.
 <li>Solid test coverage of synchronous collection operations.</li>
 <li>CollectionAccess class; derive your case class companion object from it, then you'll have sync and async collection fields.</li>
 <li>Validation of JSON against a case class.</li>
+<li>Automatic creation and closing of connections, automatic on-demand setup of collections (e.g. creating indexes).</li>
 </ul>
 </p>
 
@@ -127,10 +128,6 @@ particular thing then let me know:
 <li>Optimization: chill out thread handoffs. Right now library boundaries are creating threads in the async case, i.e. there are threads in Hammersmith and then Akka threads in Beaucatcher itself and then probably web threads. In principle we only need one thread per request.</li>
 <li>Optimization: profile and see what actually needs optimizing.</li>
 <li>Could have some kind of query DSL for BObject. This seems hard to make too fancy without a Lift-style ActiveRecord setup. See latest Rogue?</li>
-<li>Haven't figured out exactly how collections will get initialized on
-application load (or on first use of the collection). For example, where do you
-create indexes. This should maybe be handled in a Play plugin for example (for Play).
-</li>
 <li>A Play 2 plugin?</li>
 <li>It's software, this list has no end ;-)</li>
 </ul>
