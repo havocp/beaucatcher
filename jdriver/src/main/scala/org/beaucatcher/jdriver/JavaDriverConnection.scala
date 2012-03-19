@@ -35,6 +35,16 @@ private[jdriver] class JavaDriverConnection(val key : ConnectionKey, val underly
         destroyed = (refcount == 0)
         destroyed
     }
+
+    // called if we never put it in the map
+    def discardBeforeUse() = synchronized {
+        if (refcount != 1)
+            throw new BugInSomethingMongoException("Refcount should have been 1")
+        release()
+        require(destroyed)
+        require(refcount == 0)
+        underlying.close()
+    }
 }
 
 private[jdriver] object JavaDriverConnection {
@@ -43,7 +53,6 @@ private[jdriver] object JavaDriverConnection {
         2, /* initial capacity - default is 16 */
         0.75f, /* load factor - this is the default */
         1) /* concurrency level - this is 1 writer, vs. the default of 16 */
-    private val creationLock = new ReentrantLock
 
     private[jdriver] def acquireConnection(uri : MongoURI) : JavaDriverConnection = {
         acquireConnectionWithKey(ConnectionKey(uri), uri)
@@ -53,26 +62,22 @@ private[jdriver] object JavaDriverConnection {
         val c = active.get(key)
         try {
             if (c eq null) {
-                creationLock.lock()
-                try {
-                    val beatenToIt = active.get(key)
-                    if (beatenToIt eq null) {
-                        val underlying = new Mongo(uri)
-                        // things are awfully race-prone without Safe, and you
-                        // don't get constraint violations for example.
-                        // Also since we do async with threads (with AsyncCollection)
-                        // there is no real reason for people to use fire-and-forget
-                        // with the Java driver itself, right?
-                        underlying.setWriteConcern(WriteConcern.SAFE)
-                        val created = new JavaDriverConnection(key, underlying)
-                        active.put(key, created)
-                        created
-                    } else {
-                        beatenToIt.acquire()
-                        beatenToIt
-                    }
-                } finally {
-                    creationLock.unlock()
+                val underlying = new Mongo(uri)
+                // things are awfully race-prone without Safe, and you
+                // don't get constraint violations for example.
+                // Also since we do async with threads (with AsyncCollection)
+                // there is no real reason for people to use fire-and-forget
+                // with the Java driver itself, right?
+                underlying.setWriteConcern(WriteConcern.SAFE)
+                val created = new JavaDriverConnection(key, underlying)
+                val existing = active.putIfAbsent(key, created)
+
+                if (existing eq null) {
+                    created
+                } else {
+                    created.discardBeforeUse()
+                    existing.acquire()
+                    existing
                 }
             } else {
                 c.acquire()
@@ -87,13 +92,7 @@ private[jdriver] object JavaDriverConnection {
 
     private[jdriver] def releaseConnection(connection : JavaDriverConnection) : Unit = {
         if (connection.release()) {
-            creationLock.lock()
-            try {
-                if (active.get(connection.key) eq connection)
-                    active.remove(connection.key)
-            } finally {
-                creationLock.unlock()
-            }
+            active.remove(connection.key, connection)
             connection.underlying.close()
         }
     }

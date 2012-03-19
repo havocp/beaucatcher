@@ -7,7 +7,7 @@ private[beaucatcher] final class Migrator {
     private val map = new ConcurrentHashMap[String, java.lang.Boolean](16, /* initial capacity - this is default */
         0.75f, /* load factor - this is the default */
         1) /* concurrency level - this is 1 writer, vs. the default of 16 */
-    private val creationLock = new ReentrantLock
+    private val migrationLock = new ReentrantLock
 
     // note: we EXPECT to be called recursively because the
     // migrate() function will have to in turn get some
@@ -26,11 +26,13 @@ private[beaucatcher] final class Migrator {
         // already done the migrate()
         val b = map.get(collectionName)
         if (b eq null) {
-            creationLock.lock()
+            // we're using a lock rather than ConcurrentHashMap.putIfAbsent because
+            // we _want_ "contention" (we want everyone to wait the migration)
+            migrationLock.lock()
             try {
                 val beatenToIt = map.get(collectionName)
                 if (beatenToIt eq null) {
-                    val depth = creationLock.getHoldCount()
+                    val depth = migrationLock.getHoldCount()
                     require(depth > 0)
                     if (depth == 1) {
                         migrate(context)
@@ -38,7 +40,7 @@ private[beaucatcher] final class Migrator {
                     }
                 }
             } finally {
-                creationLock.unlock()
+                migrationLock.unlock()
             }
         }
     }
