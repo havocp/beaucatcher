@@ -77,21 +77,27 @@ trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTra
     private lazy val collectionGroup : CollectionGroupWithoutEntity[IdType] =
         mongoDriver.createCollectionGroupWithoutEntity(collectionName)
 
-    /**
-     * Obtains the `SyncCollection` for this collection.
-     */
-    def sync(implicit context : Context) : SyncCollection[BObject, BObject, IdType, BValue] = {
+    private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
         collectionGroup.newBObjectSync
     }
 
     /**
-     * Obtains the `AsyncCollection` for this collection.
+     * Obtains the `SyncCollection` for this collection.
      */
-    def async(implicit context : Context) : AsyncCollection[BObject, BObject, IdType, BValue] = {
+    def sync(implicit context : Context) : SyncCollection[BObject, BObject, IdType, BValue] =
+        bobjectSyncCache.get
+
+    private lazy val bobjectAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
         collectionGroup.newBObjectAsync
     }
+
+    /**
+     * Obtains the `AsyncCollection` for this collection.
+     */
+    def async(implicit context : Context) : AsyncCollection[BObject, BObject, IdType, BValue] =
+        bobjectAsyncCache.get
 }
 
 /**
@@ -133,29 +139,41 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
             entityBObjectEntityComposer)
     }
 
-    /** Synchronous Collection returning BObject values from the collection */
-    private[mongo] final def bobjectSync(implicit context : Context) : BObjectSyncCollection[IdType] = {
+    private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
         collectionGroup.newBObjectSync
     }
 
-    /** Synchronous Collection returning case class entity values from the collection */
-    private[mongo] final def entitySync(implicit context : Context) : EntitySyncCollection[BObject, EntityType, IdType] = {
+    /** Synchronous Collection returning BObject values from the collection */
+    private[mongo] final def bobjectSync(implicit context : Context) : BObjectSyncCollection[IdType] =
+        bobjectSyncCache.get
+
+    private lazy val entitySyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
         collectionGroup.newEntitySync
     }
 
-    /** Asynchronous Collection returning BObject values from the collection */
-    private[mongo] final def bobjectAsync(implicit context : Context) : BObjectAsyncCollection[IdType] = {
+    /** Synchronous Collection returning case class entity values from the collection */
+    private[mongo] final def entitySync(implicit context : Context) : EntitySyncCollection[BObject, EntityType, IdType] =
+        entitySyncCache.get
+
+    private lazy val bobjectAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
         collectionGroup.newBObjectAsync
     }
 
-    /** Asynchronous Collection returning case class entity values from the collection */
-    private[mongo] final def entityAsync(implicit context : Context) : EntityAsyncCollection[BObject, EntityType, IdType] = {
+    /** Asynchronous Collection returning BObject values from the collection */
+    private[mongo] final def bobjectAsync(implicit context : Context) : BObjectAsyncCollection[IdType] =
+        bobjectAsyncCache.get
+
+    private lazy val entityAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
         collectionGroup.newEntityAsync
     }
+
+    /** Asynchronous Collection returning case class entity values from the collection */
+    private[mongo] final def entityAsync(implicit context : Context) : EntityAsyncCollection[BObject, EntityType, IdType] =
+        entityAsyncCache.get
 
     /**
      * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
