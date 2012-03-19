@@ -74,8 +74,8 @@ trait CollectionAccessBaseTrait[IdType] {
 trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTrait[IdType] {
     self : DriverProvider =>
 
-    private lazy val collectionGroup : CollectionGroupWithoutEntity[IdType] =
-        mongoDriver.createCollectionGroupWithoutEntity(collectionName)
+    private lazy val collectionGroup : CollectionFactoryWithoutEntity[IdType] =
+        mongoDriver.createCollectionFactoryWithoutEntity(collectionName)
 
     private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
@@ -133,9 +133,9 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      */
     implicit protected def entityTypeManifest : Manifest[EntityType]
 
-    private lazy val collectionGroup : CollectionGroup[EntityType, IdType, IdType] = {
+    private lazy val collectionGroup : CollectionFactory[EntityType, IdType, IdType] = {
         require(entityTypeManifest != null)
-        mongoDriver.createCollectionGroup(collectionName, entityBObjectQueryComposer,
+        mongoDriver.createCollectionFactory(collectionName, entityBObjectQueryComposer,
             entityBObjectEntityComposer)
     }
 

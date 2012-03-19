@@ -16,21 +16,21 @@ import akka.actor.ActorSystem
 final class JavaDriver private[jdriver] ()
     extends Driver {
 
-    override final def createCollectionGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
+    override final def createCollectionFactory[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
-        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : CollectionGroup[EntityType, IdType, IdType] = {
+        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : CollectionFactory[EntityType, IdType, IdType] = {
         val identityIdComposer = new IdentityIdComposer[IdType]
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
             // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
-            new EntityBObjectJavaDriverCollectionGroup[EntityType, IdType, IdType, JavaObjectId](this,
+            new EntityBObjectJavaDriverCollectionFactory[EntityType, IdType, IdType, JavaObjectId](this,
                 collectionName,
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
                 identityIdComposer,
                 JavaDriver.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
-            new EntityBObjectJavaDriverCollectionGroup[EntityType, IdType, IdType, IdType](this,
+            new EntityBObjectJavaDriverCollectionFactory[EntityType, IdType, IdType, IdType](this,
                 collectionName,
                 caseClassBObjectQueryComposer,
                 caseClassBObjectEntityComposer,
@@ -39,15 +39,15 @@ final class JavaDriver private[jdriver] ()
         }
     }
 
-    override def createCollectionGroupWithoutEntity[IdType : Manifest](collectionName : String) : CollectionGroupWithoutEntity[IdType] = {
+    override def createCollectionFactoryWithoutEntity[IdType : Manifest](collectionName : String) : CollectionFactoryWithoutEntity[IdType] = {
         val idManifest = manifest[IdType]
         if (idManifest <:< manifest[ObjectId]) {
-            new BObjectJavaDriverCollectionGroup[IdType, JavaObjectId](this,
+            new BObjectJavaDriverCollectionFactory[IdType, JavaObjectId](this,
                 collectionName,
                 JavaDriver.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
         } else {
             val identityIdComposer = new IdentityIdComposer[IdType]
-            new BObjectJavaDriverCollectionGroup[IdType, IdType](this,
+            new BObjectJavaDriverCollectionFactory[IdType, IdType](this,
                 collectionName,
                 identityIdComposer)
         }

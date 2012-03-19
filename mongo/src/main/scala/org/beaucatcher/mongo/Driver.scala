@@ -13,11 +13,11 @@ trait DriverProvider {
 
 trait Driver {
 
-    def createCollectionGroup[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
+    def createCollectionFactory[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
         entityBObjectQueryComposer : QueryComposer[BObject, BObject],
-        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : CollectionGroup[EntityType, IdType, IdType]
+        entityBObjectEntityComposer : EntityComposer[EntityType, BObject]) : CollectionFactory[EntityType, IdType, IdType]
 
-    def createCollectionGroupWithoutEntity[IdType : Manifest](collectionName : String) : CollectionGroupWithoutEntity[IdType]
+    def createCollectionFactoryWithoutEntity[IdType : Manifest](collectionName : String) : CollectionFactoryWithoutEntity[IdType]
 
     def newContext(config : MongoConfig, system : ActorSystem) : Context
 }

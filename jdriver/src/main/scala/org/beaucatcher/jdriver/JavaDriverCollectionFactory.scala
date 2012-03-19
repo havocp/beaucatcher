@@ -24,11 +24,11 @@ private[jdriver] class OuterBValueValueComposer
     override def valueOut(v : Any) : BValue = wrapJavaAsBValue(v)
 }
 
-private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDriverIdType](
+private[jdriver] class BObjectJavaDriverCollectionFactory[BObjectIdType, JavaDriverIdType](
     val driver : JavaDriver,
     val collectionName : String,
     private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
-    extends CollectionGroupWithoutEntity[BObjectIdType] {
+    extends CollectionFactoryWithoutEntity[BObjectIdType] {
     require(driver != null)
     require(collectionName != null)
 
@@ -86,11 +86,11 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
 }
 
 /**
- * A CollectionGroup exposes the entire chain of Collection conversions; you can "tap in" and use the
+ * A CollectionFactory exposes the entire chain of Collection conversions; you can "tap in" and use the
  * nicest Collection at whatever level is convenient for whatever you're doing. You can also
  * override any of the conversions as the data makes its way up from MongoDB.
  *
- * The long-term idea is to get rid of the JavaDriver part, and the CollectionGroup will
+ * The long-term idea is to get rid of the JavaDriver part, and the CollectionFactory will
  * have a 2x2 of Collection flavors: sync vs. async, and BObject vs. case entity.
  *
  * Rather than a bunch of annotations specifying how to go from MongoDB to
@@ -98,15 +98,15 @@ private[jdriver] class BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDrive
  * "composer" objects and do things like validation or dealing with legacy
  * object formats in there.
  */
-private[jdriver] class EntityBObjectJavaDriverCollectionGroup[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, JavaDriverIdType](
+private[jdriver] class EntityBObjectJavaDriverCollectionFactory[EntityType <: AnyRef : Manifest, EntityIdType, BObjectIdType, JavaDriverIdType](
     override val driver : JavaDriver,
     override val collectionName : String,
     val entityBObjectQueryComposer : QueryComposer[BObject, BObject],
     val entityBObjectEntityComposer : EntityComposer[EntityType, BObject],
     val entityBObjectIdComposer : IdComposer[EntityIdType, BObjectIdType],
     private val bobjectJavaDriverIdComposer : IdComposer[BObjectIdType, JavaDriverIdType])
-    extends BObjectJavaDriverCollectionGroup[BObjectIdType, JavaDriverIdType](driver, collectionName, bobjectJavaDriverIdComposer)
-    with CollectionGroup[EntityType, EntityIdType, BObjectIdType] {
+    extends BObjectJavaDriverCollectionFactory[BObjectIdType, JavaDriverIdType](driver, collectionName, bobjectJavaDriverIdComposer)
+    with CollectionFactory[EntityType, EntityIdType, BObjectIdType] {
     require(driver != null)
     require(collectionName != null)
     require(entityBObjectQueryComposer != null)

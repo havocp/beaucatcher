@@ -4,12 +4,13 @@ import org.beaucatcher.bson._
 import akka.actor.ActorSystem
 
 /**
- * An interface specifying a Collection objects to be provided that do not rely
+ * An internal interface specifying a Collection objects to be provided that do not rely
  * on having an entity class (such as a case class). These Collections are just
  * BObject-based.
- * For now there's just one, the synchronous one.
+ *
+ * This interface is provided by an instance of [[org.beaucatcher.Driver]].
  */
-private[beaucatcher] trait CollectionGroupWithoutEntity[BObjectIdType] {
+private[beaucatcher] trait CollectionFactoryWithoutEntity[BObjectIdType] {
     /**
      *  This Collection works with a traversable immutable BSON tree (BObject), which is probably
      *  the best representation if you want to convert to JSON. You can also use
@@ -24,12 +25,14 @@ private[beaucatcher] trait CollectionGroupWithoutEntity[BObjectIdType] {
 }
 
 /**
- * An interface specifying a set of Collection flavors to be provided.
+ * An internal interface specifying a set of Collection flavors to be provided.
  * For now, the two flavors are one that returns [[org.beaucatcher.bson.BObject]] results
  * and another that returns an application-specified case class.
+ *
+ * This interface is provided by an instance of [[org.beaucatcher.Driver]].
  */
-private[beaucatcher] trait CollectionGroup[EntityType <: AnyRef, EntityIdType, BObjectIdType]
-    extends CollectionGroupWithoutEntity[BObjectIdType] {
+private[beaucatcher] trait CollectionFactory[EntityType <: AnyRef, EntityIdType, BObjectIdType]
+    extends CollectionFactoryWithoutEntity[BObjectIdType] {
 
     /**
      *  This Collection works with a specified entity class, for typesafe access to fields
