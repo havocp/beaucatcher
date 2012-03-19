@@ -20,7 +20,7 @@ final class JavaDriverContext private[jdriver] (override val driver : JavaDriver
 
     private lazy val jdriverURI = new MongoURI(config.url)
 
-    private lazy val driverConnection = JavaDriverConnection.acquireConnection(ConnectionInfo(jdriverURI))
+    private lazy val driverConnection = JavaDriverConnection.acquireConnection(jdriverURI)
     private def connection = driverConnection.underlying
 
     override type DriverType = JavaDriver

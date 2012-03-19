@@ -7,10 +7,16 @@ import java.util.concurrent.locks.ReentrantLock
 
 private[jdriver] class ConnectionDestroyedException extends Exception("Connection was destroyed before it was acquired")
 
-// FIXME this needs to be the set of ServerAddress, but not the database name
-private[jdriver] case class ConnectionInfo(uri : MongoURI)
+private[jdriver] case class ConnectionKey(key : String)
 
-private[jdriver] class JavaDriverConnection(val info : ConnectionInfo, val underlying : Mongo) {
+private[jdriver] object ConnectionKey {
+    import scala.collection.JavaConverters._
+    private def makeKey(uri : MongoURI) = uri.getHosts().asScala.mkString(",") + "!" + uri.getUsername() + "!" + uri.getOptions()
+
+    def apply(uri : MongoURI) : ConnectionKey = ConnectionKey(makeKey(uri))
+}
+
+private[jdriver] class JavaDriverConnection(val key : ConnectionKey, val underlying : Mongo) {
     private var refcount = 1
     private var destroyed = false
 
@@ -33,29 +39,33 @@ private[jdriver] class JavaDriverConnection(val info : ConnectionInfo, val under
 
 private[jdriver] object JavaDriverConnection {
 
-    private[jdriver] val active = new ConcurrentHashMap[ConnectionInfo, JavaDriverConnection](
+    private[jdriver] val active = new ConcurrentHashMap[ConnectionKey, JavaDriverConnection](
         2, /* initial capacity - default is 16 */
         0.75f, /* load factor - this is the default */
         1) /* concurrency level - this is 1 writer, vs. the default of 16 */
     private val creationLock = new ReentrantLock
 
-    private[jdriver] def acquireConnection(info : ConnectionInfo) : JavaDriverConnection = {
-        val c = active.get(info)
+    private[jdriver] def acquireConnection(uri : MongoURI) : JavaDriverConnection = {
+        acquireConnectionWithKey(ConnectionKey(uri), uri)
+    }
+
+    private[this] def acquireConnectionWithKey(key : ConnectionKey, uri : MongoURI) : JavaDriverConnection = {
+        val c = active.get(key)
         try {
             if (c eq null) {
                 creationLock.lock()
                 try {
-                    val beatenToIt = active.get(info)
+                    val beatenToIt = active.get(key)
                     if (beatenToIt eq null) {
-                        val underlying = new Mongo(info.uri)
+                        val underlying = new Mongo(uri)
                         // things are awfully race-prone without Safe, and you
                         // don't get constraint violations for example.
                         // Also since we do async with threads (with AsyncCollection)
                         // there is no real reason for people to use fire-and-forget
                         // with the Java driver itself, right?
                         underlying.setWriteConcern(WriteConcern.SAFE)
-                        val created = new JavaDriverConnection(info, underlying)
-                        active.put(info, created)
+                        val created = new JavaDriverConnection(key, underlying)
+                        active.put(key, created)
                         created
                     } else {
                         beatenToIt.acquire()
@@ -71,7 +81,7 @@ private[jdriver] object JavaDriverConnection {
         } catch {
             // if the connection is destroyed before we acquire it, start over
             case e : ConnectionDestroyedException =>
-                acquireConnection(info)
+                acquireConnectionWithKey(key, uri)
         }
     }
 
@@ -79,8 +89,8 @@ private[jdriver] object JavaDriverConnection {
         if (connection.release()) {
             creationLock.lock()
             try {
-                if (active.get(connection.info) eq connection)
-                    active.remove(connection.info)
+                if (active.get(connection.key) eq connection)
+                    active.remove(connection.key)
             } finally {
                 creationLock.unlock()
             }
