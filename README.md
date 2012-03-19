@@ -210,7 +210,7 @@ like this:
         object Foo
             extends CollectionAccessWithCaseClass[Foo, ObjectId]
             with MyAppMongoProvider {
-            def customQuery[E](implicit chooser : SyncCollectionChooser[E, _]) = {
+            def customQuery[E](implicit context : Context, chooser : SyncCollectionChooser[E, _]) = {
                 sync[E].find(BObject("intField" -> 23))
             }
         }
