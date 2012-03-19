@@ -25,7 +25,9 @@ trait CollectionAccessBaseTrait[IdType] {
      * with the first character made lowercase. So "object FooBar" gets collection name "fooBar" for
      * example. Override this value to change it.
      */
-    val collectionName : String = {
+    def collectionName : String = defaultCollectionName
+
+    private lazy val defaultCollectionName : String = {
         // FIXME getClass.getSimpleName ?
         // "org.bar.Foo$" -> "foo"
 
