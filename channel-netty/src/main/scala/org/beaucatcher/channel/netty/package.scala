@@ -70,7 +70,7 @@ package object netty {
         }
         val size = buf.writerIndex() - start
         if (size > maxSize)
-            throw new MongoException("Document is too large (" + size + " bytes but the max is " + maxSize + ")")
+            throw new MongoChannelException("Document is too large (" + size + " bytes but the max is " + maxSize + ")")
     }
 
     private[beaucatcher] def writeQuery[Q](buf: ChannelBuffer, query: Q, maxSize: Int)(implicit querySupport: QueryEncodeSupport[Q]): Unit = {

@@ -67,7 +67,7 @@ class ConnectionTest extends TestUtils {
         val futureReply = socket.sendCommand(0, /* flags */
             "admin", BObject("ismaster" -> 1, "ignored" -> b))
 
-        val e = intercept[MongoException] {
+        val e = intercept[MongoChannelException] {
             block(futureReply)
         }
         assertTrue(e.getMessage.contains("too large"))
