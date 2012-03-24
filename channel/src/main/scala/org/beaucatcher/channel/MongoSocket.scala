@@ -27,6 +27,10 @@ trait MongoSocket {
     /** Send an OP_GETMORE. */
     def sendGetMore(fullCollectionName: String, numberToReturn: Int, cursorId: Long): Future[QueryReply]
 
+    /** Send an OP_UPDATE. Future is completed when the message is sent; there is no reply. */
+    def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
+        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: EntityEncodeSupport[E]): Future[Unit]
+
     /**
      * Close the socket and free resources.
      */

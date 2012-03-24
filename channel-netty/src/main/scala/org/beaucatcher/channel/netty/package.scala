@@ -58,19 +58,27 @@ package object netty {
         buf.writeByte(zeroByte)
     }
 
-    private[beaucatcher] def writeQuery[Q](buf: ChannelBuffer, query: Q, maxSize: Int)(implicit querySupport: QueryEncodeSupport[Q]): Unit = {
+    private[beaucatcher] def writeDocument[D](buf: ChannelBuffer, doc: D, maxSize: Int)(implicit encodeSupport: EncodeSupport[D]): Unit = {
         val start = buf.writerIndex()
-        querySupport match {
+        encodeSupport match {
             case nettySupport: NettyEncodeSupport[_] =>
-                nettySupport.asInstanceOf[NettyEncodeSupport[Q]].write(buf, query)
+                nettySupport.asInstanceOf[NettyEncodeSupport[D]].write(buf, doc)
             case _ =>
-                val bb = querySupport.encode(query)
+                val bb = encodeSupport.encode(doc)
                 buf.ensureWritableBytes(bb.remaining())
                 buf.writeBytes(bb)
         }
         val size = buf.writerIndex() - start
         if (size > maxSize)
             throw new MongoException("Document is too large (" + size + " bytes but the max is " + maxSize + ")")
+    }
+
+    private[beaucatcher] def writeQuery[Q](buf: ChannelBuffer, query: Q, maxSize: Int)(implicit querySupport: QueryEncodeSupport[Q]): Unit = {
+        writeDocument(buf, query, maxSize)
+    }
+
+    private[beaucatcher] def writeEntity[E](buf: ChannelBuffer, entity: E, maxSize: Int)(implicit entitySupport: EntityEncodeSupport[E]): Unit = {
+        writeDocument(buf, entity, maxSize)
     }
 
     private[beaucatcher] def readEntity[E](buf: ChannelBuffer)(implicit entitySupport: EntityDecodeSupport[E]): E = {

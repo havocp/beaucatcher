@@ -95,4 +95,36 @@ class ConnectionTest extends TestUtils {
         assertDocumentSmallEnough(socket, oneK)
         assertDocumentTooLarge(socket, tenK)
     }
+
+    @Test
+    def sendToClosedSocket(): Unit = withFactory { factory =>
+        import Support._
+        val futureSocket = factory.connect(new InetSocketAddress("localhost", wire.DEFAULT_PORT))
+        val socket = block(futureSocket)
+
+        socket.close()
+
+        val futureReply = socket.sendCommand(0, /* flags */
+            "admin", BObject("ismaster" -> 1))
+
+        val e = intercept[MongoChannelException] {
+            block(futureReply)
+        }
+    }
+
+    @Test
+    def sendToClosedFactory(): Unit = withFactory { factory =>
+        import Support._
+        val futureSocket = factory.connect(new InetSocketAddress("localhost", wire.DEFAULT_PORT))
+        val socket = block(futureSocket)
+
+        factory.close()
+
+        val futureReply = socket.sendCommand(0, /* flags */
+            "admin", BObject("ismaster" -> 1))
+
+        val e = intercept[MongoChannelException] {
+            block(futureReply)
+        }
+    }
 }

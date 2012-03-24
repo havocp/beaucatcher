@@ -19,6 +19,8 @@
 
 package org.beaucatcher.channel.netty
 
+import org.beaucatcher.mongo._
+import org.beaucatcher.channel._
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
@@ -46,6 +48,7 @@ import org.jboss.netty.handler.logging.LoggingHandler
 import org.jboss.netty.logging.InternalLogLevel
 import org.jboss.netty.logging.InternalLoggerFactory
 import org.jboss.netty.logging.AbstractInternalLogger
+import org.jboss.netty.channel.ExceptionEvent
 
 class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) {
 
@@ -108,6 +111,16 @@ class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) {
             for (socket <- socketOption) {
                 socket.disconnected()
             }
+        }
+
+        override def exceptionCaught(context: ChannelHandlerContext, e: ExceptionEvent): Unit = {
+            val f = e.getFuture()
+            val cause = e.getCause() match {
+                case m: MongoException => m
+                case x => new MongoChannelException(x.getMessage(), x)
+            }
+
+            f.setFailure(cause)
         }
     }
 

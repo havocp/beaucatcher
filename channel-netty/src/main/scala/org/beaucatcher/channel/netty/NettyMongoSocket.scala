@@ -4,6 +4,9 @@ import org.beaucatcher.channel._
 import org.beaucatcher.wire.mongo._
 import org.beaucatcher.wire.bson._
 import akka.dispatch._
+import akka.util._
+import akka.util.duration._
+import akka.pattern._
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.nio.ByteOrder
@@ -20,26 +23,15 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         0.75f, /* load factor - this is the default */
         1) /* concurrency level - this is 1 writer, vs. the default of 16 */
 
-    private def newPending[T]()(implicit executor: ExecutionContext): (Int, Promise[T]) = {
+    private def newPending[T <: AnyRef]()(implicit executor: ExecutionContext): (Int, Promise[T]) = {
         val i = nextSerial.getAndIncrement()
         val p = Promise[T]()
         val old = pending.put(i, p)
         if (old ne null)
             throw new RuntimeException("Somehow re-used the same message id?")
+        // on either error or success, remove from the map
+        p.onComplete({ whatever => pending.remove(i) })
         (i, p)
-    }
-
-    private def removePending[T](serial: Int): Promise[T] = {
-        val p = pending.remove(serial)
-        if (p eq null)
-            throw new RuntimeException("Got a reply with unknown ID " + serial)
-        // put back the type parameter
-        p.asInstanceOf[Promise[T]]
-    }
-
-    private def failPending(serial: Int, e: MongoChannelException): Unit = {
-        val p = removePending(serial)
-        p.failure(e)
     }
 
     private class NettyEntityIterator(val buf: ChannelBuffer) extends EntityIterator {
@@ -71,22 +63,46 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         }
     }
 
-    private[this] def withQueryReply(body: (Int, Promise[NettyQueryReply]) => ChannelBuffer): Future[QueryReply] = {
+    private[this] final def withQueryReply(body: (Int, Promise[NettyQueryReply]) => ChannelBuffer): Future[QueryReply] = {
         val (serial, promise) = newPending[NettyQueryReply]
         try {
             val buf = body(serial, promise)
 
-            channel.write(buf)
+            sendMessage(buf, promise)
         } catch {
             // if any synchronous exceptions occur, stuff them in the future and
             // drop the pending message. This way people don't have to both
             // handle exceptions on the future and handle exceptions synchronously.
             // (One likely exception here is "document too large")
             case e: Exception =>
-                removePending(serial).failure(e)
+                promise.failure(e)
         }
 
         promise
+    }
+
+    private[this] final def messageBuffer(serial: Int, op: Int, guessedAfterHeaderLength: Int): ChannelBuffer = {
+        val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN,
+            MESSAGE_HEADER_LENGTH + guessedAfterHeaderLength)
+        buf.writeInt(0) // length, to be fixed up later
+        buf.writeInt(serial)
+        buf.writeInt(0) // responseTo, always 0 when sending from client
+        buf.writeInt(op)
+        buf
+    }
+
+    private class WriteErrorListener(val promise: Promise[_]) extends ChannelFutureListener {
+        override final def operationComplete(f: ChannelFuture): Unit = {
+            if (!f.isSuccess()) {
+                promise.failure(new MongoChannelException("Writing message failed", f.getCause()))
+            }
+        }
+    }
+
+    private[this] final def sendMessage(buf: ChannelBuffer, promise: Promise[_]): Unit = {
+        val length = buf.writerIndex()
+        buf.setInt(0, length)
+        channel.write(buf).addListener(new WriteErrorListener(promise))
     }
 
     override def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
@@ -97,16 +113,11 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
             // struct { int flags, cstring fullCollectionName, int numberToSkip, int numberToReturn, doc query, [doc fields] }
 
             // note that fullCollectionName.length is in chars not utf-8 bytes. we're just estimating.
-            val guessedLength = MESSAGE_HEADER_LENGTH + 4 + fullCollectionName.length + 4 + 4 + 128
+            val buf = messageBuffer(serial, OP_QUERY, 4 + fullCollectionName.length + 4 + 4 + 128)
 
-            val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, guessedLength)
-
-            buf.writeInt(0) // length, to be fixed up later
-            buf.writeInt(serial)
-            buf.writeInt(0) // responseTo
-            buf.writeInt(OP_QUERY)
             buf.writeInt(flags)
             writeNulString(buf, fullCollectionName)
+            buf.ensureWritableBytes(8) // in case nul string was longer than guessed
             buf.writeInt(numberToSkip)
             buf.writeInt(numberToReturn)
 
@@ -119,33 +130,42 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
             for (fields <- fieldsOption)
                 writeQuery(buf, fields, maxDocumentSize)
 
-            val length = buf.writerIndex()
-            buf.setInt(0, length)
             buf
         }
     }
 
     def sendGetMore(fullCollectionName: String, numberToReturn: Int, cursorId: Long): Future[QueryReply] = {
         withQueryReply { (serial, promise) =>
-            // note that fullCollectionName.length is in chars not utf-8 bytes. we're just estimating.
-            val guessedLength = MESSAGE_HEADER_LENGTH + 4 + fullCollectionName.length + 4 + 8
-
-            val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, guessedLength)
-
-            buf.writeInt(0) // length, to be fixed up later
-            buf.writeInt(serial)
-            buf.writeInt(0) // responseTo
-            buf.writeInt(OP_GETMORE)
+            val buf = messageBuffer(serial, OP_GETMORE,
+                4 + fullCollectionName.length + 4 + 8)
 
             buf.writeInt(0) // reserved, must be zero
             writeNulString(buf, fullCollectionName)
+            buf.ensureWritableBytes(12) // in case nul string was longer than guessed
             buf.writeInt(numberToReturn)
             buf.writeLong(cursorId)
 
-            val length = buf.writerIndex()
-            buf.setInt(0, length)
             buf
         }
+    }
+
+    def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
+        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: EntityEncodeSupport[E]): Future[Unit] = {
+        val promise = Promise[Unit]()
+
+        val buf = messageBuffer(nextSerial.getAndIncrement(), OP_UPDATE,
+            4 + fullCollectionName.length + 4 + 128)
+
+        buf.writeInt(0) // reserved, must be zero
+        writeNulString(buf, fullCollectionName)
+        buf.ensureWritableBytes(4) // in case nul string was longer than guessed
+        buf.writeInt(flags)
+        writeQuery(buf, query, maxDocumentSize)
+        writeEntity(buf, update, maxDocumentSize)
+
+        sendMessage(buf, promise)
+
+        promise
     }
 
     override def close(): Future[Unit] = {
@@ -167,13 +187,16 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         val opCode = buf.getInt(12)
 
         if (opCode == OP_REPLY) {
-            val p = removePending(responseTo).asInstanceOf[Promise[NettyQueryReply]]
+            val p = pending.get(responseTo)
 
-            // note that the reply lazy-decodes, so decoding will happen when
-            // someone actually tries to use the reply. We are relying on success()
-            // running its callbacks async, which it appears to do. We don't
-            // really want to do the decode work in this IO thread.
-            p.success(new NettyQueryReply(buf))
+            if (p ne null) {
+                val np = p.asInstanceOf[Promise[NettyQueryReply]]
+                // note that the reply lazy-decodes, so decoding will happen when
+                // someone actually tries to use the reply. We are relying on success()
+                // running its callbacks async, which it appears to do. We don't
+                // really want to do the decode work in this IO thread.
+                np.success(new NettyQueryReply(buf))
+            }
         }
     }
 
@@ -182,18 +205,25 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
     }
 
     private[netty] def disconnected(): Unit = {
+        import scala.collection.JavaConverters._
+
         while (!pending.isEmpty()) {
-            val entryOption = try {
-                Some(pending.entrySet().iterator().next())
-            } catch {
-                case e: NoSuchElementException =>
-                    None
+            // pending.values changes as pending does; here,
+            // force an immutable Scala List
+            val promises = pending.values.asScala.toList
+
+            for (p <- promises) {
+                // this will kick off an asynchronous removal
+                // of "p" from the "pending" map
+                p.failure(new MongoChannelException("Disconnected"))
             }
-            for (entry <- entryOption) {
-                val serial = entry.getKey
-                // modifies hash table breaking the iteration
-                failPending(serial, new MongoChannelException("Disconnected"))
-            }
+
+            // a little hack to match the Future.reduce signature which requires AnyRef
+            val futures: Traversable[Future[AnyRef]] = promises.map(_.asInstanceOf[Promise[AnyRef]])
+            val all = Future.reduce(futures)({ (a, b) => ().asInstanceOf[AnyRef] })
+
+            // wait for everything to be asynchronously canceled
+            Await.result(all, 1 second)
         }
     }
 }
