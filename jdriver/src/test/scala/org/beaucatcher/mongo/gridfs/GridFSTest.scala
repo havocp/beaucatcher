@@ -155,6 +155,8 @@ class GridFSTest
 
         val uri = new MongoURI(context.config.url)
         val mongo = new Mongo(uri)
+        // without SAFE here the tests are racy
+        mongo.setWriteConcern(WriteConcern.SAFE)
         val db = mongo.getDB(uri.getDatabase())
         val fs = new GridFS(db, TestFS.bucket)
 
