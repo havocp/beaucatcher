@@ -20,6 +20,10 @@ trait MongoSocket {
 
     /**
      * Send an OP_QUERY. Parameters map directly to protocol and are in the same order as on the wire.
+     * Weirdness note: negative numberToReturn means don't create a cursor and return the absolute value
+     * number of max results. positive 1 also means don't create a cursor and return 1 result. 0 means
+     * return a default number of results. All other positive numbers mean return initial number of
+     * results and also a cursor ID.
      */
     def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
         numberToReturn: Int, query: Q, fieldsOption: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply]
