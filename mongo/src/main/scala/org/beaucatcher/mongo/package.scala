@@ -52,4 +52,21 @@ package object mongo {
         }
         sb.toString
     }
+
+    private[beaucatcher] implicit def queryFlagsAsInt(flags : Set[QueryFlag]) : Int = {
+        import org.beaucatcher.wire.mongo._
+        var i = 0
+        for (f <- flags) {
+            val o = f match {
+                case QueryAwaitData => QUERY_FLAG_AWAIT_DATA
+                case QueryExhaust => QUERY_FLAG_EXHAUST
+                case QueryNoTimeout => QUERY_FLAG_NO_CURSOR_TIMEOUT
+                case QueryOpLogReplay => QUERY_FLAG_OPLOG_RELAY
+                case QuerySlaveOk => QUERY_FLAG_SLAVE_OK
+                case QueryTailable => QUERY_FLAG_TAILABLE_CURSOR
+            }
+            i |= o
+        }
+        i
+    }
 }

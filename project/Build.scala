@@ -89,13 +89,13 @@ object BeaucatcherBuild extends Build {
     lazy val channel = Project("beaucatcher-channel",
         file("channel"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq())) dependsOn(wire)
+            Seq(libraryDependencies := Seq(akkaActor))) dependsOn(wire)
 
     // netty implementation of a mongo channel
     lazy val channelNetty = Project("beaucatcher-channel-netty",
         file("channel-netty"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(netty))) dependsOn(channel)
+            Seq(libraryDependencies := Seq(netty))) dependsOn(channel % "compile->compile;test->test")
 
     // bson/json parsing and syntax tree
     lazy val bson = Project("beaucatcher-bson",
@@ -126,5 +126,5 @@ object BeaucatcherBuild extends Build {
     lazy val channelDriver = Project("beaucatcher-channel-driver",
         file("channel-driver"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq())) dependsOn(channelNetty, mongo)
+            Seq(libraryDependencies := Seq())) dependsOn(channelNetty % "compile->compile;test->test", mongo % "compile->compile;test->test")
 }

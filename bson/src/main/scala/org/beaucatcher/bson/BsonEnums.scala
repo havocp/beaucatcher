@@ -1,5 +1,7 @@
 package org.beaucatcher.bson
 
+import org.beaucatcher.wire.{ bson => wire }
+
 /**
  * A representation of BSON in JSON format.
  * Only the `CLEAN` flavor is currently implemented.
@@ -26,13 +28,15 @@ object JsonFlavor extends Enumeration {
 /** A detailed type tag for binary data in wire. */
 object BsonSubtype extends Enumeration {
     type BsonSubtype = Value
-    val GENERAL, FUNC, BINARY, UUID = Value
+    val GENERAL, FUNC, BINARY, UUID, MD5, USER_DEFINED = Value
 
     private val fromBytes =
         Map(wire.B_GENERAL -> GENERAL,
             wire.B_FUNC -> FUNC,
             wire.B_BINARY -> BINARY,
-            wire.B_UUID -> UUID)
+            wire.B_UUID -> UUID,
+            wire.B_MD5 -> MD5,
+            wire.B_USER_DEFINED -> USER_DEFINED)
 
     private val toBytes = fromBytes map { _.swap }
 
