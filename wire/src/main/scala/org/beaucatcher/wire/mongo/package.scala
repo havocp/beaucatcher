@@ -30,4 +30,7 @@ object `package` {
     val REPLY_FLAG_QUERY_FAILURE = 1 << 1 // Set when query failed. Results consist of one document containing an "$err" field describing the failure.
     val REPLY_FLAG_SHARD_CONFIG_STALE = 1 << 2 // Drivers should ignore this. Only mongos will ever see this set, in which case, it needs to update config from the server.
     val REPLY_FLAG_AWAIT_CAPABLE = 1 << 3 // Set when the server supports the AwaitData Query option. If it doesn't, a client should sleep a little between getMore's of a Tailable cursor. Mongod version 1.6 supports AwaitData and thus always sets AwaitCapable.
+
+    val UPDATE_FLAG_UPSERT = 1 << 0 // insert the supplied object into the collection if no matching document is found.
+    val UPDATE_FLAG_MULTI_UPDATE = 1 << 1 // update all matching objects rather than only first
 }
