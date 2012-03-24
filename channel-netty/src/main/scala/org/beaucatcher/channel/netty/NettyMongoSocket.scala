@@ -168,6 +168,63 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         promise
     }
 
+    def sendInsert[E](flags: Int, fullCollectionName: String,
+        docs: Traversable[E])(implicit entitySupport: EntityEncodeSupport[E]): Future[Unit] = {
+        val promise = Promise[Unit]()
+
+        val buf = messageBuffer(nextSerial.getAndIncrement(), OP_INSERT,
+            4 + fullCollectionName.length + 128)
+
+        buf.writeInt(flags)
+        writeNulString(buf, fullCollectionName)
+        for (doc <- docs)
+            writeEntity(buf, doc, maxDocumentSize)
+
+        sendMessage(buf, promise)
+
+        promise
+    }
+
+    def sendDelete[Q](fullCollectionName: String, flags: Int,
+        query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[Unit] = {
+        val promise = Promise[Unit]()
+
+        val buf = messageBuffer(nextSerial.getAndIncrement(), OP_DELETE,
+            4 + fullCollectionName.length + 4 + 128)
+
+        buf.writeInt(0) // reserved, zero
+        writeNulString(buf, fullCollectionName)
+        buf.ensureWritableBytes(4)
+        buf.writeInt(flags)
+        writeQuery(buf, query, maxDocumentSize)
+
+        sendMessage(buf, promise)
+
+        promise
+    }
+
+    def sendKillCursors(cursorIds: Traversable[Long]): Future[Unit] = {
+        val promise = Promise[Unit]()
+
+        val buf = messageBuffer(nextSerial.getAndIncrement(), OP_KILL_CURSORS,
+            4 + 4 + 16)
+
+        buf.writeInt(0) // reserved, 0
+        val lengthIndex = buf.writerIndex()
+        buf.writeInt(0) // number of cursor IDs, will overwrite later
+        var count = 0
+        for (c <- cursorIds) {
+            count += 1
+            buf.ensureWritableBytes(8)
+            buf.writeLong(c)
+        }
+        buf.setInt(lengthIndex, count)
+
+        sendMessage(buf, promise)
+
+        promise
+    }
+
     override def close(): Future[Unit] = {
         val p = Promise[Unit]()
         channel.close().addListener(new ChannelFutureListener() {

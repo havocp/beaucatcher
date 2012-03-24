@@ -33,4 +33,8 @@ object `package` {
 
     val UPDATE_FLAG_UPSERT = 1 << 0 // insert the supplied object into the collection if no matching document is found.
     val UPDATE_FLAG_MULTI_UPDATE = 1 << 1 // update all matching objects rather than only first
+
+    val INSERT_FLAG_CONTINUE_ON_ERROR = 1 << 0 // continue inserting other docs if one of them fails
+
+    val DELETE_FLAG_SINGLE_REMOVE = 1 << 0 // remove only the first matching document instead of all
 }

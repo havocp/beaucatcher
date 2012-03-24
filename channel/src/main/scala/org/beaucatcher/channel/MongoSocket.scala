@@ -19,17 +19,37 @@ trait MongoSocket {
     }
 
     /**
-     * Send an OP_QUERY.
+     * Send an OP_QUERY. Parameters map directly to protocol and are in the same order as on the wire.
      */
     def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
         numberToReturn: Int, query: Q, fieldsOption: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply]
 
-    /** Send an OP_GETMORE. */
+    /** Send an OP_GETMORE. Parameters map directly to protocol and are in the same order as on the wire. */
     def sendGetMore(fullCollectionName: String, numberToReturn: Int, cursorId: Long): Future[QueryReply]
 
-    /** Send an OP_UPDATE. Future is completed when the message is sent; there is no reply. */
+    /**
+     * Send an OP_UPDATE. No reply.
+     * Parameters map directly to protocol and are in the same order as on the wire.
+     */
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
         query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: EntityEncodeSupport[E]): Future[Unit]
+
+    /**
+     * Send an OP_INSERT. No reply.
+     * Parameters map directly to protocol and are in the same order as on the wire.
+     */
+    def sendInsert[E](flags: Int, fullCollectionName: String, docs: Traversable[E])(implicit entitySupport: EntityEncodeSupport[E]): Future[Unit]
+
+    /**
+     * Send an OP_DELETE. No reply.
+     * Parameters map directly to protocol and are in the same order as on the wire.
+     */
+    def sendDelete[Q](fullCollectionName: String, flags: Int, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[Unit]
+
+    /**
+     * Send an OP_KILL_CURSORS. No reply.
+     */
+    def sendKillCursors(cursorIds: Traversable[Long]): Future[Unit]
 
     /**
      * Close the socket and free resources.
