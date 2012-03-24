@@ -71,11 +71,28 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         }
     }
 
-    override def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
-        numberToReturn: Int, query: Q, fieldsOption: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply] = {
+    private[this] def withQueryReply(body: (Int, Promise[NettyQueryReply]) => ChannelBuffer): Future[QueryReply] = {
         val (serial, promise) = newPending[NettyQueryReply]
-
         try {
+            val buf = body(serial, promise)
+
+            channel.write(buf)
+        } catch {
+            // if any synchronous exceptions occur, stuff them in the future and
+            // drop the pending message. This way people don't have to both
+            // handle exceptions on the future and handle exceptions synchronously.
+            // (One likely exception here is "document too large")
+            case e: Exception =>
+                removePending(serial).failure(e)
+        }
+
+        promise
+    }
+
+    override def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
+        numberToReturn: Int, query: Q,
+        fieldsOption: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply] = {
+        withQueryReply { (serial, promise) =>
             // struct { int messageLength, int requestId, int responseTo, int opCode }
             // struct { int flags, cstring fullCollectionName, int numberToSkip, int numberToReturn, doc query, [doc fields] }
 
@@ -84,9 +101,9 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
 
             val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, guessedLength)
 
-            buf.writeInt(0) // to be fixed up later
+            buf.writeInt(0) // length, to be fixed up later
             buf.writeInt(serial)
-            buf.writeInt(0)
+            buf.writeInt(0) // responseTo
             buf.writeInt(OP_QUERY)
             buf.writeInt(flags)
             writeNulString(buf, fullCollectionName)
@@ -104,18 +121,31 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
 
             val length = buf.writerIndex()
             buf.setInt(0, length)
-
-            channel.write(buf)
-        } catch {
-            // if any synchronous exceptions occur, stuff them in the future and
-            // drop the pending message. This way people don't have to both
-            // handle exceptions on the future and handle exceptions synchronously.
-            // (One likely exception here is "document too large")
-            case e: Exception =>
-                removePending(serial).failure(e)
+            buf
         }
+    }
 
-        promise
+    def sendGetMore(fullCollectionName: String, numberToReturn: Int, cursorId: Long): Future[QueryReply] = {
+        withQueryReply { (serial, promise) =>
+            // note that fullCollectionName.length is in chars not utf-8 bytes. we're just estimating.
+            val guessedLength = MESSAGE_HEADER_LENGTH + 4 + fullCollectionName.length + 4 + 8
+
+            val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, guessedLength)
+
+            buf.writeInt(0) // length, to be fixed up later
+            buf.writeInt(serial)
+            buf.writeInt(0) // responseTo
+            buf.writeInt(OP_GETMORE)
+
+            buf.writeInt(0) // reserved, must be zero
+            writeNulString(buf, fullCollectionName)
+            buf.writeInt(numberToReturn)
+            buf.writeLong(cursorId)
+
+            val length = buf.writerIndex()
+            buf.setInt(0, length)
+            buf
+        }
     }
 
     override def close(): Future[Unit] = {

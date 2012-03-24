@@ -19,15 +19,16 @@ trait MongoSocket {
     }
 
     /**
-     * Send an OP_QUERY. Callbacks on the future
-     * are invoked with the implicit executor.
+     * Send an OP_QUERY.
      */
     def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
         numberToReturn: Int, query: Q, fieldsOption: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply]
 
+    /** Send an OP_GETMORE. */
+    def sendGetMore(fullCollectionName: String, numberToReturn: Int, cursorId: Long): Future[QueryReply]
+
     /**
-     * Close the socket and free resources. Callbacks on the future
-     * are invoked with the implicit executor.
+     * Close the socket and free resources.
      */
     def close(): Future[Unit]
 
