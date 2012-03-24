@@ -77,7 +77,8 @@ object BeaucatcherBuild extends Build {
     lazy val root = Project("beaucatcher",
         file("."),
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (jdriver, channelDriver)
+            Seq(publishArtifact := false)) aggregate (wire, channel, channelNetty, bson,
+                                                      bsonJava, mongo, jdriver, channelDriver)
 
     // constants and other miscellany for the bson/mongo wire protocol
     lazy val wire = Project("beaucatcher-wire",
