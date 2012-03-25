@@ -2,6 +2,7 @@ package org.beaucatcher.channel.netty
 
 import org.beaucatcher.channel._
 import org.beaucatcher.wire._
+import org.beaucatcher.mongo._
 import akka.dispatch._
 import akka.util._
 import akka.util.duration._

@@ -1,4 +1,4 @@
-package org.beaucatcher.channel
+package org.beaucatcher.mongo
 
 import java.nio.ByteBuffer
 import scala.annotation.implicitNotFound

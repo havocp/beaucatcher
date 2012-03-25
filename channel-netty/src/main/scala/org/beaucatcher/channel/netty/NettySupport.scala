@@ -5,7 +5,7 @@ import java.nio.ByteOrder
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers
 import org.beaucatcher.channel._
-import org.beaucatcher.mongo.MongoException
+import org.beaucatcher.mongo._
 
 /** EncodeSupport optimized for netty */
 trait NettyEncodeSupport[-T] extends EncodeSupport[T] {

@@ -3,6 +3,7 @@ package org.beaucatcher.channel
 import akka.dispatch._
 import java.util.concurrent.atomic.AtomicInteger
 import org.beaucatcher.wire._
+import org.beaucatcher.mongo._
 
 /**
  * An abstract low-level connection to a mongo server. This exposes the "raw" protocol
