@@ -1,6 +1,6 @@
-package org.beaucatcher.wire.bson
+package org.beaucatcher.wire
 
-object `package` {
+object Bson {
     // an empty bson document is just a length field and a nul byte
     val EMPTY_DOCUMENT_LENGTH = 5
 

@@ -2,7 +2,7 @@ package org.beaucatcher.channel
 
 import akka.dispatch._
 import java.util.concurrent.atomic.AtomicInteger
-import org.beaucatcher.wire.mongo._
+import org.beaucatcher.wire._
 
 /**
  * An abstract low-level connection to a mongo server. This exposes the "raw" protocol
@@ -10,7 +10,7 @@ import org.beaucatcher.wire.mongo._
  * The implementation of this should represent a single open socket.
  */
 trait MongoSocket {
-    private[this] val _maxDocumentSize = new AtomicInteger(DEFAULT_MAX_DOCUMENT_SIZE)
+    private[this] val _maxDocumentSize = new AtomicInteger(Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
 
     def maxDocumentSize = _maxDocumentSize.get
 

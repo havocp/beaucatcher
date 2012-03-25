@@ -2,7 +2,7 @@ package org.beaucatcher.channel
 
 import org.jboss.netty.buffer.ChannelBuffer
 import java.nio.charset.Charset
-import org.beaucatcher.wire.bson._
+import org.beaucatcher.wire._
 import org.beaucatcher.mongo._
 
 package object netty {
@@ -54,7 +54,7 @@ package object netty {
 
     private[beaucatcher] def writeEmptyQuery(buf: ChannelBuffer): Unit = {
         buf.ensureWritableBytes(5)
-        buf.writeInt(EMPTY_DOCUMENT_LENGTH)
+        buf.writeInt(Bson.EMPTY_DOCUMENT_LENGTH)
         buf.writeByte(zeroByte)
     }
 

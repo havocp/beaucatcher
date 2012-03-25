@@ -2,7 +2,7 @@ package org.beaucatcher.mongo.cdriver
 
 import org.beaucatcher.channel.netty._
 import org.beaucatcher.bson._
-import org.beaucatcher.wire.bson._
+import org.beaucatcher.wire._
 import org.beaucatcher.channel._
 import org.beaucatcher.mongo._
 import java.nio.ByteOrder
@@ -65,46 +65,46 @@ private[beaucatcher] object Support {
         buf.ensureWritableBytes(1 + name.length() + 1 + 16) // typecode + name + nul + large value size
         bvalue match {
             case v: BInt32 =>
-                buf.writeByte(NUMBER_INT)
+                buf.writeByte(Bson.NUMBER_INT)
                 writeNulString(buf, name)
                 buf.writeInt(v.value)
             case v: BInt64 =>
-                buf.writeByte(NUMBER_LONG)
+                buf.writeByte(Bson.NUMBER_LONG)
                 writeNulString(buf, name)
                 buf.writeLong(v.value)
             case v: BDouble =>
-                buf.writeByte(NUMBER)
+                buf.writeByte(Bson.NUMBER)
                 writeNulString(buf, name)
                 buf.writeDouble(v.value)
             case v: BObjectId =>
-                buf.writeByte(OID)
+                buf.writeByte(Bson.OID)
                 writeNulString(buf, name)
                 buf.writeInt(swapInt(v.value.time))
                 buf.writeInt(swapInt(v.value.machine))
                 buf.writeInt(swapInt(v.value.inc))
             case v: BString =>
-                buf.writeByte(STRING)
+                buf.writeByte(Bson.STRING)
                 writeNulString(buf, name)
                 writeLengthString(buf, v.value)
             case v: BObject =>
-                buf.writeByte(OBJECT)
+                buf.writeByte(Bson.OBJECT)
                 writeNulString(buf, name)
                 writeQuery[BObject](buf, v, Int.MaxValue /* max size; already checked for outer object */ )
             case v: BArray =>
-                buf.writeByte(ARRAY)
+                buf.writeByte(Bson.ARRAY)
                 writeNulString(buf, name)
                 writeArray(buf, v)
             case v: BTimestamp =>
-                buf.writeByte(TIMESTAMP)
+                buf.writeByte(Bson.TIMESTAMP)
                 writeNulString(buf, name)
                 buf.writeInt(v.value.inc)
                 buf.writeInt(v.value.time)
             case v: BISODate =>
-                buf.writeByte(DATE)
+                buf.writeByte(Bson.DATE)
                 writeNulString(buf, name)
                 buf.writeLong(v.value.getMillis())
             case v: BBinary =>
-                buf.writeByte(BINARY)
+                buf.writeByte(Bson.BINARY)
                 writeNulString(buf, name)
                 val bytes = v.value.data
                 buf.ensureWritableBytes(bytes.length + 5)
@@ -112,11 +112,11 @@ private[beaucatcher] object Support {
                 buf.writeByte(BsonSubtype.toByte(v.value.subtype))
                 buf.writeBytes(bytes)
             case v: BBoolean =>
-                buf.writeByte(BOOLEAN)
+                buf.writeByte(Bson.BOOLEAN)
                 writeNulString(buf, name)
                 buf.writeByte(if (v.value) 1 else 0)
             case BNull =>
-                buf.writeByte(NULL)
+                buf.writeByte(Bson.NULL)
                 writeNulString(buf, name)
             // no data on the wire for null
             case v: JObject =>
@@ -131,13 +131,13 @@ private[beaucatcher] object Support {
         with EntityDecodeSupport[BObject] {
         override final def read(buf: ChannelBuffer): BObject = {
             val len = buf.readInt()
-            if (len == EMPTY_DOCUMENT_LENGTH) {
+            if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
                 BObject.empty
             } else {
                 val b = BObject.newBuilder
 
                 var what = buf.readByte()
-                while (what != EOO) {
+                while (what != Bson.EOO) {
 
                     val name = readNulString(buf)
 
@@ -153,13 +153,13 @@ private[beaucatcher] object Support {
 
     private def readArray(buf: ChannelBuffer): BArray = {
         val len = buf.readInt()
-        if (len == EMPTY_DOCUMENT_LENGTH) {
+        if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
             BArray.empty
         } else {
             val b = BArray.newBuilder
 
             var what = buf.readByte()
-            while (what != EOO) {
+            while (what != Bson.EOO) {
 
                 // the names in an array are just the indices, so nobody cares
                 skipNulString(buf)
@@ -175,21 +175,21 @@ private[beaucatcher] object Support {
 
     private def readBValue(what: Byte, buf: ChannelBuffer): BValue = {
         what match {
-            case NUMBER =>
+            case Bson.NUMBER =>
                 BDouble(buf.readDouble())
-            case STRING =>
+            case Bson.STRING =>
                 BString(readLengthString(buf))
-            case OBJECT =>
+            case Bson.OBJECT =>
                 readEntity[BObject](buf)
-            case ARRAY =>
+            case Bson.ARRAY =>
                 readArray(buf)
-            case BINARY =>
+            case Bson.BINARY =>
                 val len = buf.readInt()
                 val subtype = BsonSubtype.fromByte(buf.readByte()).getOrElse(BsonSubtype.GENERAL)
                 val bytes = new Array[Byte](len)
                 buf.readBytes(bytes)
                 BBinary(Binary(bytes, subtype))
-            case OID =>
+            case Bson.OID =>
                 // the mongo wiki says the numbers are really
                 // 4 bytes, 5 bytes, and 3 bytes but the java
                 // driver does 4,4,4 and it looks like the C driver too.
@@ -200,28 +200,28 @@ private[beaucatcher] object Support {
                 val machine = swapInt(buf.readInt())
                 val inc = swapInt(buf.readInt())
                 BObjectId(ObjectId(time, machine, inc))
-            case BOOLEAN =>
+            case Bson.BOOLEAN =>
                 BBoolean(buf.readByte() != 0)
-            case DATE =>
+            case Bson.DATE =>
                 BISODate(buf.readLong())
-            case NULL =>
+            case Bson.NULL =>
                 BNull
-            case NUMBER_INT =>
+            case Bson.NUMBER_INT =>
                 BInt32(buf.readInt())
-            case TIMESTAMP =>
+            case Bson.TIMESTAMP =>
                 val inc = buf.readInt()
                 val time = buf.readInt()
                 BTimestamp(Timestamp(time, inc))
-            case NUMBER_LONG =>
+            case Bson.NUMBER_LONG =>
                 BInt64(buf.readLong())
-            case UNDEFINED |
-                REGEX |
-                REF |
-                CODE |
-                SYMBOL |
-                CODE_W_SCOPE |
-                MINKEY |
-                MAXKEY =>
+            case Bson.UNDEFINED |
+                Bson.REGEX |
+                Bson.REF |
+                Bson.CODE |
+                Bson.SYMBOL |
+                Bson.CODE_W_SCOPE |
+                Bson.MINKEY |
+                Bson.MAXKEY =>
                 throw new MongoException("Encountered value of type " + Integer.toHexString(what) + " which is currently unsupported")
         }
     }

@@ -1,6 +1,6 @@
-package org.beaucatcher.wire.mongo
+package org.beaucatcher.wire
 
-object `package` {
+object Mongo {
     // struct { int messageLength, int requestId, int responseTo, int opCode }
     val MESSAGE_HEADER_LENGTH = 4 * 4
 

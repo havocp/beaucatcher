@@ -1,8 +1,7 @@
 package org.beaucatcher.channel.netty
 
 import org.beaucatcher.channel._
-import org.beaucatcher.wire.mongo._
-import org.beaucatcher.wire.bson._
+import org.beaucatcher.wire._
 import akka.dispatch._
 import akka.util._
 import akka.util.duration._
@@ -49,13 +48,13 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
     private class NettyQueryReply(val buf: ChannelBuffer) extends QueryReply {
         // struct { int messageLength, int requestId, int responseTo, int opCode }
         // struct { int responseFlags, int64 cursorId, int startingFrom, int numReturned, document* documents }
-        override lazy val responseFlags: Int = buf.getInt(MESSAGE_HEADER_LENGTH)
-        override lazy val cursorId: Long = buf.getLong(MESSAGE_HEADER_LENGTH + 4)
-        override lazy val startingFrom: Int = buf.getInt(MESSAGE_HEADER_LENGTH + 12)
-        override lazy val numberReturned: Int = buf.getInt(MESSAGE_HEADER_LENGTH + 16)
+        override lazy val responseFlags: Int = buf.getInt(Mongo.MESSAGE_HEADER_LENGTH)
+        override lazy val cursorId: Long = buf.getLong(Mongo.MESSAGE_HEADER_LENGTH + 4)
+        override lazy val startingFrom: Int = buf.getInt(Mongo.MESSAGE_HEADER_LENGTH + 12)
+        override lazy val numberReturned: Int = buf.getInt(Mongo.MESSAGE_HEADER_LENGTH + 16)
 
         def iterator(): EntityIterator = {
-            val offset = MESSAGE_HEADER_LENGTH + 20
+            val offset = Mongo.MESSAGE_HEADER_LENGTH + 20
             val documentsStart = buf.readerIndex + offset
             // slice() gives the iterator its own reader/writer indexes but
             // the data is still shared.
@@ -83,7 +82,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
 
     private[this] final def messageBuffer(serial: Int, op: Int, guessedAfterHeaderLength: Int): ChannelBuffer = {
         val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN,
-            MESSAGE_HEADER_LENGTH + guessedAfterHeaderLength)
+            Mongo.MESSAGE_HEADER_LENGTH + guessedAfterHeaderLength)
         buf.writeInt(0) // length, to be fixed up later
         buf.writeInt(serial)
         buf.writeInt(0) // responseTo, always 0 when sending from client
@@ -113,7 +112,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
             // struct { int flags, cstring fullCollectionName, int numberToSkip, int numberToReturn, doc query, [doc fields] }
 
             // note that fullCollectionName.length is in chars not utf-8 bytes. we're just estimating.
-            val buf = messageBuffer(serial, OP_QUERY, 4 + fullCollectionName.length + 4 + 4 + 128)
+            val buf = messageBuffer(serial, Mongo.OP_QUERY, 4 + fullCollectionName.length + 4 + 4 + 128)
 
             buf.writeInt(flags)
             writeNulString(buf, fullCollectionName)
@@ -136,7 +135,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
 
     def sendGetMore(fullCollectionName: String, numberToReturn: Int, cursorId: Long): Future[QueryReply] = {
         withQueryReply { (serial, promise) =>
-            val buf = messageBuffer(serial, OP_GETMORE,
+            val buf = messageBuffer(serial, Mongo.OP_GETMORE,
                 4 + fullCollectionName.length + 4 + 8)
 
             buf.writeInt(0) // reserved, must be zero
@@ -153,7 +152,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: EntityEncodeSupport[E]): Future[Unit] = {
         val promise = Promise[Unit]()
 
-        val buf = messageBuffer(nextSerial.getAndIncrement(), OP_UPDATE,
+        val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_UPDATE,
             4 + fullCollectionName.length + 4 + 128)
 
         buf.writeInt(0) // reserved, must be zero
@@ -172,7 +171,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         docs: Traversable[E])(implicit entitySupport: EntityEncodeSupport[E]): Future[Unit] = {
         val promise = Promise[Unit]()
 
-        val buf = messageBuffer(nextSerial.getAndIncrement(), OP_INSERT,
+        val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_INSERT,
             4 + fullCollectionName.length + 128)
 
         buf.writeInt(flags)
@@ -189,7 +188,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[Unit] = {
         val promise = Promise[Unit]()
 
-        val buf = messageBuffer(nextSerial.getAndIncrement(), OP_DELETE,
+        val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_DELETE,
             4 + fullCollectionName.length + 4 + 128)
 
         buf.writeInt(0) // reserved, zero
@@ -206,7 +205,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
     def sendKillCursors(cursorIds: Traversable[Long]): Future[Unit] = {
         val promise = Promise[Unit]()
 
-        val buf = messageBuffer(nextSerial.getAndIncrement(), OP_KILL_CURSORS,
+        val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_KILL_CURSORS,
             4 + 4 + 16)
 
         buf.writeInt(0) // reserved, 0
@@ -243,7 +242,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         val responseTo = buf.getInt(8)
         val opCode = buf.getInt(12)
 
-        if (opCode == OP_REPLY) {
+        if (opCode == Mongo.OP_REPLY) {
             val p = pending.get(responseTo)
 
             if (p ne null) {

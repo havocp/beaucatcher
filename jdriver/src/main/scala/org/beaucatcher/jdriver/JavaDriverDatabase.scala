@@ -2,7 +2,6 @@ package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import org.beaucatcher.mongo.wire._
 import com.mongodb.{ CommandResult => _, _ }
 import akka.dispatch.Future
 

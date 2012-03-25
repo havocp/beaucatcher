@@ -3,7 +3,7 @@ package org.beaucatcher.mongo.cdriver
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import org.beaucatcher.wire.{ mongo => wire }
+import org.beaucatcher.wire._
 import org.beaucatcher.channel._
 import org.beaucatcher.channel.netty._
 import org.beaucatcher.mongo.cdriver._
@@ -39,7 +39,7 @@ class ConnectionTest extends TestUtils {
     @Test
     def connectAndQuery(): Unit = withFactory { factory =>
         import Support._
-        val futureSocket = factory.connect(new InetSocketAddress("localhost", wire.DEFAULT_PORT))
+        val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
         val futureReply = socket.sendCommand(0, /* flags */
@@ -75,7 +75,7 @@ class ConnectionTest extends TestUtils {
 
     @Test
     def maxDocumentSize(): Unit = withFactory { factory =>
-        val futureSocket = factory.connect(new InetSocketAddress("localhost", wire.DEFAULT_PORT))
+        val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
         val oneByte = Binary(new Array[Byte](1))
@@ -99,7 +99,7 @@ class ConnectionTest extends TestUtils {
     @Test
     def sendToClosedSocket(): Unit = withFactory { factory =>
         import Support._
-        val futureSocket = factory.connect(new InetSocketAddress("localhost", wire.DEFAULT_PORT))
+        val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
         socket.close()
@@ -115,7 +115,7 @@ class ConnectionTest extends TestUtils {
     @Test
     def sendToClosedFactory(): Unit = withFactory { factory =>
         import Support._
-        val futureSocket = factory.connect(new InetSocketAddress("localhost", wire.DEFAULT_PORT))
+        val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
         factory.close()

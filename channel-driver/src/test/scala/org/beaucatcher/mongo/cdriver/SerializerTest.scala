@@ -3,7 +3,7 @@ package org.beaucatcher.mongo.cdriver
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import org.beaucatcher.wire.mongo._
+import org.beaucatcher.wire._
 import org.beaucatcher.channel.netty._
 import org.beaucatcher.mongo.cdriver._
 import org.junit.Assert._
@@ -19,7 +19,7 @@ class SerializerTest extends TestUtils {
 
         val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 128)
 
-        writeQuery(buf, bobj, DEFAULT_MAX_DOCUMENT_SIZE)
+        writeQuery(buf, bobj, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
 
         /*
         System.err.println("Wrote " + bobj + " to buffer: " + buf)
@@ -72,9 +72,9 @@ class SerializerTest extends TestUtils {
                 j -= 1
             }
             for (field <- many.value) {
-                writeQuery(buf, BObject(List(field)), DEFAULT_MAX_DOCUMENT_SIZE)
+                writeQuery(buf, BObject(List(field)), Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
             }
-            writeQuery(buf, many, DEFAULT_MAX_DOCUMENT_SIZE)
+            writeQuery(buf, many, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
         }
     }
 }

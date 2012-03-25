@@ -2,7 +2,6 @@ package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import org.beaucatcher.mongo.wire._
 import org.bson.BSONObject
 import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, _ }
 

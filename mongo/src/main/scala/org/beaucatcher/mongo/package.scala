@@ -54,16 +54,17 @@ package object mongo {
     }
 
     private[beaucatcher] implicit def queryFlagsAsInt(flags : Set[QueryFlag]) : Int = {
-        import org.beaucatcher.wire.mongo._
+        import org.beaucatcher.wire.Mongo
+
         var i = 0
         for (f <- flags) {
             val o = f match {
-                case QueryAwaitData => QUERY_FLAG_AWAIT_DATA
-                case QueryExhaust => QUERY_FLAG_EXHAUST
-                case QueryNoTimeout => QUERY_FLAG_NO_CURSOR_TIMEOUT
-                case QueryOpLogReplay => QUERY_FLAG_OPLOG_RELAY
-                case QuerySlaveOk => QUERY_FLAG_SLAVE_OK
-                case QueryTailable => QUERY_FLAG_TAILABLE_CURSOR
+                case QueryAwaitData => Mongo.QUERY_FLAG_AWAIT_DATA
+                case QueryExhaust => Mongo.QUERY_FLAG_EXHAUST
+                case QueryNoTimeout => Mongo.QUERY_FLAG_NO_CURSOR_TIMEOUT
+                case QueryOpLogReplay => Mongo.QUERY_FLAG_OPLOG_RELAY
+                case QuerySlaveOk => Mongo.QUERY_FLAG_SLAVE_OK
+                case QueryTailable => Mongo.QUERY_FLAG_TAILABLE_CURSOR
             }
             i |= o
         }
