@@ -77,12 +77,12 @@ object BeaucatcherBuild extends Build {
     lazy val root = Project("beaucatcher",
         file("."),
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (wire, channel, channelNetty, bson,
+            Seq(publishArtifact := false)) aggregate (base, channel, channelNetty, bson,
                                                       bsonJava, mongo, jdriver, channelDriver)
 
     // constants and other miscellany for the bson/mongo wire protocol
-    lazy val wire = Project("beaucatcher-wire",
-        file("wire"),
+    lazy val base = Project("beaucatcher-base",
+        file("base"),
         settings = projectSettings ++
             Seq(libraryDependencies := Seq(Test.junitInterface, Test.slf4j)))
 
@@ -90,7 +90,7 @@ object BeaucatcherBuild extends Build {
     lazy val channel = Project("beaucatcher-channel",
         file("channel"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(akkaActor))) dependsOn(wire)
+            Seq(libraryDependencies := Seq(akkaActor))) dependsOn(base)
 
     // netty implementation of a mongo channel
     lazy val channelNetty = Project("beaucatcher-channel-netty",
@@ -103,7 +103,7 @@ object BeaucatcherBuild extends Build {
         file("bson"),
         settings = projectSettings ++
             Seq(libraryDependencies := Seq(scalap, commonsCodec, jodaTime,
-                    Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver))) dependsOn(wire)
+                    Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver))) dependsOn(base)
 
     // mongo API
     lazy val mongo = Project("beaucatcher-mongo",
