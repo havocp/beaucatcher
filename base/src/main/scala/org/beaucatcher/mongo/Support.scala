@@ -28,3 +28,9 @@ trait EntityDecodeSupport[+T] extends DecodeSupport[T] {
 trait EntityEncodeSupport[-T] extends EncodeSupport[T] {
 
 }
+
+/** Marks an empty document, which can be encoded with no knowledge other than its emptiness */
+trait EmptyDocument
+
+/** An instance of the EmptyDocument trait */
+object EmptyDocument extends EmptyDocument
