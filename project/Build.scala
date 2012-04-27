@@ -61,7 +61,7 @@ object Dependencies {
     object Test {
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test"
         val liftJson = "net.liftweb" %% "lift-json" % "2.4" % "test"
-        val slf4j = "org.slf4j" % "slf4j-api" % "1.6.0"
+        val slf4j = "org.slf4j" % "slf4j-api" % "1.6.4"
         val mongoJavaDriver = Dependencies.mongoJavaDriver % "test"
         val commonsIO = "commons-io" % "commons-io" % "2.1" % "test"
     }
