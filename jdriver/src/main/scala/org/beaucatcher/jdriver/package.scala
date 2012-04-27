@@ -63,4 +63,34 @@ package object jdriver {
         case ex : JavaMongoException => new MongoException(ex.getMessage, ex)
         case ex : BSONException => new MongoException(ex.getMessage, ex)
     }
+
+    private[jdriver] def convertDocumentToJava[D](doc : D)(implicit encodeSupport : EncodeSupport[D]) : BSONObject = {
+        encodeSupport match {
+            case javaSupport : JavaEncodeSupport[_] =>
+                javaSupport.asInstanceOf[JavaEncodeSupport[D]].toBsonObject(doc)
+            case _ =>
+                // we'll have to serialize from document then deserialize to Java
+                val bb = encodeSupport.encode(doc)
+                JavaSupport.decode(bb)
+        }
+    }
+
+    private[jdriver] def convertQueryToJava[Q](query : Q)(implicit querySupport : QueryEncodeSupport[Q]) : BSONObject = {
+        convertDocumentToJava(query)
+    }
+
+    private[jdriver] def convertEntityToJava[E](entity : E)(implicit entitySupport : EntityEncodeSupport[E]) : BSONObject = {
+        convertDocumentToJava(entity)
+    }
+
+    private[jdriver] def convertEntityFromJava[E](obj : BSONObject)(implicit entitySupport : EntityDecodeSupport[E]) : E = {
+        entitySupport match {
+            case javaSupport : JavaDecodeSupport[_] =>
+                javaSupport.asInstanceOf[JavaDecodeSupport[E]].fromBsonObject(obj)
+            case _ =>
+                // we'll have to serialize from Java then deserialize to target
+                val bb = JavaSupport.encode(obj)
+                entitySupport.decode(bb)
+        }
+    }
 }
