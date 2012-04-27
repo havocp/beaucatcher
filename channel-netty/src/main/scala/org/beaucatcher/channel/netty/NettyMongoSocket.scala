@@ -235,6 +235,15 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         p
     }
 
+    override def addCloseListener(listener: (MongoSocket) => Unit): Unit = {
+        val socket = this
+        channel.getCloseFuture().addListener(new ChannelFutureListener() {
+            override def operationComplete(f: ChannelFuture): Unit = {
+                listener(socket)
+            }
+        })
+    }
+
     private[netty] def receivedFrame(writeChannel: Channel, buf: ChannelBuffer): Unit = {
         require(writeChannel eq channel) // true for now afaik
 

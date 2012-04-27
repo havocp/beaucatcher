@@ -64,6 +64,8 @@ trait MongoSocket {
     final def sendCommand[Q](flags: Int, ns: String, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply] = {
         sendQuery(flags, ns + ".$cmd", 0 /* skip */ , 1 /* return */ , query, None)
     }
+
+    def addCloseListener(listener: (MongoSocket) => Unit): Unit
 }
 
 /** Iterate over entities decoded from BSON documents */

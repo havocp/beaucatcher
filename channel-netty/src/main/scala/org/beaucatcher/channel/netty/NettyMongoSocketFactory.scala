@@ -58,6 +58,9 @@ class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) {
     // from going nuts. Possibly it should be configurable.
     private val maxIncomingFrameSize = 1024 * 1024 * 128
 
+    // this only ever changes in one direction, false to true
+    @volatile private var closed = false
+
     private final class NamedThreadFactory(val name: String)
         extends ThreadFactory {
 
@@ -113,6 +116,14 @@ class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) {
             }
         }
 
+        override def channelClosed(context: ChannelHandlerContext, e: ChannelStateEvent): Unit = {
+            if (socketOption.isEmpty) {
+                // we were never connected; if we were connected, then channelDisconnected
+                // will handle things for us.
+                mongoSocketPromise.failure(new MongoChannelException("Channel closed"))
+            }
+        }
+
         override def exceptionCaught(context: ChannelHandlerContext, e: ExceptionEvent): Unit = {
             val f = e.getFuture()
             val cause = e.getCause() match {
@@ -133,7 +144,9 @@ class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) {
 
     private lazy val allChannels = new DefaultChannelGroup("mongo sockets")
 
-    def close(): Future[Unit] = {
+    def close(): Future[Unit] = synchronized {
+        closed = true
+
         val p = Promise[Unit]()
         allChannels.close().addListener(new ChannelGroupFutureListener() {
             override def operationComplete(group: ChannelGroupFuture): Unit = {
@@ -165,30 +178,44 @@ class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) {
                 Channels.pipeline(decoder, handler)
             }
         }
+
         val channel = channelFactory.newChannel(pipeline)
-        allChannels.add(channel)
 
-        val channelConfig = channel.getConfig()
-        channelConfig.setKeepAlive(true)
-        channelConfig.setTcpNoDelay(true)
-
-        // because our MongoFrameDecoder will copy the frames, we
-        // go ahead and use a direct buffer for the brief time until
-        // the copy. But this needs profiling probably.
-        // also here we're setting LITTLE_ENDIAN (mongo is always little endian)
-        channelConfig.setBufferFactory(DirectChannelBufferFactory.getInstance(ByteOrder.LITTLE_ENDIAN))
-
-        channelConfig match {
-            case nioConfig: NioSocketChannelConfig =>
-                // this predictor is based on how many bytes read() returned
-                // in the last few read() calls.
-                val predictor = new AdaptiveReceiveBufferSizePredictor(128, // min
-                    512, // initial
-                    1024 * 1024 * 4) // max, 4M per read()
-                nioConfig.setReceiveBufferSizePredictor(predictor)
+        val open = synchronized {
+            if (closed) {
+                // this should complete the mongoSocketPromise
+                // by closing the channel
+                channel.close()
+                false
+            } else {
+                allChannels.add(channel)
+                true
+            }
         }
 
-        channel.connect(addr)
+        if (open) {
+            val channelConfig = channel.getConfig()
+            channelConfig.setKeepAlive(true)
+            channelConfig.setTcpNoDelay(true)
+
+            // because our MongoFrameDecoder will copy the frames, we
+            // go ahead and use a direct buffer for the brief time until
+            // the copy. But this needs profiling probably.
+            // also here we're setting LITTLE_ENDIAN (mongo is always little endian)
+            channelConfig.setBufferFactory(DirectChannelBufferFactory.getInstance(ByteOrder.LITTLE_ENDIAN))
+
+            channelConfig match {
+                case nioConfig: NioSocketChannelConfig =>
+                    // this predictor is based on how many bytes read() returned
+                    // in the last few read() calls.
+                    val predictor = new AdaptiveReceiveBufferSizePredictor(128, // min
+                        512, // initial
+                        1024 * 1024 * 4) // max, 4M per read()
+                    nioConfig.setReceiveBufferSizePredictor(predictor)
+            }
+
+            channel.connect(addr)
+        }
 
         mongoSocketPromise
     }
