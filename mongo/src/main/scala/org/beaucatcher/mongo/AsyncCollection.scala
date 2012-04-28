@@ -4,24 +4,12 @@ import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import akka.dispatch.Future
 
-trait ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
+trait ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType]
+    extends ReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
 
     /** Internal method to be sure we don't have more than 1 level of sync/async wrappers */
     private[beaucatcher] def underlyingSync : Option[ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]] =
         None
-
-    private[beaucatcher] def context : Context
-
-    protected[this] implicit final def implicitContext = context
-
-    /** The database containing the collection */
-    final def database : Database = context.database
-
-    def name : String
-
-    def fullName : String = database.name + "." + name
-
-    def emptyQuery : QueryType
 
     final def count() : Future[Long] =
         count(emptyQuery)
@@ -73,16 +61,11 @@ trait ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
 }
 
 trait AsyncCollection[QueryType, EntityType, IdType, ValueType]
-    extends ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
+    extends ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType]
+    with Collection[QueryType, EntityType, IdType, ValueType] {
 
     private[beaucatcher] override def underlyingSync : Option[SyncCollection[QueryType, EntityType, IdType, ValueType]] =
         None
-
-    def entityToUpsertableObject(entity : EntityType) : QueryType
-
-    def entityToModifierObject(entity : EntityType) : QueryType
-
-    def entityToUpdateQuery(entity : EntityType) : QueryType
 
     def findAndModify(query : QueryType, update : Option[QueryType], options : FindAndModifyOptions[QueryType]) : Future[Option[EntityType]]
 

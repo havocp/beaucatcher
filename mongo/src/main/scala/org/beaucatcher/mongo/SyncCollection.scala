@@ -138,30 +138,12 @@ object IndexOptions {
     val empty = IndexOptions()
 }
 
-trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
+trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]
+    extends ReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
 
     /** Internal method to be sure we don't have more than 1 level of sync/async wrappers */
     private[beaucatcher] def underlyingAsync : Option[ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType]] =
         None
-
-    private[beaucatcher] def context : Context
-
-    protected[this] implicit final def implicitContext = context
-
-    /** The database containing the collection */
-    final def database : Database = context.database
-
-    /** The name of the collection */
-    def name : String
-
-    /**
-     * The name of the collection with database included, like "databaseName.collectionName"
-     *
-     */
-    def fullName : String = database.name + "." + name
-
-    /** Construct an empty query object */
-    def emptyQuery : QueryType
 
     final def count() : Long =
         count(emptyQuery)
@@ -256,7 +238,8 @@ trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
  *   returned in the old (or new) object returned from the method.
  */
 trait SyncCollection[QueryType, EntityType, IdType, ValueType]
-    extends ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType] {
+    extends ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]
+    with Collection[QueryType, EntityType, IdType, ValueType] {
 
     private[beaucatcher] override def underlyingAsync : Option[AsyncCollection[QueryType, EntityType, IdType, ValueType]] =
         None
@@ -364,19 +347,6 @@ trait SyncCollection[QueryType, EntityType, IdType, ValueType]
      */
     final def findAndRemove[A <% QueryType, B <% QueryType](query : A, sort : B) : Option[EntityType] =
         findAndModify(query : QueryType, None, FindAndModifyOptions[QueryType](sort = Some(sort), flags = Set(FindAndModifyRemove)))
-
-    /** An upsertable object generally must have all fields and must have an ID. */
-    def entityToUpsertableObject(entity : EntityType) : QueryType
-    /**
-     * A modifier object generally must not have an ID, and may be missing fields that
-     * won't be modified.
-     */
-    def entityToModifierObject(entity : EntityType) : QueryType
-    /**
-     * Returns a query that matches only the given entity,
-     * such as a query for the entity's ID.
-     */
-    def entityToUpdateQuery(entity : EntityType) : QueryType
 
     /**
      * $findAndModifyVsUpdate
