@@ -683,7 +683,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
         val notThere = Foo.sync[Foo].findAndModify(BObject("intField" -> 124334),
             BObject("$inc" -> BObject("intField" -> 87)))
-        assertTrue(notThere.isEmpty)
+        assertEquals(None, notThere)
     }
 
     @Test

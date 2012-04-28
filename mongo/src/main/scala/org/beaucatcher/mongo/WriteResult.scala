@@ -3,45 +3,45 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 
-class WriteResult(lazyRaw : => BObject) extends CommandResult(lazyRaw) {
-    def n : Int = getInt("n").getOrElse(0)
+trait WriteResult extends CommandResult {
+    def n : Int
 
-    def upserted : Option[Any] = raw.get("upserted") map { _.unwrapped }
+    def upserted : Option[Any]
 
-    def updatedExisting : Option[Boolean] = getBoolean("updatedExisting")
+    def updatedExisting : Option[Boolean]
 
+    // unlike case class default toString this shows the field names
     override def toString =
         "WriteResult(ok=%s,errmsg=%s,err=%s,code=%s,n=%s,updatedExisting=%s,upserted=%s)".format(ok, errmsg, err, code, n, updatedExisting, upserted)
 
-    override def throwIfNotOk() {
-        if (!ok)
-            throw new WriteResultMongoException(this)
-    }
+    override def toException() = new WriteResultMongoException(this)
+}
+
+private[mongo] case class WriteResultImpl(command : CommandResult, n : Int, upserted : Option[Any], updatedExisting : Option[Boolean]) extends WriteResult {
+
+    override def ok : Boolean = command.ok
+    override def errmsg : Option[String] = command.errmsg
+    override def err : Option[String] = command.err
+    override def code : Option[Int] = command.code
 }
 
 object WriteResult {
-    def apply(lazyRaw : => BObject) : WriteResult = new WriteResult(lazyRaw)
+    def apply(raw : BObject) : WriteResult = {
+        WriteResultImpl(CommandResult(raw),
+            n = CommandResult.getInt(raw, "n").getOrElse(0),
+            updatedExisting = CommandResult.getBoolean(raw, "updatedExisting"),
+            upserted = raw.get("upserted") map { _.unwrapped })
+    }
 
-    /** This constructor is basically for converting from a Hammersmith WriteResult */
     def apply(ok : Boolean, err : Option[String] = None, n : Int = 0,
         code : Option[Int] = None, upserted : Option[AnyRef] = None,
         updatedExisting : Option[Boolean] = None) : WriteResult = {
-        val builder = BObject.newBuilder
-        builder += ("ok" -> ok)
-        builder += ("n" -> n)
-        err foreach { e =>
-            builder += ("err" -> e)
-        }
-        code foreach { i =>
-            builder += ("code" -> i)
-        }
-        upserted foreach { u =>
-            builder += ("upserted" -> BValue.wrap(u))
-        }
-        updatedExisting foreach { b =>
-            builder += ("updatedExisting" -> b)
-        }
+        WriteResultImpl(CommandResultImpl(ok = ok, err = err, errmsg = None, code = code), n = n, upserted = upserted, updatedExisting = updatedExisting)
+    }
 
-        new WriteResult(builder.result)
+    def apply(commandResult : CommandResult, n : Int,
+        upserted : Option[AnyRef],
+        updatedExisting : Option[Boolean]) : WriteResult = {
+        WriteResultImpl(command = commandResult, n = n, upserted = upserted, updatedExisting = updatedExisting)
     }
 }

@@ -20,20 +20,31 @@ private[beaucatcher] object Support {
     implicit def bobjectEntityDecodeSupport: EntityDecodeSupport[BObject] =
         BObjectDecodeSupport
 
-    private object BObjectEncodeSupport
+    private[cdriver] def writeOpenDocument(buf: ChannelBuffer): Int = {
+        val start = buf.writerIndex()
+        buf.ensureWritableBytes(32) // min size is 5, but prealloc for efficiency
+        buf.writeInt(0) // will write this later
+        start
+    }
+
+    private[cdriver] def writeCloseDocument(buf: ChannelBuffer, start: Int) = {
+        buf.ensureWritableBytes(1)
+        buf.writeByte('\0')
+        buf.setInt(start, buf.writerIndex - start)
+    }
+
+    private[cdriver] object BObjectEncodeSupport
         extends NettyEncodeSupport[BObject]
         with QueryEncodeSupport[BObject]
         with EntityEncodeSupport[BObject] {
         override final def write(buf: ChannelBuffer, t: BObject): Unit = {
-            val start = buf.writerIndex()
-            buf.ensureWritableBytes(32) // min size is 5, but prealloc for efficiency
-            buf.writeInt(0) // will write this later
+            val start = writeOpenDocument(buf)
+
             for (field <- t.value) {
                 writeValue(buf, field._1, field._2)
             }
-            buf.ensureWritableBytes(1)
-            buf.writeByte('\0')
-            buf.setInt(start, buf.writerIndex - start)
+
+            writeCloseDocument(buf, start)
         }
     }
 
@@ -61,35 +72,61 @@ private[beaucatcher] object Support {
         buf.setInt(start, buf.writerIndex - start)
     }
 
+    final private[cdriver] def writeFieldInt(buf: ChannelBuffer, name: String, value: Int): Unit = {
+        buf.writeByte(Bson.NUMBER_INT)
+        writeNulString(buf, name)
+        buf.writeInt(value)
+    }
+
+    final private[cdriver] def writeFieldLong(buf: ChannelBuffer, name: String, value: Long): Unit = {
+        buf.writeByte(Bson.NUMBER_LONG)
+        writeNulString(buf, name)
+        buf.writeLong(value)
+    }
+
+    final private[cdriver] def writeFieldString(buf: ChannelBuffer, name: String, value: String): Unit = {
+        buf.writeByte(Bson.STRING)
+        writeNulString(buf, name)
+        writeLengthString(buf, value)
+    }
+
+    final private[cdriver] def writeFieldBoolean(buf: ChannelBuffer, name: String, value: Boolean): Unit = {
+        buf.writeByte(Bson.BOOLEAN)
+        writeNulString(buf, name)
+        buf.writeByte(if (value) 1 else 0)
+    }
+
+    final private[cdriver] def writeFieldObjectId(buf: ChannelBuffer, name: String, value: ObjectId): Unit = {
+        buf.writeByte(Bson.OID)
+        writeNulString(buf, name)
+        buf.writeInt(swapInt(value.time))
+        buf.writeInt(swapInt(value.machine))
+        buf.writeInt(swapInt(value.inc))
+    }
+
+    final private[cdriver] def writeFieldObject[Q](buf: ChannelBuffer, name: String, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Unit = {
+        buf.writeByte(Bson.OBJECT)
+        writeNulString(buf, name)
+        writeQuery(buf, query, Int.MaxValue /* max size; already checked for outer object */ )
+    }
+
     def writeValue(buf: ChannelBuffer, name: String, bvalue: BValue): Unit = {
         buf.ensureWritableBytes(1 + name.length() + 1 + 16) // typecode + name + nul + large value size
         bvalue match {
             case v: BInt32 =>
-                buf.writeByte(Bson.NUMBER_INT)
-                writeNulString(buf, name)
-                buf.writeInt(v.value)
+                writeFieldInt(buf, name, v.value)
             case v: BInt64 =>
-                buf.writeByte(Bson.NUMBER_LONG)
-                writeNulString(buf, name)
-                buf.writeLong(v.value)
+                writeFieldLong(buf, name, v.value)
             case v: BDouble =>
                 buf.writeByte(Bson.NUMBER)
                 writeNulString(buf, name)
                 buf.writeDouble(v.value)
             case v: BObjectId =>
-                buf.writeByte(Bson.OID)
-                writeNulString(buf, name)
-                buf.writeInt(swapInt(v.value.time))
-                buf.writeInt(swapInt(v.value.machine))
-                buf.writeInt(swapInt(v.value.inc))
+                writeFieldObjectId(buf, name, v.value)
             case v: BString =>
-                buf.writeByte(Bson.STRING)
-                writeNulString(buf, name)
-                writeLengthString(buf, v.value)
+                writeFieldString(buf, name, v.value)
             case v: BObject =>
-                buf.writeByte(Bson.OBJECT)
-                writeNulString(buf, name)
-                writeQuery[BObject](buf, v, Int.MaxValue /* max size; already checked for outer object */ )
+                writeFieldObject(buf, name, v)
             case v: BArray =>
                 buf.writeByte(Bson.ARRAY)
                 writeNulString(buf, name)
@@ -112,9 +149,7 @@ private[beaucatcher] object Support {
                 buf.writeByte(BsonSubtype.toByte(v.value.subtype))
                 buf.writeBytes(bytes)
             case v: BBoolean =>
-                buf.writeByte(Bson.BOOLEAN)
-                writeNulString(buf, name)
-                buf.writeByte(if (v.value) 1 else 0)
+                writeFieldBoolean(buf, name, v.value)
             case BNull =>
                 buf.writeByte(Bson.NULL)
                 writeNulString(buf, name)
@@ -126,12 +161,13 @@ private[beaucatcher] object Support {
         }
     }
 
-    private object BObjectDecodeSupport
+    private[cdriver] object BObjectDecodeSupport
         extends NettyDecodeSupport[BObject]
         with EntityDecodeSupport[BObject] {
         override final def read(buf: ChannelBuffer): BObject = {
             val len = buf.readInt()
             if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
+                buf.skipBytes(len - 4)
                 BObject.empty
             } else {
                 val b = BObject.newBuilder
@@ -154,6 +190,7 @@ private[beaucatcher] object Support {
     private def readArray(buf: ChannelBuffer): BArray = {
         val len = buf.readInt()
         if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
+            buf.skipBytes(len - 4)
             BArray.empty
         } else {
             val b = BArray.newBuilder
@@ -170,6 +207,45 @@ private[beaucatcher] object Support {
             }
 
             b.result()
+        }
+    }
+
+    private[cdriver] def skipValue(what: Byte, buf: ChannelBuffer): Unit = {
+        what match {
+            case Bson.NUMBER =>
+                buf.skipBytes(8)
+            case Bson.STRING =>
+                skipLengthString(buf)
+            case Bson.OBJECT =>
+                skipDocument(buf)
+            case Bson.ARRAY =>
+                skipDocument(buf)
+            case Bson.BINARY =>
+                val len = buf.readInt()
+                val subtype = buf.readByte()
+                buf.skipBytes(len)
+            case Bson.OID =>
+                buf.skipBytes(12)
+            case Bson.BOOLEAN =>
+                buf.skipBytes(1)
+            case Bson.DATE =>
+                buf.skipBytes(8)
+            case Bson.NULL => // nothing to skip
+            case Bson.NUMBER_INT =>
+                buf.skipBytes(4)
+            case Bson.TIMESTAMP =>
+                buf.skipBytes(8)
+            case Bson.NUMBER_LONG =>
+                buf.skipBytes(8)
+            case Bson.UNDEFINED |
+                Bson.REGEX |
+                Bson.REF |
+                Bson.CODE |
+                Bson.SYMBOL |
+                Bson.CODE_W_SCOPE |
+                Bson.MINKEY |
+                Bson.MAXKEY =>
+                throw new MongoException("Encountered value of type " + Integer.toHexString(what) + " which is currently unsupported")
         }
     }
 
@@ -225,5 +301,4 @@ private[beaucatcher] object Support {
                 throw new MongoException("Encountered value of type " + Integer.toHexString(what) + " which is currently unsupported")
         }
     }
-
 }

@@ -13,6 +13,15 @@ import org.beaucatcher.channel._
 import org.beaucatcher.channel.netty._
 import java.net.SocketAddress
 
+private[cdriver] case class GetLastError(database: String, w: Int)
+
+private[cdriver] object GetLastError {
+    def safe(database: String): GetLastError = GetLastError(database, w = 1)
+}
+
+private[cdriver] case class DecodedResult(result: CommandResult, fields: Map[String, Any])
+private[cdriver] case class DecodedWriteResult(result: WriteResult, fields: Map[String, Any])
+
 private[cdriver] class SocketBatch(val reply: QueryReply, val cursor: SocketCursor) extends Batch[QueryReply] {
 
     override def isLastBatch = reply.cursorId == 0L
@@ -47,7 +56,7 @@ private[cdriver] class SocketCursor(val system: ActorSystem, val actor: Option[A
  *
  * Note: does not actually handle all of this yet.
  */
-private[cdriver] class Connection(private val system: ActorSystem, private val addr: SocketAddress) {
+private[cdriver] class Connection(private[cdriver] val system: ActorSystem, private val addr: SocketAddress) {
 
     import Connection._
 
@@ -60,19 +69,21 @@ private[cdriver] class Connection(private val system: ActorSystem, private val a
         })
     }
 
-    def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
-        numberToReturn: Int, query: Q, fieldsOption: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Future[AsyncCursor[QueryReply]] = {
+    def sendQuery[Q, F](flags: Int, fullCollectionName: String, numberToSkip: Int,
+        numberToReturn: Int, limit: Long, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncodeSupport[Q], fieldsSupport: QueryEncodeSupport[F]): Future[AsyncCursor[QueryReply]] = {
         acquireSocket()
             .flatMap({ socket =>
                 socket.sendQuery(flags, fullCollectionName, numberToSkip, numberToReturn, query, fieldsOption)
+                    .map({ reply => reply.throwOnError(); reply })
                     .map((socket, _))
             })
             .flatMap({
                 case (socket, reply) =>
-                    if (reply.cursorId == 0L) {
+                    val remaining = limit - reply.numberReturned
+                    if (reply.cursorId == 0L || remaining <= 0) {
                         Promise.successful(new SocketCursor(system, None, reply))(system.dispatcher)
                     } else {
-                        actor.ask(ConnectionActor.CreateCursorActor(socket, fullCollectionName, numberToReturn, reply.cursorId))(longTimeout)
+                        actor.ask(ConnectionActor.CreateCursorActor(socket, fullCollectionName, numberToReturn, remaining, reply.cursorId))(longTimeout)
                             .map({
                                 case ConnectionActor.CursorActorCreated(cursorActor) =>
                                     new SocketCursor(system, Some(cursorActor), reply)
@@ -81,17 +92,47 @@ private[cdriver] class Connection(private val system: ActorSystem, private val a
             })
     }
 
+    def sendQueryOne[Q, F](flags: Int, fullCollectionName: String, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncodeSupport[Q], fieldsSupport: QueryEncodeSupport[F]): Future[Option[QueryReply]] = {
+        acquireSocket()
+            .flatMap({ socket =>
+                socket.sendQuery(flags, fullCollectionName, 0 /* skip */ , -1 /* num to return, no cursor */ , query, fieldsOption)
+                    .map({ reply =>
+                        reply.throwOnError()
+                        if (reply.numberReturned == 0)
+                            None
+                        else
+                            Some(reply)
+                    })
+            })
+    }
+
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: EntityEncodeSupport[E]): Future[Unit] = {
-        acquireSocket().flatMap(_.sendUpdate(fullCollectionName, flags, query, update))
+        query: Q, update: E, gle: GetLastError)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: QueryEncodeSupport[E]): Future[WriteResult] = {
+        acquireSocket().flatMap(withLastError(_, gle, _.sendUpdate(fullCollectionName, flags, query, update)))
     }
 
-    def sendInsert[E](flags: Int, fullCollectionName: String, docs: Traversable[E])(implicit entitySupport: EntityEncodeSupport[E]): Future[Unit] = {
-        acquireSocket().flatMap(_.sendInsert(flags, fullCollectionName, docs))
+    def sendInsert[E](flags: Int, fullCollectionName: String, docs: Traversable[E], gle: GetLastError)(implicit entitySupport: EntityEncodeSupport[E]): Future[WriteResult] = {
+        acquireSocket().flatMap(withLastError(_, gle, _.sendInsert(flags, fullCollectionName, docs)))
     }
 
-    def sendDelete[Q](fullCollectionName: String, flags: Int, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[Unit] = {
-        acquireSocket().flatMap(_.sendDelete(fullCollectionName, flags, query))
+    def sendDelete[Q](fullCollectionName: String, flags: Int, query: Q, gle: GetLastError)(implicit querySupport: QueryEncodeSupport[Q]): Future[WriteResult] = {
+        acquireSocket().flatMap(withLastError(_, gle, _.sendDelete(fullCollectionName, flags, query)))
+    }
+
+    // note that we're going through hoops to be sure the GLE
+    // goes down the same TCP socket as the request
+    private def withLastError(socket: MongoSocket, gle: GetLastError, first: (MongoSocket) => Future[Unit]): Future[WriteResult] = {
+        import RawEncoded._
+        val step1 = first(socket)
+        val raw = RawEncoded()
+        raw.writeField("getlasterror", 1)
+        raw.writeField("w", gle.w)
+        raw.writeField("fsync", false)
+        val step2 = socket.sendCommand(0 /* flags */ , gle.database, raw)
+        step1.flatMap(_ => step2.map({ reply =>
+            val result = decodeWriteResult(reply)
+            result.result
+        }))
     }
 
     /**
@@ -172,9 +213,9 @@ private[cdriver] class ConnectionActor(val addr: SocketAddress) extends Actor {
 
         // we create the cursor actor inside the ConnectionActor so that it isn't
         // a root actor; actors related to a connection are inside the ConnectionActor
-        case CreateCursorActor(socket, fullCollectionName, batchSize, cursorId) =>
+        case CreateCursorActor(socket, fullCollectionName, batchSize, limit, cursorId) =>
             val actor =
-                context.actorOf(Props(new MongoCursorActor(socket, fullCollectionName, batchSize, cursorId)))
+                context.actorOf(Props(new MongoCursorActor(socket, fullCollectionName, batchSize, limit, cursorId)))
             sender ! CursorActorCreated(actor)
     }
 }
@@ -185,7 +226,7 @@ object ConnectionActor {
     case object Close
     case class SocketCreated(socket: MongoSocket)
     case class SocketClosed(socket: MongoSocket)
-    case class CreateCursorActor(socket: MongoSocket, fullCollectionName: String, batchSize: Int, cursorId: Long)
+    case class CreateCursorActor(socket: MongoSocket, fullCollectionName: String, batchSize: Int, limit: Long, cursorId: Long)
 
     // Sent from the ConnectionActor
     case class SocketAcquired(socket: MongoSocket)

@@ -28,11 +28,11 @@ package object jdriver {
         private[jdriver] implicit def asScalaBObject(bsonObj : BSONObject) = JavaConversions.asScalaBObject(bsonObj)
 
         private[jdriver] implicit def asScalaWriteResult(j : JavaWriteResult) : WriteResult = {
-            new WriteResult({ asScalaBObject(j.getLastError()) })
+            WriteResult({ asScalaBObject(j.getLastError()) })
         }
 
         private[jdriver] implicit def asScalaCommandResult(j : JavaCommandResult) : CommandResult = {
-            new CommandResult({ asScalaBObject(j) })
+            CommandResult({ asScalaBObject(j) })
         }
     }
 

@@ -18,13 +18,14 @@ private[beaucatcher] object MongoCursorActor {
     case class Batch(reply: QueryReply)
 }
 
-private[beaucatcher] class MongoCursorActor(val socket: MongoSocket, val fullCollectionName: String, val batchSize: Int, val cursorId: Long) extends Actor {
+private[beaucatcher] class MongoCursorActor(val socket: MongoSocket, val fullCollectionName: String, val batchSize: Int, val limit: Long, val cursorId: Long) extends Actor {
     import MongoCursorActor._
 
     var killed = false
     var done = false
     var pending = false
     var lastActivity = System.currentTimeMillis
+    var remaining = limit
 
     val cursorTimeout = 1 minute
 
@@ -51,6 +52,7 @@ private[beaucatcher] class MongoCursorActor(val socket: MongoSocket, val fullCol
                 // an important issue here is that errors also go back
                 // to the sender, which is a reason we use pipeTo
                 val f: Future[Batch] = socket.sendGetMore(fullCollectionName, batchSize, cursorId).flatMap({ reply =>
+                    reply.throwOnError()
                     self.ask(GotMore(reply))(cursorTimeout).mapTo[Batch]
                 })
                 f.pipeTo(sender)
@@ -63,6 +65,13 @@ private[beaucatcher] class MongoCursorActor(val socket: MongoSocket, val fullCol
                 killed = true
             }
             pending = false
+
+            remaining -= reply.numberReturned
+            if (remaining <= 0) {
+                done = true
+                self ! PoisonPill
+            }
+
             // the sender here is always ourselves
             sender ! Batch(reply)
         case Close =>

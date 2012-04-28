@@ -34,7 +34,7 @@ package object mongo {
      */
     type EntityAsyncCollection[OuterQueryType, EntityType <: AnyRef, IdType] = AsyncCollection[OuterQueryType, EntityType, IdType, Any]
 
-    private[mongo] def defaultIndexName(keys : BObject) : String = {
+    private[beaucatcher] def defaultIndexName(keys : BObject) : String = {
         val sb = new StringBuilder()
         for (kv <- keys.iterator) {
             if (sb.length > 0)

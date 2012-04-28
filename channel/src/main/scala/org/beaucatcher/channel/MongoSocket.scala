@@ -26,8 +26,9 @@ trait MongoSocket {
      * return a default number of results. All other positive numbers mean return initial number of
      * results and also a cursor ID.
      */
-    def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
-        numberToReturn: Int, query: Q, fieldsOption: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply]
+    def sendQuery[Q, F](flags: Int, fullCollectionName: String, numberToSkip: Int,
+        numberToReturn: Int, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncodeSupport[Q],
+            fieldsSupport: QueryEncodeSupport[F]): Future[QueryReply]
 
     /** Send an OP_GETMORE. Parameters map directly to protocol and are in the same order as on the wire. */
     def sendGetMore(fullCollectionName: String, numberToReturn: Int, cursorId: Long): Future[QueryReply]
@@ -37,7 +38,7 @@ trait MongoSocket {
      * Parameters map directly to protocol and are in the same order as on the wire.
      */
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: EntityEncodeSupport[E]): Future[Unit]
+        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: QueryEncodeSupport[E]): Future[Unit]
 
     /**
      * Send an OP_INSERT. No reply.
@@ -68,17 +69,19 @@ trait MongoSocket {
     def addCloseListener(listener: (MongoSocket) => Unit): Unit
 }
 
-/** Iterate over entities decoded from BSON documents */
-trait EntityIterator {
-    def hasNext: Boolean
-    def next[E]()(implicit entitySupport: EntityDecodeSupport[E]): E
-}
-
 /** Reply to OP_QUERY */
 trait QueryReply {
     def responseFlags: Int
     def cursorId: Long
     def startingFrom: Int
     def numberReturned: Int
-    def iterator(): EntityIterator
+    def iterator[E]()(implicit entitySupport: EntityDecodeSupport[E]): Iterator[E]
+
+    final def throwOnError(): Unit = {
+        if ((responseFlags & Mongo.REPLY_FLAG_CURSOR_NOT_FOUND) != 0)
+            throw new MongoException("Cursor ID was not valid anymore")
+        // TODO we should parse $err here and include it in the message
+        if ((responseFlags & Mongo.REPLY_FLAG_QUERY_FAILURE) != 0)
+            throw new MongoException("Query failed")
+    }
 }

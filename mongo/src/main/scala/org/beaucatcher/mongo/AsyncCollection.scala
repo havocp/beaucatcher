@@ -19,7 +19,7 @@ trait ReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType] {
 
     def name : String
 
-    def fullName : String
+    def fullName : String = database.name + "." + name
 
     def emptyQuery : QueryType
 

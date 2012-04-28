@@ -15,14 +15,14 @@ class CommandResultTest extends TestUtils {
         val r2 = CommandResult(true)
         assertTrue(r2.ok)
 
-        assertEquals(r.raw, r2.raw)
+        assertEquals(r, r2)
     }
 
     @Test
     def intAsBoolean : Unit = {
         val r = CommandResult(BObject("ok" -> 1))
         assertTrue(r.ok)
-        val r2 = CommandResult(BObject("ok" -> 0))
+        val r2 = CommandResult(BObject("ok" -> 0, "err" -> "Did not work"))
         assertFalse(r2.ok)
     }
 
@@ -36,13 +36,13 @@ class CommandResultTest extends TestUtils {
 
     @Test
     def writeResultFields : Unit = {
-        val r = WriteResult(ok = true,
+        val r = WriteResult(ok = false,
             err = Some("this is an error message"),
             n = 10,
             code = Some(5),
             upserted = Some(ObjectId()),
             updatedExisting = Some(false))
-        assertEquals(true, r.ok)
+        assertEquals(false, r.ok)
         assertEquals(Some("this is an error message"), r.err)
         assertEquals(10, r.n)
         assertEquals(Some(5), r.code)

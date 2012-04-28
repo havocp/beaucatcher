@@ -52,6 +52,11 @@ package object netty {
         buf.skipBytes(len)
     }
 
+    private[beaucatcher] def skipDocument(buf: ChannelBuffer): Unit = {
+        val len = buf.readInt()
+        buf.skipBytes(len - 4)
+    }
+
     private[beaucatcher] def writeEmptyQuery(buf: ChannelBuffer): Unit = {
         buf.ensureWritableBytes(5)
         buf.writeInt(Bson.EMPTY_DOCUMENT_LENGTH)

@@ -34,11 +34,11 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         (i, p)
     }
 
-    private class NettyEntityIterator(val buf: ChannelBuffer) extends EntityIterator {
-        def hasNext: Boolean =
+    private class NettyEntityIterator[E](val buf: ChannelBuffer)(implicit val entitySupport: EntityDecodeSupport[E]) extends Iterator[E] {
+        override def hasNext: Boolean =
             buf.readableBytes() > 0
 
-        def next[E]()(implicit entitySupport: EntityDecodeSupport[E]): E = {
+        override def next(): E = {
             if (hasNext)
                 readEntity(buf)
             else
@@ -54,7 +54,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         override lazy val startingFrom: Int = buf.getInt(Mongo.MESSAGE_HEADER_LENGTH + 12)
         override lazy val numberReturned: Int = buf.getInt(Mongo.MESSAGE_HEADER_LENGTH + 16)
 
-        def iterator(): EntityIterator = {
+        override def iterator[E]()(implicit entitySupport: EntityDecodeSupport[E]): Iterator[E] = {
             val offset = Mongo.MESSAGE_HEADER_LENGTH + 20
             val documentsStart = buf.readerIndex + offset
             // slice() gives the iterator its own reader/writer indexes but
@@ -68,7 +68,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         try {
             val buf = body(serial, promise)
 
-            sendMessage(buf, promise)
+            sendMessageWithReply(buf, promise)
         } catch {
             // if any synchronous exceptions occur, stuff them in the future and
             // drop the pending message. This way people don't have to both
@@ -99,15 +99,31 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         }
     }
 
-    private[this] final def sendMessage(buf: ChannelBuffer, promise: Promise[_]): Unit = {
+    private[this] final def sendMessageWithReply(buf: ChannelBuffer, promise: Promise[_]): Unit = {
         val length = buf.writerIndex()
         buf.setInt(0, length)
         channel.write(buf).addListener(new WriteErrorListener(promise))
     }
 
-    override def sendQuery[Q](flags: Int, fullCollectionName: String, numberToSkip: Int,
-        numberToReturn: Int, query: Q,
-        fieldsOption: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply] = {
+    private class WriteCompleteListener(val promise: Promise[Unit]) extends ChannelFutureListener {
+        override final def operationComplete(f: ChannelFuture): Unit = {
+            if (f.isSuccess()) {
+                promise.success()
+            } else {
+                promise.failure(new MongoChannelException("Writing message failed", f.getCause()))
+            }
+        }
+    }
+
+    private[this] final def sendMessageNoReply(buf: ChannelBuffer, promise: Promise[Unit]): Unit = {
+        val length = buf.writerIndex()
+        buf.setInt(0, length)
+        channel.write(buf).addListener(new WriteCompleteListener(promise))
+    }
+
+    override def sendQuery[Q, F](flags: Int, fullCollectionName: String, numberToSkip: Int,
+        numberToReturn: Int, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncodeSupport[Q],
+            fieldsSupport: QueryEncodeSupport[F]): Future[QueryReply] = {
         withQueryReply { (serial, promise) =>
             // struct { int messageLength, int requestId, int responseTo, int opCode }
             // struct { int flags, cstring fullCollectionName, int numberToSkip, int numberToReturn, doc query, [doc fields] }
@@ -150,7 +166,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
     }
 
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: EntityEncodeSupport[E]): Future[Unit] = {
+        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: QueryEncodeSupport[E]): Future[Unit] = {
         val promise = Promise[Unit]()
 
         val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_UPDATE,
@@ -161,9 +177,9 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         buf.ensureWritableBytes(4) // in case nul string was longer than guessed
         buf.writeInt(flags)
         writeQuery(buf, query, maxDocumentSize)
-        writeEntity(buf, update, maxDocumentSize)
+        writeQuery(buf, update, maxDocumentSize)
 
-        sendMessage(buf, promise)
+        sendMessageNoReply(buf, promise)
 
         promise
     }
@@ -180,7 +196,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         for (doc <- docs)
             writeEntity(buf, doc, maxDocumentSize)
 
-        sendMessage(buf, promise)
+        sendMessageNoReply(buf, promise)
 
         promise
     }
@@ -198,7 +214,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         buf.writeInt(flags)
         writeQuery(buf, query, maxDocumentSize)
 
-        sendMessage(buf, promise)
+        sendMessageNoReply(buf, promise)
 
         promise
     }
@@ -220,7 +236,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         }
         buf.setInt(lengthIndex, count)
 
-        sendMessage(buf, promise)
+        sendMessageNoReply(buf, promise)
 
         promise
     }
