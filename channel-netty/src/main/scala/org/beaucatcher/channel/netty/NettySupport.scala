@@ -23,7 +23,8 @@ trait NettyDecodeSupport[+T] extends DecodeSupport[T] {
     override final def decode(buf: ByteBuffer): T = {
         if (buf.order() != ByteOrder.LITTLE_ENDIAN)
             throw new MongoException("ByteBuffer to decode must be little endian")
-        read(ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, 128))
+        val nettyBuf = ChannelBuffers.wrappedBuffer(buf)
+        read(nettyBuf)
     }
 
     def read(buf: ChannelBuffer): T
