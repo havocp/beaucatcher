@@ -14,8 +14,9 @@ import com.mongodb.DBObject
 trait JavaDocumentEncoder[-T] extends DocumentEncoder[T] {
     // the "lose" case which we'd probably never use
     // (should only happen if used with another driver)
-    override final def encode(t : T) : ByteBuffer = {
-        JavaSupport.encode(toBsonObject(t))
+    override final def encode(buf : EncodeBuffer, t : T) : Unit = {
+        val bb = JavaSupport.encode(toBsonObject(t))
+        buf.writeBytes(bb)
     }
 
     def toBsonObject(t : T) : BSONObject = toDBObject(t)
@@ -27,8 +28,8 @@ trait JavaDocumentEncoder[-T] extends DocumentEncoder[T] {
 trait JavaDocumentDecoder[+T] extends DocumentDecoder[T] {
     // the "lose" case which we'd probably never use
     // (should only happen if used with another driver)
-    override final def decode(buf : ByteBuffer) : T = {
-        fromBsonObject(JavaSupport.decode(buf))
+    override final def decode(buf : DecodeBuffer) : T = {
+        fromBsonObject(JavaSupport.decode(buf.toByteBuffer()))
     }
 
     def fromBsonObject(obj : BSONObject) : T

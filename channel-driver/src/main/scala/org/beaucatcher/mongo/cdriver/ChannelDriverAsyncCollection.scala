@@ -21,8 +21,12 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
     protected[beaucatcher] implicit def entityDecoder: QueryResultDecoder[EntityType]
     protected[beaucatcher] implicit def entityEncoder: EntityEncodeSupport[EntityType]
 
+    private def newRaw() = RawEncoded(context.driver.backend)
+    // must be lazy since it uses stuff that isn't available at construct
+    private implicit lazy val fieldsEncoder = newFieldsQueryEncoder(context.driver.backend)
+
     override def count(query: QueryType, options: CountOptions): Future[Long] = {
-        val raw = RawEncoded()
+        val raw = newRaw()
         raw.writeField("count", name)
         raw.writeField("query", query)
         raw.writeFieldLongOption("limit", options.limit)
@@ -46,7 +50,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
     // TODO there is no reason this should have an Iterator[Future] because it
     // never does batch paging like a cursor it looks like
     override def distinct(key: String, options: DistinctOptions[QueryType]): Future[Iterator[Future[ValueType]]] = {
-        val raw = RawEncoded()
+        val raw = newRaw()
         raw.writeField("distinct", name)
         raw.writeField("key", key)
         raw.writeField("query", options.query)
@@ -110,7 +114,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
     }
 
     override def findOneById(id: IdType, options: FindOneByIdOptions): Future[Option[EntityType]] = {
-        val raw = RawEncoded()
+        val raw = newRaw()
         raw.writeFieldAny("_id", id)
         findOne(queryFlags(options.overrideQueryFlags), raw, options.fields)
     }
@@ -125,7 +129,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
     override def entityToUpdateQuery(entity: EntityType): QueryType
 
     override def findAndModify(query: QueryType, update: Option[QueryType], options: FindAndModifyOptions[QueryType]): Future[Option[EntityType]] = {
-        val raw = RawEncoded()
+        val raw = newRaw()
         raw.writeField("findandmodify", name)
         raw.writeField("query", query)
         raw.writeField("fields", options.fields)
@@ -206,7 +210,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
     }
 
     override def removeById(id: IdType): Future[WriteResult] = {
-        val raw = RawEncoded()
+        val raw = newRaw()
         raw.writeFieldAny("_id", id)
         remove[RawEncoded](Mongo.DELETE_FLAG_SINGLE_REMOVE, raw)
     }
@@ -215,15 +219,16 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
     private def indexNameHack[Q](keys: Q)(implicit querySupport: QueryEncoder[Q]): String = {
         import Codecs._
         // convert to BObject via serializing
-        val bytes = querySupport.encode(keys)
-        val bobj = implicitly[QueryResultDecoder[BObject]].decode(bytes)
+        val buf = context.driver.backend.newDynamicEncodeBuffer(64)
+        querySupport.encode(buf, keys)
+        val bobj = implicitly[QueryResultDecoder[BObject]].decode(buf.toDecodeBuffer())
         // then compute the index name
         defaultIndexName(bobj)
     }
 
     override def ensureIndex(keys: QueryType, options: IndexOptions): Future[WriteResult] = {
         val indexName = options.name.getOrElse(indexNameHack(keys))
-        val raw = RawEncoded()
+        val raw = newRaw()
         raw.writeField("name", indexName)
         raw.writeField("ns", fullName)
         raw.writeFieldIntOption("v", options.v)
@@ -241,7 +246,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
     }
 
     override def dropIndex(indexName: String): Future[CommandResult] = {
-        val raw = RawEncoded()
+        val raw = newRaw()
         raw.writeField("deleteIndexes", name)
         raw.writeField("index", indexName)
         connection.sendCommand(0 /* query flags */ , database.name, raw) map { reply =>

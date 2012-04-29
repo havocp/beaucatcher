@@ -2,7 +2,6 @@ package org.beaucatcher.mongo.cdriver
 
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
-import org.beaucatcher.channel.netty._
 import akka.actor.ActorSystem
 import org.jboss.netty.buffer.ChannelBuffer
 
@@ -38,19 +37,17 @@ private[cdriver] class EntityBObjectChannelDriverCollectionFactory[EntityType <:
     require(entityBObjectEntityComposer != null)
 
     implicit private object EntityEncodeSupport
-        extends NettyDocumentEncoder[EntityType]
-        with EntityEncodeSupport[EntityType] {
-        override final def write(buf: ChannelBuffer, t: EntityType): Unit = {
+        extends EntityEncodeSupport[EntityType] {
+        override final def encode(buf: EncodeBuffer, t: EntityType): Unit = {
             val bobj = entityBObjectEntityComposer.entityIn(t)
-            Codecs.BObjectEncodeSupport.write(buf, bobj)
+            Codecs.BObjectEncodeSupport.encode(buf, bobj)
         }
     }
 
     implicit private object EntityDecodeSupport
-        extends NettyDocumentDecoder[EntityType]
-        with QueryResultDecoder[EntityType] {
-        override final def read(buf: ChannelBuffer): EntityType = {
-            val bobj = Codecs.BObjectDecodeSupport.read(buf)
+        extends QueryResultDecoder[EntityType] {
+        override final def decode(buf: DecodeBuffer): EntityType = {
+            val bobj = Codecs.BObjectDecodeSupport.decode(buf)
             entityBObjectEntityComposer.entityOut(bobj)
         }
     }

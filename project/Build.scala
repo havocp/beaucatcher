@@ -96,7 +96,7 @@ object BeaucatcherBuild extends Build {
     lazy val channelNetty = Project("beaucatcher-channel-netty",
         file("channel-netty"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(netty))) dependsOn(channel % "compile->compile;test->test")
+            Seq(libraryDependencies := Seq(netty))) dependsOn(channel % "compile->compile;test->test", bson % "test->test")
 
     // bson/json parsing and syntax tree
     lazy val bson = Project("beaucatcher-bson",

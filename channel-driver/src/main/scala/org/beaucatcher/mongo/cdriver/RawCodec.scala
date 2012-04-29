@@ -2,15 +2,15 @@ package org.beaucatcher.mongo.cdriver
 
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
-import org.beaucatcher.channel.netty._
-import org.jboss.netty.buffer._
-import org.jboss.netty.buffer.ChannelBuffers._
+import org.beaucatcher.channel._
+import org.beaucatcher.wire._
 import java.nio.ByteOrder
 
-private[cdriver] class RawEncoded {
+private[cdriver] class RawEncoded(val backend: ChannelBackend) {
     import Codecs._
+    import CodecUtils._
 
-    private val buf: ChannelBuffer = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 32)
+    private val buf: EncodeBuffer = backend.newDynamicEncodeBuffer(32)
 
     private val start = writeOpenDocument(buf)
     var closed = false
@@ -95,7 +95,7 @@ private[cdriver] class RawEncoded {
 
     def writeField(name: String, fieldsOption: Option[Fields]): Unit = {
         fieldsOption.foreach({ fields =>
-            val raw = RawEncoded()
+            val raw = RawEncoded(backend)
             raw.writeFields(fields)
             writeField(name, raw)
         })
@@ -108,19 +108,18 @@ private[cdriver] class RawEncoded {
         closed = true
     }
 
-    def writeTo(target: ChannelBuffer): Unit = {
+    def writeTo(target: EncodeBuffer): Unit = {
         if (!closed)
             close()
-        target.writeBytes(buf, 0, buf.writerIndex())
+        target.writeBuffer(buf)
     }
 }
 
 object RawEncoded {
     private object RawEncodeSupport
-        extends NettyDocumentEncoder[RawEncoded]
-        with QueryEncoder[RawEncoded]
+        extends QueryEncoder[RawEncoded]
         with EntityEncodeSupport[RawEncoded] {
-        override final def write(buf: ChannelBuffer, t: RawEncoded): Unit = {
+        override final def encode(buf: EncodeBuffer, t: RawEncoded): Unit = {
             t.writeTo(buf)
         }
     }
@@ -128,19 +127,18 @@ object RawEncoded {
     implicit def rawQueryEncoder: QueryEncoder[RawEncoded] = RawEncodeSupport
     implicit def rawEntityEncodeSupport: EntityEncodeSupport[RawEncoded] = RawEncodeSupport
 
-    def apply(): RawEncoded = new RawEncoded()
+    def apply(backend: ChannelBackend): RawEncoded = new RawEncoded(backend)
 
-    private object FieldsEncodeSupport
-        extends NettyDocumentEncoder[Fields]
-        with QueryEncoder[Fields] {
-        override final def write(buf: ChannelBuffer, t: Fields): Unit = {
-            val raw = RawEncoded()
+    private class FieldsEncodeSupport(backend: ChannelBackend)
+        extends QueryEncoder[Fields] {
+        override final def encode(buf: EncodeBuffer, t: Fields): Unit = {
+            val raw = RawEncoded(backend)
             raw.writeFields(t)
             raw.writeTo(buf)
         }
     }
 
-    implicit def fieldsQueryEncoder: QueryEncoder[Fields] = FieldsEncodeSupport
+    def newFieldsQueryEncoder(backend: ChannelBackend): QueryEncoder[Fields] = new FieldsEncodeSupport(backend)
 }
 
 private[cdriver] class RawDecoded {
@@ -150,14 +148,13 @@ private[cdriver] class RawDecoded {
 }
 
 object RawDecoded {
-    import org.beaucatcher.wire._
     import Codecs._
+    import CodecUtils._
 
     private class RawDecodeSupport[NestedEntityType](val needed: Seq[String])(implicit val nestedDecodeSupport: QueryResultDecoder[NestedEntityType])
-        extends NettyDocumentDecoder[RawDecoded]
-        with QueryResultDecoder[RawDecoded] {
+        extends QueryResultDecoder[RawDecoded] {
 
-        private def readArray(buf: ChannelBuffer): Seq[Any] = {
+        private def readArray(buf: DecodeBuffer): Seq[Any] = {
             val len = buf.readInt()
             if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
                 buf.skipBytes(len - 4)
@@ -180,7 +177,7 @@ object RawDecoded {
             }
         }
 
-        private def readAny(what: Byte, buf: ChannelBuffer): Any = {
+        private def readAny(what: Byte, buf: DecodeBuffer): Any = {
             what match {
                 case Bson.NUMBER =>
                     buf.readDouble()
@@ -228,7 +225,7 @@ object RawDecoded {
             }
         }
 
-        override final def read(buf: ChannelBuffer): RawDecoded = {
+        override final def decode(buf: DecodeBuffer): RawDecoded = {
             val raw = RawDecoded()
             val len = buf.readInt()
             var what = buf.readByte()

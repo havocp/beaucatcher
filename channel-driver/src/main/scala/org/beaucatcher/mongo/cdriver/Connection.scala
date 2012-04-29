@@ -10,7 +10,6 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.channel._
-import org.beaucatcher.channel.netty._
 import java.net.SocketAddress
 
 private[cdriver] case class GetLastError(database: String, w: Int)
@@ -56,11 +55,11 @@ private[cdriver] class SocketCursor(val system: ActorSystem, val actor: Option[A
  *
  * Note: does not actually handle all of this yet.
  */
-private[cdriver] class Connection(private[cdriver] val system: ActorSystem, private val addr: SocketAddress) {
+private[cdriver] class Connection(private val backend: ChannelBackend, private[cdriver] val system: ActorSystem, private val addr: SocketAddress) {
 
     import Connection._
 
-    private val actor = system.actorOf(Props(new ConnectionActor(addr)))
+    private val actor = system.actorOf(Props(new ConnectionActor(backend, addr)))
 
     private def acquireSocket(): Future[MongoSocket] = {
         actor.ask(ConnectionActor.AcquireSocket)(longTimeout).map({
@@ -124,7 +123,7 @@ private[cdriver] class Connection(private[cdriver] val system: ActorSystem, priv
     private def withLastError(socket: MongoSocket, gle: GetLastError, first: (MongoSocket) => Future[Unit]): Future[WriteResult] = {
         import RawEncoded._
         val step1 = first(socket)
-        val raw = RawEncoded()
+        val raw = RawEncoded(backend)
         raw.writeField("getlasterror", 1)
         raw.writeField("w", gle.w)
         raw.writeField("fsync", false)
@@ -156,11 +155,11 @@ object Connection {
     private[cdriver] val longTimeout = 1 minutes
 }
 
-private[cdriver] class ConnectionActor(val addr: SocketAddress) extends Actor {
+private[cdriver] class ConnectionActor(val backend: ChannelBackend, val addr: SocketAddress) extends Actor {
 
     import ConnectionActor._
 
-    val socketFactory = new NettyMongoSocketFactory()(context.system.dispatcher)
+    val socketFactory = backend.newSocketFactory()(context.system.dispatcher)
     var socketCache: Option[MongoSocket] = None
     var pendingSocket: Option[Future[MongoSocket]] = None
 

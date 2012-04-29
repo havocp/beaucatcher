@@ -30,7 +30,7 @@ final class ChannelDriverContext private[cdriver] (override val driver: ChannelD
             p
     }
 
-    private lazy val driverConnection = new Connection(actorSystem, new InetSocketAddress(host, port))
+    private lazy val driverConnection = new Connection(driver.backend, actorSystem, new InetSocketAddress(host, port))
     private[cdriver] def connection = driverConnection
 
     override type DriverType = ChannelDriver

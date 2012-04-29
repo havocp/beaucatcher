@@ -1,47 +1,45 @@
-package org.beaucatcher.mongo.cdriver
+package org.beaucatcher.bson
 
-import org.beaucatcher.channel.netty._
+import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import org.beaucatcher.wire._
-import org.beaucatcher.channel._
-import org.beaucatcher.mongo._
 
-private[beaucatcher] object Codecs {
+object Codecs {
     import CodecUtils._
 
-    implicit def bobjectQueryEncoder: QueryEncoder[BObject] =
+    implicit def bobjectQueryEncoder : QueryEncoder[BObject] =
         BObjectEncodeSupport
 
-    implicit def bobjectEntityEncodeSupport: EntityEncodeSupport[BObject] =
+    implicit def bobjectEntityEncodeSupport : EntityEncodeSupport[BObject] =
         BObjectEncodeSupport
 
-    implicit def bobjectQueryResultDecoder: QueryResultDecoder[BObject] =
+    implicit def bobjectQueryResultDecoder : QueryResultDecoder[BObject] =
         BObjectDecodeSupport
 
-    private[beaucatcher] def swapInt(value: Int): Int = {
+    private[beaucatcher] def swapInt(value : Int) : Int = {
         (((value >> 0) & 0xff) << 24) |
             (((value >> 8) & 0xff) << 16) |
             (((value >> 16) & 0xff) << 8) |
             (((value >> 24) & 0xff) << 0)
     }
 
-    private[cdriver] def writeOpenDocument(buf: EncodeBuffer): Int = {
+    private[beaucatcher] def writeOpenDocument(buf : EncodeBuffer) : Int = {
         val start = buf.writerIndex
         buf.ensureWritableBytes(32) // min size is 5, but prealloc for efficiency
         buf.writeInt(0) // will write this later
         start
     }
 
-    private[cdriver] def writeCloseDocument(buf: EncodeBuffer, start: Int) = {
+    private[beaucatcher] def writeCloseDocument(buf : EncodeBuffer, start : Int) = {
         buf.ensureWritableBytes(1)
         buf.writeByte('\0')
         buf.setInt(start, buf.writerIndex - start)
     }
 
-    private[cdriver] object BObjectEncodeSupport
+    private[beaucatcher] object BObjectEncodeSupport
         extends QueryEncoder[BObject]
         with EntityEncodeSupport[BObject] {
-        override final def encode(buf: EncodeBuffer, t: BObject): Unit = {
+        override def encode(buf : EncodeBuffer, t : BObject) : Unit = {
             val start = writeOpenDocument(buf)
 
             for (field <- t.value) {
@@ -55,14 +53,14 @@ private[beaucatcher] object Codecs {
     private[this] val intStrings = Seq("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
         "11", "12", "13", "14", "15", "16", "17", "18", "19", "20").toArray(manifest[String])
 
-    private[this] def arrayIndex(i: Int): String = {
+    private[this] def arrayIndex(i : Int) : String = {
         if (i < intStrings.length)
             intStrings(i)
         else
             Integer.toString(i)
     }
 
-    def writeArray(buf: EncodeBuffer, array: BArray): Unit = {
+    def writeArray(buf : EncodeBuffer, array : BArray) : Unit = {
         val start = buf.writerIndex
         buf.ensureWritableBytes(32) // some prealloc for efficiency
         buf.writeInt(0) // will write this later
@@ -76,31 +74,31 @@ private[beaucatcher] object Codecs {
         buf.setInt(start, buf.writerIndex - start)
     }
 
-    final private[cdriver] def writeFieldInt(buf: EncodeBuffer, name: String, value: Int): Unit = {
+    private[beaucatcher] def writeFieldInt(buf : EncodeBuffer, name : String, value : Int) : Unit = {
         buf.writeByte(Bson.NUMBER_INT)
         writeNulString(buf, name)
         buf.writeInt(value)
     }
 
-    final private[cdriver] def writeFieldLong(buf: EncodeBuffer, name: String, value: Long): Unit = {
+    private[beaucatcher] def writeFieldLong(buf : EncodeBuffer, name : String, value : Long) : Unit = {
         buf.writeByte(Bson.NUMBER_LONG)
         writeNulString(buf, name)
         buf.writeLong(value)
     }
 
-    final private[cdriver] def writeFieldString(buf: EncodeBuffer, name: String, value: String): Unit = {
+    private[beaucatcher] def writeFieldString(buf : EncodeBuffer, name : String, value : String) : Unit = {
         buf.writeByte(Bson.STRING)
         writeNulString(buf, name)
         writeLengthString(buf, value)
     }
 
-    final private[cdriver] def writeFieldBoolean(buf: EncodeBuffer, name: String, value: Boolean): Unit = {
+    private[beaucatcher] def writeFieldBoolean(buf : EncodeBuffer, name : String, value : Boolean) : Unit = {
         buf.writeByte(Bson.BOOLEAN)
         writeNulString(buf, name)
         buf.writeByte(if (value) 1 else 0)
     }
 
-    final private[cdriver] def writeFieldObjectId(buf: EncodeBuffer, name: String, value: ObjectId): Unit = {
+    private[beaucatcher] def writeFieldObjectId(buf : EncodeBuffer, name : String, value : ObjectId) : Unit = {
         buf.writeByte(Bson.OID)
         writeNulString(buf, name)
         buf.writeInt(swapInt(value.time))
@@ -108,43 +106,43 @@ private[beaucatcher] object Codecs {
         buf.writeInt(swapInt(value.inc))
     }
 
-    final private[cdriver] def writeFieldObject[Q](buf: EncodeBuffer, name: String, query: Q)(implicit querySupport: QueryEncoder[Q]): Unit = {
+    private[beaucatcher] def writeFieldObject[Q](buf : EncodeBuffer, name : String, query : Q)(implicit querySupport : QueryEncoder[Q]) : Unit = {
         buf.writeByte(Bson.OBJECT)
         writeNulString(buf, name)
         writeQuery(buf, query, Int.MaxValue /* max size; already checked for outer object */ )
     }
 
-    def writeValue(buf: EncodeBuffer, name: String, bvalue: BValue): Unit = {
+    private[beaucatcher] def writeValue(buf : EncodeBuffer, name : String, bvalue : BValue) : Unit = {
         buf.ensureWritableBytes(1 + name.length() + 1 + 16) // typecode + name + nul + large value size
         bvalue match {
-            case v: BInt32 =>
+            case v : BInt32 =>
                 writeFieldInt(buf, name, v.value)
-            case v: BInt64 =>
+            case v : BInt64 =>
                 writeFieldLong(buf, name, v.value)
-            case v: BDouble =>
+            case v : BDouble =>
                 buf.writeByte(Bson.NUMBER)
                 writeNulString(buf, name)
                 buf.writeDouble(v.value)
-            case v: BObjectId =>
+            case v : BObjectId =>
                 writeFieldObjectId(buf, name, v.value)
-            case v: BString =>
+            case v : BString =>
                 writeFieldString(buf, name, v.value)
-            case v: BObject =>
+            case v : BObject =>
                 writeFieldObject(buf, name, v)
-            case v: BArray =>
+            case v : BArray =>
                 buf.writeByte(Bson.ARRAY)
                 writeNulString(buf, name)
                 writeArray(buf, v)
-            case v: BTimestamp =>
+            case v : BTimestamp =>
                 buf.writeByte(Bson.TIMESTAMP)
                 writeNulString(buf, name)
                 buf.writeInt(v.value.inc)
                 buf.writeInt(v.value.time)
-            case v: BISODate =>
+            case v : BISODate =>
                 buf.writeByte(Bson.DATE)
                 writeNulString(buf, name)
                 buf.writeLong(v.value.getMillis())
-            case v: BBinary =>
+            case v : BBinary =>
                 buf.writeByte(Bson.BINARY)
                 writeNulString(buf, name)
                 val bytes = v.value.data
@@ -152,22 +150,22 @@ private[beaucatcher] object Codecs {
                 buf.writeInt(bytes.length)
                 buf.writeByte(BsonSubtype.toByte(v.value.subtype))
                 buf.writeBytes(bytes)
-            case v: BBoolean =>
+            case v : BBoolean =>
                 writeFieldBoolean(buf, name, v.value)
             case BNull =>
                 buf.writeByte(Bson.NULL)
                 writeNulString(buf, name)
             // no data on the wire for null
-            case v: JObject =>
+            case v : JObject =>
                 throw new MongoException("Can't use JObject in queries: " + v)
-            case v: JArray =>
+            case v : JArray =>
                 throw new MongoException("Can't use JArray in queries: " + v)
         }
     }
 
-    private[cdriver] object BObjectDecodeSupport
+    private[beaucatcher] object BObjectDecodeSupport
         extends QueryResultDecoder[BObject] {
-        override final def decode(buf: DecodeBuffer): BObject = {
+        override def decode(buf : DecodeBuffer) : BObject = {
             val len = buf.readInt()
             if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
                 buf.skipBytes(len - 4)
@@ -190,7 +188,7 @@ private[beaucatcher] object Codecs {
         }
     }
 
-    private def readArray(buf: DecodeBuffer): BArray = {
+    private def readArray(buf : DecodeBuffer) : BArray = {
         val len = buf.readInt()
         if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
             buf.skipBytes(len - 4)
@@ -213,7 +211,7 @@ private[beaucatcher] object Codecs {
         }
     }
 
-    private[cdriver] def skipValue(what: Byte, buf: DecodeBuffer): Unit = {
+    private[beaucatcher] def skipValue(what : Byte, buf : DecodeBuffer) : Unit = {
         what match {
             case Bson.NUMBER =>
                 buf.skipBytes(8)
@@ -252,7 +250,7 @@ private[beaucatcher] object Codecs {
         }
     }
 
-    private def readBValue(what: Byte, buf: DecodeBuffer): BValue = {
+    private def readBValue(what : Byte, buf : DecodeBuffer) : BValue = {
         what match {
             case Bson.NUMBER =>
                 BDouble(buf.readDouble())

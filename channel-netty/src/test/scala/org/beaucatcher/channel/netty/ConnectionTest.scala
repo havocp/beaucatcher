@@ -1,4 +1,4 @@
-package org.beaucatcher.mongo.cdriver
+package org.beaucatcher.channel.netty
 
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
@@ -6,7 +6,6 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.wire._
 import org.beaucatcher.channel._
 import org.beaucatcher.channel.netty._
-import org.beaucatcher.mongo.cdriver._
 import org.junit.Assert._
 import org.junit._
 import java.nio.ByteOrder
@@ -67,7 +66,7 @@ class ConnectionTest extends TestUtils {
         val futureReply = socket.sendCommand(0, /* flags */
             "admin", BObject("ismaster" -> 1, "ignored" -> b))
 
-        val e = intercept[MongoChannelException] {
+        val e = intercept[MongoDocumentTooLargeException] {
             block(futureReply)
         }
         assertTrue(e.getMessage.contains("too large"))

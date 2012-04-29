@@ -69,9 +69,10 @@ package object jdriver {
             case javaSupport : JavaDocumentEncoder[_] =>
                 javaSupport.asInstanceOf[JavaDocumentEncoder[D]].toBsonObject(doc)
             case _ =>
-                // we'll have to serialize from document then deserialize to Java
-                val bb = encodeSupport.encode(doc)
-                JavaSupport.decode(bb)
+                // we'll have to serialize from document then deserialize to Java,
+                // which requires a non-Netty implementation of encode/decodebuffer
+                throw new MongoException("Cannot use encoder with Java driver: " + encodeSupport)
+
         }
     }
 
@@ -88,9 +89,9 @@ package object jdriver {
             case javaSupport : JavaDocumentDecoder[_] =>
                 javaSupport.asInstanceOf[JavaDocumentDecoder[E]].fromBsonObject(obj)
             case _ =>
-                // we'll have to serialize from Java then deserialize to target
-                val bb = JavaSupport.encode(obj)
-                entitySupport.decode(bb)
+                // we'll have to serialize from Java then deserialize to target, which requires
+                // a non-Netty implementation of encode/decode buffer
+                throw new MongoException("Cannot use decoder with Java driver: " + entitySupport)
         }
     }
 }

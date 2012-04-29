@@ -1,11 +1,9 @@
-package org.beaucatcher.mongo.cdriver
+package org.beaucatcher.channel.netty
 
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.beaucatcher.wire._
-import org.beaucatcher.channel.netty._
-import org.beaucatcher.mongo.cdriver._
 import org.junit.Assert._
 import org.junit._
 import java.nio.ByteOrder
@@ -16,10 +14,11 @@ class SerializerTest extends TestUtils {
 
     private def testRoundTrip(bobj: BObject): Unit = {
         import Codecs._
+        import CodecUtils._
 
         val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 128)
 
-        writeQuery(buf, bobj, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
+        writeQuery(Buffer(buf), bobj, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
 
         /*
         System.err.println("Wrote " + bobj + " to buffer: " + buf)
@@ -38,7 +37,7 @@ class SerializerTest extends TestUtils {
         */
 
         buf.resetReaderIndex()
-        val decoded = readEntity[BObject](buf)
+        val decoded = readEntity[BObject](Buffer(buf))
 
         assertEquals(bobj, decoded)
     }
@@ -57,6 +56,7 @@ class SerializerTest extends TestUtils {
     @Test
     def growBufferWhenNeeded(): Unit = {
         import Codecs._
+        import CodecUtils._
 
         val rand = new Random(1234L)
         val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 1)
@@ -72,9 +72,9 @@ class SerializerTest extends TestUtils {
                 j -= 1
             }
             for (field <- many.value) {
-                writeQuery(buf, BObject(List(field)), Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
+                writeQuery(Buffer(buf), BObject(List(field)), Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
             }
-            writeQuery(buf, many, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
+            writeQuery(Buffer(buf), many, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
         }
     }
 }

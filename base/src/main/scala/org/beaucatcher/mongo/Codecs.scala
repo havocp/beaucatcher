@@ -5,12 +5,12 @@ import scala.annotation.implicitNotFound
 
 /** Trait means we can convert a BSON document to a ByteBuffer. */
 trait DocumentEncoder[-T] {
-    def encode(t: T): ByteBuffer
+    def encode(buf: EncodeBuffer, t: T): Unit
 }
 
 /** Trait means we can convert a BSON document from a ByteBuffer. */
 trait DocumentDecoder[+T] {
-    def decode(buf: ByteBuffer): T
+    def decode(buf: DecodeBuffer): T
 }
 
 /** Trait means we can convert a single BSON value from a ByteBuffer. */

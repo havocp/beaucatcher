@@ -2,9 +2,10 @@ package org.beaucatcher.mongo.cdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import org.beaucatcher.channel._
 import akka.actor.ActorSystem
 
-final class ChannelDriver private[cdriver] ()
+final class ChannelDriver private[cdriver] (private[cdriver] val backend: ChannelBackend)
     extends Driver {
 
     override final def createCollectionFactory[EntityType <: AnyRef: Manifest, IdType: Manifest](collectionName: String,
@@ -28,7 +29,9 @@ final class ChannelDriver private[cdriver] ()
 
 object ChannelDriver {
 
-    lazy val instance = new ChannelDriver()
+    // FIXME channel backend would come from a config file if we had multiple options
+    // TODO we can break this build dependency using reflection; might be nice.
+    lazy val instance = new ChannelDriver(org.beaucatcher.channel.netty.NettyChannelBackend)
 }
 
 /**

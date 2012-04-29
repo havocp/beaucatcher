@@ -50,7 +50,7 @@ import org.jboss.netty.logging.InternalLoggerFactory
 import org.jboss.netty.logging.AbstractInternalLogger
 import org.jboss.netty.channel.ExceptionEvent
 
-class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) {
+private[netty] final class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) extends SocketFactory {
 
     NettyMongoSocketFactory.debugLoggingEnabled // want this to happen before we use netty
 
@@ -144,7 +144,7 @@ class NettyMongoSocketFactory(implicit private val executor: ExecutionContext) {
 
     private lazy val allChannels = new DefaultChannelGroup("mongo sockets")
 
-    def close(): Future[Unit] = synchronized {
+    override def close(): Future[Unit] = synchronized {
         closed = true
 
         val p = Promise[Unit]()

@@ -10,7 +10,7 @@ import org.beaucatcher.mongo._
  * and an implementation basically just has to marshal to the wire and match up request/reply IDs.
  * The implementation of this should represent a single open socket.
  */
-trait MongoSocket {
+private[beaucatcher] trait MongoSocket {
     private[this] val _maxDocumentSize = new AtomicInteger(Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
 
     def maxDocumentSize = _maxDocumentSize.get
@@ -70,7 +70,7 @@ trait MongoSocket {
 }
 
 /** Reply to OP_QUERY */
-trait QueryReply {
+private[beaucatcher] trait QueryReply {
     def responseFlags: Int
     def cursorId: Long
     def startingFrom: Int
