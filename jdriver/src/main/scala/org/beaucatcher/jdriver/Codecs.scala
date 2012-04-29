@@ -19,7 +19,7 @@ private[beaucatcher] object Codecs {
         BObjectDecodeSupport
 
     private object BObjectEncodeSupport
-        extends JavaEncodeSupport[BObject]
+        extends JavaDocumentEncoder[BObject]
         with QueryEncoder[BObject]
         with EntityEncodeSupport[BObject] {
 
@@ -29,7 +29,7 @@ private[beaucatcher] object Codecs {
     }
 
     private object BObjectDecodeSupport
-        extends JavaDecodeSupport[BObject]
+        extends JavaDocumentDecoder[BObject]
         with QueryResultDecoder[BObject] {
         override def fromBsonObject(obj : BSONObject) : BObject = {
             import Implicits._

@@ -11,7 +11,7 @@ import org.bson.BSONDecoder
 import com.mongodb.DBObject
 
 /** EncodeSupport optimized for mongo-java-driver */
-trait JavaEncodeSupport[-T] extends DocumentEncoder[T] {
+trait JavaDocumentEncoder[-T] extends DocumentEncoder[T] {
     // the "lose" case which we'd probably never use
     // (should only happen if used with another driver)
     override final def encode(t : T) : ByteBuffer = {
@@ -24,7 +24,7 @@ trait JavaEncodeSupport[-T] extends DocumentEncoder[T] {
 }
 
 /** DecodeSupport optimized for mongo-java-driver */
-trait JavaDecodeSupport[+T] extends DocumentDecoder[T] {
+trait JavaDocumentDecoder[+T] extends DocumentDecoder[T] {
     // the "lose" case which we'd probably never use
     // (should only happen if used with another driver)
     override final def decode(buf : ByteBuffer) : T = {
