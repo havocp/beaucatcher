@@ -11,13 +11,13 @@ import org.jboss.netty.buffer.ChannelBuffers._
 
 private[beaucatcher] object Support {
 
-    implicit def bobjectQueryEncodeSupport: QueryEncodeSupport[BObject] =
+    implicit def bobjectQueryEncoder: QueryEncoder[BObject] =
         BObjectEncodeSupport
 
     implicit def bobjectEntityEncodeSupport: EntityEncodeSupport[BObject] =
         BObjectEncodeSupport
 
-    implicit def bobjectEntityDecodeSupport: EntityDecodeSupport[BObject] =
+    implicit def bobjectQueryResultDecoder: QueryResultDecoder[BObject] =
         BObjectDecodeSupport
 
     private[cdriver] def writeOpenDocument(buf: ChannelBuffer): Int = {
@@ -34,8 +34,8 @@ private[beaucatcher] object Support {
     }
 
     private[cdriver] object BObjectEncodeSupport
-        extends NettyEncodeSupport[BObject]
-        with QueryEncodeSupport[BObject]
+        extends NettyDocumentEncoder[BObject]
+        with QueryEncoder[BObject]
         with EntityEncodeSupport[BObject] {
         override final def write(buf: ChannelBuffer, t: BObject): Unit = {
             val start = writeOpenDocument(buf)
@@ -104,7 +104,7 @@ private[beaucatcher] object Support {
         buf.writeInt(swapInt(value.inc))
     }
 
-    final private[cdriver] def writeFieldObject[Q](buf: ChannelBuffer, name: String, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Unit = {
+    final private[cdriver] def writeFieldObject[Q](buf: ChannelBuffer, name: String, query: Q)(implicit querySupport: QueryEncoder[Q]): Unit = {
         buf.writeByte(Bson.OBJECT)
         writeNulString(buf, name)
         writeQuery(buf, query, Int.MaxValue /* max size; already checked for outer object */ )
@@ -162,8 +162,8 @@ private[beaucatcher] object Support {
     }
 
     private[cdriver] object BObjectDecodeSupport
-        extends NettyDecodeSupport[BObject]
-        with EntityDecodeSupport[BObject] {
+        extends NettyDocumentDecoder[BObject]
+        with QueryResultDecoder[BObject] {
         override final def read(buf: ChannelBuffer): BObject = {
             val len = buf.readInt()
             if (len == Bson.EMPTY_DOCUMENT_LENGTH) {

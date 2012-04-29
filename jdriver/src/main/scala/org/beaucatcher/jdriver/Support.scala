@@ -9,18 +9,18 @@ import org.bson.BSONObject
 /** Concrete implicit encoders/decoders for mongo-java-driver */
 private[beaucatcher] object Support {
 
-    implicit def bobjectQueryEncodeSupport : QueryEncodeSupport[BObject] =
+    implicit def bobjectQueryEncodeSupport : QueryEncoder[BObject] =
         BObjectEncodeSupport
 
     implicit def bobjectEntityEncodeSupport : EntityEncodeSupport[BObject] =
         BObjectEncodeSupport
 
-    implicit def bobjectEntityDecodeSupport : EntityDecodeSupport[BObject] =
+    implicit def bobjectEntityDecodeSupport : QueryResultDecoder[BObject] =
         BObjectDecodeSupport
 
     private object BObjectEncodeSupport
         extends JavaEncodeSupport[BObject]
-        with QueryEncodeSupport[BObject]
+        with QueryEncoder[BObject]
         with EntityEncodeSupport[BObject] {
 
         override def toDBObject(bobj : BObject) : DBObject = {
@@ -30,7 +30,7 @@ private[beaucatcher] object Support {
 
     private object BObjectDecodeSupport
         extends JavaDecodeSupport[BObject]
-        with EntityDecodeSupport[BObject] {
+        with QueryResultDecoder[BObject] {
         override def fromBsonObject(obj : BSONObject) : BObject = {
             import Implicits._
             return obj

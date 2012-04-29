@@ -17,8 +17,8 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
 
     override def name: String
 
-    protected[beaucatcher] implicit def queryEncoder: QueryEncodeSupport[QueryType]
-    protected[beaucatcher] implicit def entityDecoder: EntityDecodeSupport[EntityType]
+    protected[beaucatcher] implicit def queryEncoder: QueryEncoder[QueryType]
+    protected[beaucatcher] implicit def entityDecoder: QueryResultDecoder[EntityType]
     protected[beaucatcher] implicit def entityEncoder: EntityEncodeSupport[EntityType]
 
     override def count(query: QueryType, options: CountOptions): Future[Long] = {
@@ -96,7 +96,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
             })
     }
 
-    private def findOne[Q](flags: Int, query: Q, fields: Option[Fields])(implicit querySupport: QueryEncodeSupport[Q]): Future[Option[EntityType]] = {
+    private def findOne[Q](flags: Int, query: Q, fields: Option[Fields])(implicit querySupport: QueryEncoder[Q]): Future[Option[EntityType]] = {
         connection.sendQueryOne[Q, Fields](flags, fullName, query, fields)
             .map({ replyOption =>
                 replyOption.map({ reply =>
@@ -195,7 +195,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
         throwOnFail(connection.sendUpdate(fullName, flags, query, modifier, safe))
     }
 
-    private def remove[Q](flags: Int, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[WriteResult] = {
+    private def remove[Q](flags: Int, query: Q)(implicit querySupport: QueryEncoder[Q]): Future[WriteResult] = {
         throwOnFail(connection.sendDelete(fullName, flags, query, safe))
     }
 
@@ -212,11 +212,11 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
     }
 
     // TODO don't do it this way?
-    private def indexNameHack[Q](keys: Q)(implicit querySupport: QueryEncodeSupport[Q]): String = {
+    private def indexNameHack[Q](keys: Q)(implicit querySupport: QueryEncoder[Q]): String = {
         import Support._
         // convert to BObject via serializing
         val bytes = querySupport.encode(keys)
-        val bobj = implicitly[EntityDecodeSupport[BObject]].decode(bytes)
+        val bobj = implicitly[QueryResultDecoder[BObject]].decode(bytes)
         // then compute the index name
         defaultIndexName(bobj)
     }
@@ -256,8 +256,8 @@ private[cdriver] abstract class BObjectChannelDriverAsyncCollection[IdType]
     extends ChannelDriverAsyncCollection[BObject, BObject, IdType, BValue]
     with BObjectAsyncCollection[IdType] {
 
-    protected[beaucatcher] override implicit def queryEncoder: QueryEncodeSupport[BObject] = Support.bobjectQueryEncodeSupport
-    protected[beaucatcher] override implicit def entityDecoder: EntityDecodeSupport[BObject] = Support.bobjectEntityDecodeSupport
+    protected[beaucatcher] override implicit def queryEncoder: QueryEncoder[BObject] = Support.bobjectQueryEncoder
+    protected[beaucatcher] override implicit def entityDecoder: QueryResultDecoder[BObject] = Support.bobjectQueryResultDecoder
     protected[beaucatcher] override implicit def entityEncoder: EntityEncodeSupport[BObject] = Support.bobjectEntityEncodeSupport
 
     protected override def wrapValue(v: Any): BValue = {
@@ -283,11 +283,11 @@ private[cdriver] abstract class BObjectChannelDriverAsyncCollection[IdType]
 // Another temporary hack because right now drivers know about particular
 // query/entity types
 private[cdriver] abstract class EntityChannelDriverAsyncCollection[EntityType <: AnyRef, IdType](val entityBObjectEntityComposer: EntityComposer[EntityType, BObject])(
-    override implicit val entityDecoder: EntityDecodeSupport[EntityType],
+    override implicit val entityDecoder: QueryResultDecoder[EntityType],
     override implicit val entityEncoder: EntityEncodeSupport[EntityType])
     extends ChannelDriverAsyncCollection[BObject, EntityType, IdType, Any]
     with EntityAsyncCollection[BObject, EntityType, IdType] {
-    override implicit def queryEncoder: QueryEncodeSupport[BObject] = Support.bobjectQueryEncodeSupport
+    override implicit def queryEncoder: QueryEncoder[BObject] = Support.bobjectQueryEncoder
 
     protected override def wrapValue(v: Any): Any = {
         v

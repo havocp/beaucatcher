@@ -70,7 +70,7 @@ private[cdriver] class Connection(private[cdriver] val system: ActorSystem, priv
     }
 
     def sendQuery[Q, F](flags: Int, fullCollectionName: String, numberToSkip: Int,
-        numberToReturn: Int, limit: Long, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncodeSupport[Q], fieldsSupport: QueryEncodeSupport[F]): Future[AsyncCursor[QueryReply]] = {
+        numberToReturn: Int, limit: Long, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncoder[Q], fieldsSupport: QueryEncoder[F]): Future[AsyncCursor[QueryReply]] = {
         acquireSocket()
             .flatMap({ socket =>
                 socket.sendQuery(flags, fullCollectionName, numberToSkip, numberToReturn, query, fieldsOption)
@@ -92,7 +92,7 @@ private[cdriver] class Connection(private[cdriver] val system: ActorSystem, priv
             })
     }
 
-    def sendQueryOne[Q, F](flags: Int, fullCollectionName: String, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncodeSupport[Q], fieldsSupport: QueryEncodeSupport[F]): Future[Option[QueryReply]] = {
+    def sendQueryOne[Q, F](flags: Int, fullCollectionName: String, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncoder[Q], fieldsSupport: QueryEncoder[F]): Future[Option[QueryReply]] = {
         acquireSocket()
             .flatMap({ socket =>
                 socket.sendQuery(flags, fullCollectionName, 0 /* skip */ , -1 /* num to return, no cursor */ , query, fieldsOption)
@@ -107,7 +107,7 @@ private[cdriver] class Connection(private[cdriver] val system: ActorSystem, priv
     }
 
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E, gle: GetLastError)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: QueryEncodeSupport[E]): Future[WriteResult] = {
+        query: Q, update: E, gle: GetLastError)(implicit querySupport: QueryEncoder[Q], entitySupport: QueryEncoder[E]): Future[WriteResult] = {
         acquireSocket().flatMap(withLastError(_, gle, _.sendUpdate(fullCollectionName, flags, query, update)))
     }
 
@@ -115,7 +115,7 @@ private[cdriver] class Connection(private[cdriver] val system: ActorSystem, priv
         acquireSocket().flatMap(withLastError(_, gle, _.sendInsert(flags, fullCollectionName, docs)))
     }
 
-    def sendDelete[Q](fullCollectionName: String, flags: Int, query: Q, gle: GetLastError)(implicit querySupport: QueryEncodeSupport[Q]): Future[WriteResult] = {
+    def sendDelete[Q](fullCollectionName: String, flags: Int, query: Q, gle: GetLastError)(implicit querySupport: QueryEncoder[Q]): Future[WriteResult] = {
         acquireSocket().flatMap(withLastError(_, gle, _.sendDelete(fullCollectionName, flags, query)))
     }
 
@@ -145,7 +145,7 @@ private[cdriver] class Connection(private[cdriver] val system: ActorSystem, priv
         })
     }
 
-    def sendCommand[Q](flags: Int, ns: String, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply] = {
+    def sendCommand[Q](flags: Int, ns: String, query: Q)(implicit querySupport: QueryEncoder[Q]): Future[QueryReply] = {
         acquireSocket().flatMap(_.sendCommand(flags, ns, query))
     }
 }

@@ -27,8 +27,8 @@ trait MongoSocket {
      * results and also a cursor ID.
      */
     def sendQuery[Q, F](flags: Int, fullCollectionName: String, numberToSkip: Int,
-        numberToReturn: Int, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncodeSupport[Q],
-            fieldsSupport: QueryEncodeSupport[F]): Future[QueryReply]
+        numberToReturn: Int, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncoder[Q],
+            fieldsSupport: QueryEncoder[F]): Future[QueryReply]
 
     /** Send an OP_GETMORE. Parameters map directly to protocol and are in the same order as on the wire. */
     def sendGetMore(fullCollectionName: String, numberToReturn: Int, cursorId: Long): Future[QueryReply]
@@ -38,7 +38,7 @@ trait MongoSocket {
      * Parameters map directly to protocol and are in the same order as on the wire.
      */
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: QueryEncodeSupport[E]): Future[Unit]
+        query: Q, update: E)(implicit querySupport: QueryEncoder[Q], entitySupport: QueryEncoder[E]): Future[Unit]
 
     /**
      * Send an OP_INSERT. No reply.
@@ -50,7 +50,7 @@ trait MongoSocket {
      * Send an OP_DELETE. No reply.
      * Parameters map directly to protocol and are in the same order as on the wire.
      */
-    def sendDelete[Q](fullCollectionName: String, flags: Int, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[Unit]
+    def sendDelete[Q](fullCollectionName: String, flags: Int, query: Q)(implicit querySupport: QueryEncoder[Q]): Future[Unit]
 
     /**
      * Send an OP_KILL_CURSORS. No reply.
@@ -62,7 +62,7 @@ trait MongoSocket {
      */
     def close(): Future[Unit]
 
-    final def sendCommand[Q](flags: Int, ns: String, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[QueryReply] = {
+    final def sendCommand[Q](flags: Int, ns: String, query: Q)(implicit querySupport: QueryEncoder[Q]): Future[QueryReply] = {
         sendQuery(flags, ns + ".$cmd", 0 /* skip */ , 1 /* return */ , query, None)
     }
 
@@ -75,7 +75,7 @@ trait QueryReply {
     def cursorId: Long
     def startingFrom: Int
     def numberReturned: Int
-    def iterator[E]()(implicit entitySupport: EntityDecodeSupport[E]): Iterator[E]
+    def iterator[E]()(implicit entitySupport: QueryResultDecoder[E]): Iterator[E]
 
     final def throwOnError(): Unit = {
         if ((responseFlags & Mongo.REPLY_FLAG_CURSOR_NOT_FOUND) != 0)

@@ -38,7 +38,7 @@ private[cdriver] class EntityBObjectChannelDriverCollectionFactory[EntityType <:
     require(entityBObjectEntityComposer != null)
 
     implicit private object EntityEncodeSupport
-        extends NettyEncodeSupport[EntityType]
+        extends NettyDocumentEncoder[EntityType]
         with EntityEncodeSupport[EntityType] {
         override final def write(buf: ChannelBuffer, t: EntityType): Unit = {
             val bobj = entityBObjectEntityComposer.entityIn(t)
@@ -47,8 +47,8 @@ private[cdriver] class EntityBObjectChannelDriverCollectionFactory[EntityType <:
     }
 
     implicit private object EntityDecodeSupport
-        extends NettyDecodeSupport[EntityType]
-        with EntityDecodeSupport[EntityType] {
+        extends NettyDocumentDecoder[EntityType]
+        with QueryResultDecoder[EntityType] {
         override final def read(buf: ChannelBuffer): EntityType = {
             val bobj = Support.BObjectDecodeSupport.read(buf)
             entityBObjectEntityComposer.entityOut(bobj)

@@ -45,14 +45,14 @@ package object cdriver {
             a
     }
 
-    private[cdriver] def decodeCommandResult[E](reply: QueryReply, fields: String*)(implicit entitySupport: EntityDecodeSupport[E]): DecodedResult = {
+    private[cdriver] def decodeCommandResult[E](reply: QueryReply, fields: String*)(implicit entitySupport: QueryResultDecoder[E]): DecodedResult = {
         import Support._
 
         // BObject here isn't expected to be actually used because
         // none of the fields we are fetching should have type object
         // TODO we could add a type which throws an exception if it's
         // ever decoded.
-        implicit val decoder = RawDecoded.rawEntityDecodeSupport[E](Seq("ok", "errmsg", "err", "code",
+        implicit val decoder = RawDecoded.rawQueryResultDecoder[E](Seq("ok", "errmsg", "err", "code",
             "n", "upserted", "updatedExisting") ++ fields)
         val doc = reply.iterator[RawDecoded]().next()
         val errOption = deNull(doc.fields.get("err")).map(_.asInstanceOf[String])
@@ -67,7 +67,7 @@ package object cdriver {
         DecodedResult(CommandResult(ok = ok, errmsg = errmsgOption, err = errOption, code = codeOption), doc.fields)
     }
 
-    private[cdriver] def decodeWriteResult[E](reply: QueryReply, fields: String*)(implicit entitySupport: EntityDecodeSupport[E]): DecodedWriteResult = {
+    private[cdriver] def decodeWriteResult[E](reply: QueryReply, fields: String*)(implicit entitySupport: QueryResultDecoder[E]): DecodedWriteResult = {
         val command = decodeCommandResult(reply, fields: _*)
 
         val n = deNull(command.fields.get("n")).map(_.asInstanceOf[Number].intValue).getOrElse(0)

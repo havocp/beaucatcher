@@ -63,11 +63,11 @@ package object netty {
         buf.writeByte(zeroByte)
     }
 
-    private[beaucatcher] def writeDocument[D](buf: ChannelBuffer, doc: D, maxSize: Int)(implicit encodeSupport: EncodeSupport[D]): Unit = {
+    private[beaucatcher] def writeDocument[D](buf: ChannelBuffer, doc: D, maxSize: Int)(implicit encodeSupport: DocumentEncoder[D]): Unit = {
         val start = buf.writerIndex()
         encodeSupport match {
-            case nettySupport: NettyEncodeSupport[_] =>
-                nettySupport.asInstanceOf[NettyEncodeSupport[D]].write(buf, doc)
+            case nettySupport: NettyDocumentEncoder[_] =>
+                nettySupport.asInstanceOf[NettyDocumentEncoder[D]].write(buf, doc)
             case _ =>
                 val bb = encodeSupport.encode(doc)
                 buf.ensureWritableBytes(bb.remaining())
@@ -78,7 +78,7 @@ package object netty {
             throw new MongoChannelException("Document is too large (" + size + " bytes but the max is " + maxSize + ")")
     }
 
-    private[beaucatcher] def writeQuery[Q](buf: ChannelBuffer, query: Q, maxSize: Int)(implicit querySupport: QueryEncodeSupport[Q]): Unit = {
+    private[beaucatcher] def writeQuery[Q](buf: ChannelBuffer, query: Q, maxSize: Int)(implicit querySupport: QueryEncoder[Q]): Unit = {
         writeDocument(buf, query, maxSize)
     }
 
@@ -86,10 +86,10 @@ package object netty {
         writeDocument(buf, entity, maxSize)
     }
 
-    private[beaucatcher] def readEntity[E](buf: ChannelBuffer)(implicit entitySupport: EntityDecodeSupport[E]): E = {
+    private[beaucatcher] def readEntity[E](buf: ChannelBuffer)(implicit entitySupport: QueryResultDecoder[E]): E = {
         entitySupport match {
-            case nettySupport: NettyDecodeSupport[_] =>
-                nettySupport.asInstanceOf[NettyDecodeSupport[E]].read(buf)
+            case nettySupport: NettyDocumentDecoder[_] =>
+                nettySupport.asInstanceOf[NettyDocumentDecoder[E]].read(buf)
             case _ =>
                 entitySupport.decode(buf.toByteBuffer())
         }

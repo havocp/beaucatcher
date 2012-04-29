@@ -70,11 +70,11 @@ private[cdriver] class RawEncoded {
         writeFieldObjectId(buf, name, value)
     }
 
-    def writeField[Q](name: String, query: Option[Q])(implicit querySupport: QueryEncodeSupport[Q]): Unit = {
+    def writeField[Q](name: String, query: Option[Q])(implicit querySupport: QueryEncoder[Q]): Unit = {
         query.foreach({ v => writeField(name, v) })
     }
 
-    def writeField[Q](name: String, query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Unit = {
+    def writeField[Q](name: String, query: Q)(implicit querySupport: QueryEncoder[Q]): Unit = {
         ensureFieldBytes(name)
         writeFieldObject(buf, name, query)
     }
@@ -117,22 +117,22 @@ private[cdriver] class RawEncoded {
 
 object RawEncoded {
     private object RawEncodeSupport
-        extends NettyEncodeSupport[RawEncoded]
-        with QueryEncodeSupport[RawEncoded]
+        extends NettyDocumentEncoder[RawEncoded]
+        with QueryEncoder[RawEncoded]
         with EntityEncodeSupport[RawEncoded] {
         override final def write(buf: ChannelBuffer, t: RawEncoded): Unit = {
             t.writeTo(buf)
         }
     }
 
-    implicit def rawQueryEncodeSupport: QueryEncodeSupport[RawEncoded] = RawEncodeSupport
+    implicit def rawQueryEncoder: QueryEncoder[RawEncoded] = RawEncodeSupport
     implicit def rawEntityEncodeSupport: EntityEncodeSupport[RawEncoded] = RawEncodeSupport
 
     def apply(): RawEncoded = new RawEncoded()
 
     private object FieldsEncodeSupport
-        extends NettyEncodeSupport[Fields]
-        with QueryEncodeSupport[Fields] {
+        extends NettyDocumentEncoder[Fields]
+        with QueryEncoder[Fields] {
         override final def write(buf: ChannelBuffer, t: Fields): Unit = {
             val raw = RawEncoded()
             raw.writeFields(t)
@@ -140,7 +140,7 @@ object RawEncoded {
         }
     }
 
-    implicit def fieldsQueryEncodeSupport: QueryEncodeSupport[Fields] = FieldsEncodeSupport
+    implicit def fieldsQueryEncoder: QueryEncoder[Fields] = FieldsEncodeSupport
 }
 
 private[cdriver] class RawDecoded {
@@ -153,9 +153,9 @@ object RawDecoded {
     import org.beaucatcher.wire._
     import Support._
 
-    private class RawDecodeSupport[NestedEntityType](val needed: Seq[String])(implicit val nestedDecodeSupport: EntityDecodeSupport[NestedEntityType])
-        extends NettyDecodeSupport[RawDecoded]
-        with EntityDecodeSupport[RawDecoded] {
+    private class RawDecodeSupport[NestedEntityType](val needed: Seq[String])(implicit val nestedDecodeSupport: QueryResultDecoder[NestedEntityType])
+        extends NettyDocumentDecoder[RawDecoded]
+        with QueryResultDecoder[RawDecoded] {
 
         private def readArray(buf: ChannelBuffer): Seq[Any] = {
             val len = buf.readInt()
@@ -248,7 +248,7 @@ object RawDecoded {
         }
     }
 
-    def rawEntityDecodeSupport[NestedEntityType](needed: Seq[String])(implicit nestedSupport: EntityDecodeSupport[NestedEntityType]): EntityDecodeSupport[RawDecoded] =
+    def rawQueryResultDecoder[NestedEntityType](needed: Seq[String])(implicit nestedSupport: QueryResultDecoder[NestedEntityType]): QueryResultDecoder[RawDecoded] =
         new RawDecodeSupport(needed)
 
     def apply(): RawDecoded = new RawDecoded()

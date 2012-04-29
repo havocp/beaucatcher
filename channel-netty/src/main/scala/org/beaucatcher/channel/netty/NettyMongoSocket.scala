@@ -34,7 +34,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         (i, p)
     }
 
-    private class NettyEntityIterator[E](val buf: ChannelBuffer)(implicit val entitySupport: EntityDecodeSupport[E]) extends Iterator[E] {
+    private class NettyEntityIterator[E](val buf: ChannelBuffer)(implicit val entitySupport: QueryResultDecoder[E]) extends Iterator[E] {
         override def hasNext: Boolean =
             buf.readableBytes() > 0
 
@@ -54,7 +54,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
         override lazy val startingFrom: Int = buf.getInt(Mongo.MESSAGE_HEADER_LENGTH + 12)
         override lazy val numberReturned: Int = buf.getInt(Mongo.MESSAGE_HEADER_LENGTH + 16)
 
-        override def iterator[E]()(implicit entitySupport: EntityDecodeSupport[E]): Iterator[E] = {
+        override def iterator[E]()(implicit entitySupport: QueryResultDecoder[E]): Iterator[E] = {
             val offset = Mongo.MESSAGE_HEADER_LENGTH + 20
             val documentsStart = buf.readerIndex + offset
             // slice() gives the iterator its own reader/writer indexes but
@@ -122,8 +122,8 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
     }
 
     override def sendQuery[Q, F](flags: Int, fullCollectionName: String, numberToSkip: Int,
-        numberToReturn: Int, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncodeSupport[Q],
-            fieldsSupport: QueryEncodeSupport[F]): Future[QueryReply] = {
+        numberToReturn: Int, query: Q, fieldsOption: Option[F])(implicit querySupport: QueryEncoder[Q],
+            fieldsSupport: QueryEncoder[F]): Future[QueryReply] = {
         withQueryReply { (serial, promise) =>
             // struct { int messageLength, int requestId, int responseTo, int opCode }
             // struct { int flags, cstring fullCollectionName, int numberToSkip, int numberToReturn, doc query, [doc fields] }
@@ -166,7 +166,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
     }
 
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E)(implicit querySupport: QueryEncodeSupport[Q], entitySupport: QueryEncodeSupport[E]): Future[Unit] = {
+        query: Q, update: E)(implicit querySupport: QueryEncoder[Q], entitySupport: QueryEncoder[E]): Future[Unit] = {
         val promise = Promise[Unit]()
 
         val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_UPDATE,
@@ -202,7 +202,7 @@ final class NettyMongoSocket(private val channel: Channel)(implicit private val 
     }
 
     def sendDelete[Q](fullCollectionName: String, flags: Int,
-        query: Q)(implicit querySupport: QueryEncodeSupport[Q]): Future[Unit] = {
+        query: Q)(implicit querySupport: QueryEncoder[Q]): Future[Unit] = {
         val promise = Promise[Unit]()
 
         val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_DELETE,
