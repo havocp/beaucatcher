@@ -213,7 +213,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
 
     // TODO don't do it this way?
     private def indexNameHack[Q](keys: Q)(implicit querySupport: QueryEncoder[Q]): String = {
-        import Support._
+        import Codecs._
         // convert to BObject via serializing
         val bytes = querySupport.encode(keys)
         val bobj = implicitly[QueryResultDecoder[BObject]].decode(bytes)
@@ -256,9 +256,9 @@ private[cdriver] abstract class BObjectChannelDriverAsyncCollection[IdType]
     extends ChannelDriverAsyncCollection[BObject, BObject, IdType, BValue]
     with BObjectAsyncCollection[IdType] {
 
-    protected[beaucatcher] override implicit def queryEncoder: QueryEncoder[BObject] = Support.bobjectQueryEncoder
-    protected[beaucatcher] override implicit def entityDecoder: QueryResultDecoder[BObject] = Support.bobjectQueryResultDecoder
-    protected[beaucatcher] override implicit def entityEncoder: EntityEncodeSupport[BObject] = Support.bobjectEntityEncodeSupport
+    protected[beaucatcher] override implicit def queryEncoder: QueryEncoder[BObject] = Codecs.bobjectQueryEncoder
+    protected[beaucatcher] override implicit def entityDecoder: QueryResultDecoder[BObject] = Codecs.bobjectQueryResultDecoder
+    protected[beaucatcher] override implicit def entityEncoder: EntityEncodeSupport[BObject] = Codecs.bobjectEntityEncodeSupport
 
     protected override def wrapValue(v: Any): BValue = {
         BValue.wrap(v)
@@ -287,7 +287,7 @@ private[cdriver] abstract class EntityChannelDriverAsyncCollection[EntityType <:
     override implicit val entityEncoder: EntityEncodeSupport[EntityType])
     extends ChannelDriverAsyncCollection[BObject, EntityType, IdType, Any]
     with EntityAsyncCollection[BObject, EntityType, IdType] {
-    override implicit def queryEncoder: QueryEncoder[BObject] = Support.bobjectQueryEncoder
+    override implicit def queryEncoder: QueryEncoder[BObject] = Codecs.bobjectQueryEncoder
 
     protected override def wrapValue(v: Any): Any = {
         v

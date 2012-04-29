@@ -27,7 +27,7 @@ private[cdriver] final class ChannelDriverDatabase(override val context: Channel
     override lazy val async = new ChannelDriverAsyncDatabase(this)
 
     private[cdriver] def command(cmd: BObject, options: CommandOptions): Future[CommandResult] = {
-        import Support._
+        import Codecs._
 
         context.connection.sendCommand(queryFlags(options.overrideQueryFlags), name, cmd)
             .map({ reply =>

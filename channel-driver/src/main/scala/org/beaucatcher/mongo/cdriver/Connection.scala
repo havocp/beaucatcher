@@ -1,6 +1,6 @@
 package org.beaucatcher.mongo.cdriver
 
-import Support._
+import Codecs._
 import akka.actor._
 import akka.dispatch._
 import akka.pattern._

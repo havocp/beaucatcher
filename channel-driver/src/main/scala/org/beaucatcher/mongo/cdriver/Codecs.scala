@@ -9,7 +9,7 @@ import java.nio.ByteOrder
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers._
 
-private[beaucatcher] object Support {
+private[beaucatcher] object Codecs {
 
     implicit def bobjectQueryEncoder: QueryEncoder[BObject] =
         BObjectEncodeSupport

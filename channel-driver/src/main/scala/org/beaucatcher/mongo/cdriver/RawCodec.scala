@@ -8,7 +8,7 @@ import org.jboss.netty.buffer.ChannelBuffers._
 import java.nio.ByteOrder
 
 private[cdriver] class RawEncoded {
-    import Support._
+    import Codecs._
 
     private val buf: ChannelBuffer = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 32)
 
@@ -144,14 +144,14 @@ object RawEncoded {
 }
 
 private[cdriver] class RawDecoded {
-    import Support._
+    import Codecs._
 
     var fields: Map[String, Any] = Map.empty
 }
 
 object RawDecoded {
     import org.beaucatcher.wire._
-    import Support._
+    import Codecs._
 
     private class RawDecodeSupport[NestedEntityType](val needed: Seq[String])(implicit val nestedDecodeSupport: QueryResultDecoder[NestedEntityType])
         extends NettyDocumentDecoder[RawDecoded]

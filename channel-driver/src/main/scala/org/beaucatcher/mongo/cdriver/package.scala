@@ -46,7 +46,7 @@ package object cdriver {
     }
 
     private[cdriver] def decodeCommandResult[E](reply: QueryReply, fields: String*)(implicit entitySupport: QueryResultDecoder[E]): DecodedResult = {
-        import Support._
+        import Codecs._
 
         // BObject here isn't expected to be actually used because
         // none of the fields we are fetching should have type object

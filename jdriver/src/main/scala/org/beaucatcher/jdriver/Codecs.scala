@@ -7,7 +7,7 @@ import com.mongodb.DBObject
 import org.bson.BSONObject
 
 /** Concrete implicit encoders/decoders for mongo-java-driver */
-private[beaucatcher] object Support {
+private[beaucatcher] object Codecs {
 
     implicit def bobjectQueryEncodeSupport : QueryEncoder[BObject] =
         BObjectEncodeSupport

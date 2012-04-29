@@ -42,7 +42,7 @@ private[cdriver] class EntityBObjectChannelDriverCollectionFactory[EntityType <:
         with EntityEncodeSupport[EntityType] {
         override final def write(buf: ChannelBuffer, t: EntityType): Unit = {
             val bobj = entityBObjectEntityComposer.entityIn(t)
-            Support.BObjectEncodeSupport.write(buf, bobj)
+            Codecs.BObjectEncodeSupport.write(buf, bobj)
         }
     }
 
@@ -50,7 +50,7 @@ private[cdriver] class EntityBObjectChannelDriverCollectionFactory[EntityType <:
         extends NettyDocumentDecoder[EntityType]
         with QueryResultDecoder[EntityType] {
         override final def read(buf: ChannelBuffer): EntityType = {
-            val bobj = Support.BObjectDecodeSupport.read(buf)
+            val bobj = Codecs.BObjectDecodeSupport.read(buf)
             entityBObjectEntityComposer.entityOut(bobj)
         }
     }

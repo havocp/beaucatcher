@@ -15,7 +15,7 @@ import java.util.Random
 class SerializerTest extends TestUtils {
 
     private def testRoundTrip(bobj: BObject): Unit = {
-        import Support._
+        import Codecs._
 
         val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 128)
 
@@ -56,7 +56,7 @@ class SerializerTest extends TestUtils {
 
     @Test
     def growBufferWhenNeeded(): Unit = {
-        import Support._
+        import Codecs._
 
         val rand = new Random(1234L)
         val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 1)
