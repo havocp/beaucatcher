@@ -168,8 +168,7 @@ private[netty] final class NettyMongoSocket(private val channel: Channel)(implic
         }
     }
 
-    def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E)(implicit querySupport: QueryEncoder[Q], entitySupport: QueryEncoder[E]): Future[Unit] = {
+    private def sendUpdate[Q, E](fullCollectionName: String, flags: Int, writeQueryAndMod: (EncodeBuffer) => Unit): Future[Unit] = {
         val promise = Promise[Unit]()
 
         val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_UPDATE,
@@ -179,16 +178,38 @@ private[netty] final class NettyMongoSocket(private val channel: Channel)(implic
         writeNulString(buf, fullCollectionName)
         buf.ensureWritableBytes(4) // in case nul string was longer than guessed
         buf.writeInt(flags)
-        writeQuery(buf, query, maxDocumentSize)
-        writeQuery(buf, update, maxDocumentSize)
+
+        writeQueryAndMod(buf)
 
         sendMessageNoReply(buf, promise)
 
         promise
     }
 
+    def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
+        query: Q, update: E)(implicit querySupport: QueryEncoder[Q], entitySupport: ModifierEncoder[E]): Future[Unit] = {
+        sendUpdate(fullCollectionName, flags, { buf: EncodeBuffer =>
+            writeQuery(buf, query, maxDocumentSize)
+            writeModifier(buf, update, maxDocumentSize)
+        })
+    }
+
+    def sendSave[E](fullCollectionName: String, flags: Int, update: E)(implicit querySupport: UpdateQueryEncoder[E], upsertEncoder: UpsertEncoder[E]): Future[Unit] = {
+        sendUpdate(fullCollectionName, flags, { buf: EncodeBuffer =>
+            writeUpdateQuery(buf, update, maxDocumentSize)
+            writeUpsert(buf, update, maxDocumentSize)
+        })
+    }
+
+    def sendUpdateUpsert[Q, E](fullCollectionName: String, flags: Int, query: Q, update: E)(implicit querySupport: QueryEncoder[Q], upsertEncoder: UpsertEncoder[E]): Future[Unit] = {
+        sendUpdate(fullCollectionName, flags, { buf: EncodeBuffer =>
+            writeQuery(buf, query, maxDocumentSize)
+            writeUpsert(buf, update, maxDocumentSize)
+        })
+    }
+
     def sendInsert[E](flags: Int, fullCollectionName: String,
-        docs: Traversable[E])(implicit entitySupport: EntityEncodeSupport[E]): Future[Unit] = {
+        docs: Traversable[E])(implicit entitySupport: UpsertEncoder[E]): Future[Unit] = {
         val promise = Promise[Unit]()
 
         val buf = messageBuffer(nextSerial.getAndIncrement(), Mongo.OP_INSERT,
@@ -197,7 +218,7 @@ private[netty] final class NettyMongoSocket(private val channel: Channel)(implic
         buf.writeInt(flags)
         writeNulString(buf, fullCollectionName)
         for (doc <- docs)
-            writeEntity(buf, doc, maxDocumentSize)
+            writeUpsert(buf, doc, maxDocumentSize)
 
         sendMessageNoReply(buf, promise)
 

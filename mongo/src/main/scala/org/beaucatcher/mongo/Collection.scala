@@ -1,5 +1,7 @@
 package org.beaucatcher.mongo
 
+import org.beaucatcher.driver._
+
 /**
  * Common base class between ReadOnlySyncCollection and ReadOnlyAsyncCollection, holding
  * only those operations that are always synchronous.
@@ -14,20 +16,15 @@ trait ReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
     final def database : Database = context.database
 
     /** The name of the collection */
-    def name : String
+    def name : String = underlying.name
 
-    // this has to be lazy since "database" may not be
-    // valid yet during construct
-    private lazy val _fullName = database.name + "." + name
+    /** The name of the collection with database included, like "databaseName.collectionName" */
+    def fullName : String = underlying.fullName
 
-    /**
-     * The name of the collection with database included, like "databaseName.collectionName"
-     *
-     */
-    def fullName : String = _fullName
+    // this has to be a 'val' so it can be imported
+    protected[mongo] val codecs : ReadOnlyCollectionCodecSet[QueryType, EntityType, IdType, ValueType]
 
-    /** Construct an empty query object */
-    def emptyQuery : QueryType
+    protected[mongo] def underlying : ReadOnlyDriverCollection
 }
 
 /**
@@ -35,17 +32,8 @@ trait ReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
  * holding only those operations that are always synchronous.
  */
 trait Collection[QueryType, EntityType, IdType, ValueType] extends ReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
+    // this has to be a 'val' so it can be imported
+    protected[mongo] override val codecs : CollectionCodecSet[QueryType, EntityType, IdType, ValueType]
 
-    /** An upsertable object generally must have all fields and must have an ID. */
-    def entityToUpsertableObject(entity : EntityType) : QueryType
-    /**
-     * A modifier object generally must not have an ID, and may be missing fields that
-     * won't be modified.
-     */
-    def entityToModifierObject(entity : EntityType) : QueryType
-    /**
-     * Returns a query that matches only the given entity,
-     * such as a query for the entity's ID.
-     */
-    def entityToUpdateQuery(entity : EntityType) : QueryType
+    protected[mongo] override def underlying : DriverCollection
 }

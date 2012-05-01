@@ -1,6 +1,7 @@
 package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
+import org.beaucatcher.driver._
 import akka.actor.ActorSystem
 import scala.annotation.implicitNotFound
 
@@ -17,7 +18,6 @@ import scala.annotation.implicitNotFound
 @implicitNotFound(msg = "No mongo.Context found")
 trait Context {
     type DriverType <: Driver
-    type DatabaseType <: Database
     type UnderlyingConnectionType
     type UnderlyingDatabaseType
     type UnderlyingCollectionType
@@ -26,9 +26,11 @@ trait Context {
     def underlyingDatabase : UnderlyingDatabaseType
     def underlyingCollection(name : String) : UnderlyingCollectionType
 
+    private[beaucatcher] def driverContext : DriverContext
+
     def driver : DriverType
 
-    def database : DatabaseType
+    def database : Database
 
     def config : MongoConfig
 
@@ -41,6 +43,32 @@ trait Context {
     def close : Unit
 }
 
-trait ContextProvider {
+trait ContextProvider extends DriverProvider {
     def mongoContext : Context
+    override final def mongoDriver = mongoContext.driver
+}
+
+object Context {
+    def apply[D <: Driver](driver : D, config : MongoConfig, system : ActorSystem) : Context = {
+        val outerDriver = driver
+        val outerConfig = config
+        new Context() {
+            override val driver = outerDriver
+            override lazy val driverContext = driver.newContext(config.url, system)
+            override lazy val database = Database(this)
+            override val config = outerConfig
+            override val actorSystem = system
+            override def close() : Unit = driverContext.close()
+
+            override type DriverType = D
+            override type UnderlyingConnectionType = driverContext.UnderlyingConnectionType
+            override type UnderlyingDatabaseType = driverContext.UnderlyingDatabaseType
+            override type UnderlyingCollectionType = driverContext.UnderlyingCollectionType
+
+            override def underlyingConnection = driverContext.underlyingConnection
+            override def underlyingDatabase = driverContext.underlyingDatabase
+            override def underlyingCollection(name : String) = driverContext.underlyingCollection(name)
+
+        }
+    }
 }

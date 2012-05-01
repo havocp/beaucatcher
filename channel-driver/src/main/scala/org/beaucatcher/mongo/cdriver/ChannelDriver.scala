@@ -2,28 +2,41 @@ package org.beaucatcher.mongo.cdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import org.beaucatcher.driver._
 import org.beaucatcher.channel._
 import akka.actor.ActorSystem
 
 final class ChannelDriver private[cdriver] (private[cdriver] val backend: ChannelBackend)
     extends Driver {
 
-    override final def createCollectionFactory[EntityType <: AnyRef: Manifest, IdType: Manifest](collectionName: String,
-        caseClassBObjectQueryComposer: QueryComposer[BObject, BObject],
-        caseClassBObjectEntityComposer: EntityComposer[EntityType, BObject]): CollectionFactory[EntityType, IdType, IdType] = {
-        // TODO the query composer is just ignored by the channel driver.
-        // The composer thing is pretty much BS in the new regime
-        // anyway, we'll have to clean it up.
-        new EntityBObjectChannelDriverCollectionFactory(this, collectionName,
-            caseClassBObjectEntityComposer)
+    private[beaucatcher] override def newBObjectCodecSet[IdType: IdEncoder](): CollectionCodecSet[BObject, BObject, IdType, BValue] =
+        Codecs.newBObjectCodecSet()
+
+    private[beaucatcher] override def newCaseClassCodecSet[EntityType <: Product: Manifest, IdType: IdEncoder](): CollectionCodecSet[BObject, EntityType, IdType, Any] =
+        Codecs.newCaseClassCodecSet()
+
+    private[beaucatcher] override def newStringIdEncoder(): IdEncoder[String] =
+        Codecs.stringIdEncoder
+
+    private[beaucatcher] override def newObjectIdIdEncoder(): IdEncoder[ObjectId] =
+        Codecs.objectIdIdEncoder
+
+    private[beaucatcher] override def newBObjectBasedCodecs[E](toBObject: (E) => BObject,
+        fromBObject: (BObject) => E): BObjectBasedCodecs[E] = {
+        import Codecs._
+        BObjectBasedCodecs[E](toBObject, fromBObject)
     }
 
-    override def createCollectionFactoryWithoutEntity[IdType: Manifest](collectionName: String): CollectionFactoryWithoutEntity[IdType] = {
-        new BObjectChannelDriverCollectionFactory(this, collectionName)
+    private[beaucatcher] override def newSyncCollection(name: String)(implicit context: DriverContext): SyncDriverCollection = {
+        SyncDriverCollection.fromAsync(newAsyncCollection(name))
     }
 
-    def newContext(config: MongoConfig, system: ActorSystem): Context = {
-        new ChannelDriverContext(this, config, system)
+    private[beaucatcher] override def newAsyncCollection(name: String)(implicit context: DriverContext): AsyncDriverCollection = {
+        new ChannelDriverAsyncCollection(name, context.asChannelContext)
+    }
+
+    private[beaucatcher] override def newContext(url: String, system: ActorSystem): DriverContext = {
+        new ChannelDriverContext(this, url, system)
     }
 }
 

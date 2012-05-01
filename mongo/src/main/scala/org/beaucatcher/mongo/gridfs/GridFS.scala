@@ -2,23 +2,37 @@ package org.beaucatcher.mongo.gridfs
 
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
+import org.beaucatcher.driver._
 import org.beaucatcher.bson.Implicits._
 import java.io._
 
 // access to implementation collections, can be shared among GridFS objects for same bucket
-private[gridfs] class GridFSCollections(driver : Driver, val bucket : String) {
-    private def createCollectionAccessWithEntity[EntityType <: AnyRef : Manifest, IdType : Manifest](name : String, composer : EntityComposer[EntityType, BObject],
+private[gridfs] class GridFSCollections(driver : Driver, val bucket : String)(implicit bobjectQueryEncoder : QueryEncoder[BObject],
+    bobjectQueryResultDecoder : QueryResultDecoder[BObject],
+    bobjectUpdateQueryEncoder : UpdateQueryEncoder[BObject],
+    bobjectUpsertEncoder : UpsertEncoder[BObject],
+    bobjectModifierEncoder : ModifierEncoder[BObject],
+    objectIdIdEncoder : IdEncoder[ObjectId],
+    anyValueDecoder : ValueDecoder[Any]) {
+    private lazy val fileCodecSet = {
+        val fileCodecs = driver.newBObjectBasedCodecs[GridFSFile](f => f.underlying, obj => new GridFSFile(obj))
+        import fileCodecs._
+
+        CollectionCodecSet[BObject, GridFSFile, ObjectId, Any]()
+    }
+
+    private def createCollectionAccessWithEntity[EntityType <: AnyRef : Manifest, IdType : IdEncoder](name : String, entityCodecs : CollectionCodecSet[BObject, EntityType, IdType, Any],
         migrateCallback : (CollectionAccess[EntityType, IdType], Context) => Unit) = {
         val d = driver
         new CollectionAccess[EntityType, IdType] with DriverProvider {
             override val mongoDriver = d
             override val collectionName = name
-            override val entityBObjectEntityComposer = composer
+            override val entityCodecSet = entityCodecs
             override def migrate(implicit context : Context) = migrateCallback(this, context)
         }
     }
 
-    private def createCollectionAccessWithoutEntity[IdType : Manifest](name : String,
+    private def createCollectionAccessWithoutEntity[IdType : IdEncoder](name : String,
         migrateCallback : (CollectionAccessWithoutEntity[IdType], Context) => Unit) = {
         val d = driver
         new CollectionAccessWithoutEntity[IdType] with DriverProvider {
@@ -30,8 +44,9 @@ private[gridfs] class GridFSCollections(driver : Driver, val bucket : String) {
     }
 
     lazy val files : CollectionAccessTrait[GridFSFile, ObjectId] = {
+        import Codecs._
         val access = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files",
-            GridFSCollections.fileComposer,
+            fileCodecSet,
             { (access, context) =>
                 // this isn't in the gridfs spec but it is in the Java implementation
                 access.sync(context).ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
@@ -41,6 +56,7 @@ private[gridfs] class GridFSCollections(driver : Driver, val bucket : String) {
     }
 
     lazy val chunks : CollectionAccessWithoutEntityTrait[ObjectId] = {
+        import Codecs._
         val access = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks",
             { (access, context) =>
                 access.sync(context).ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
@@ -52,14 +68,7 @@ private[gridfs] class GridFSCollections(driver : Driver, val bucket : String) {
 }
 
 object GridFSCollections {
-    private lazy val fileComposer = new EntityComposer[GridFSFile, BObject] {
-        override def entityIn(f : GridFSFile) : BObject = {
-            f.underlying
-        }
-        override def entityOut(obj : BObject) : GridFSFile = {
-            new GridFSFile(obj)
-        }
-    }
+
 }
 
 trait GridFS {
@@ -143,12 +152,19 @@ sealed trait SyncGridFS extends GridFS {
 }
 
 object SyncGridFS {
+    private[gridfs] def newGridFSCollections(driver : Driver, bucket : String) : GridFSCollections = {
+        implicit val idEncoder = driver.newObjectIdIdEncoder
+        val codecs = driver.newBObjectCodecSet[ObjectId]()
+        import codecs.{ collectionModifierEncoderEntity => _, collectionIdEncoder => _, _ }
+        new GridFSCollections(driver, bucket)
+    }
+
     /**
      * Manually creates a SyncGridFS. You could also create an object that
      * extends GridFSAccess and use the "sync" field in that object.
      */
     def apply(bucket : String)(implicit context : Context) : SyncGridFS = {
-        new ConcreteSyncGridFS(new GridFSCollections(context.driver, bucket), context)
+        new ConcreteSyncGridFS(newGridFSCollections(context.driver, bucket), context)
     }
 }
 
@@ -173,7 +189,7 @@ abstract class GridFSAccess extends GridFSAccessTrait {
     self : DriverProvider =>
 
     // this is shared between the sync and async access objects
-    private lazy val collections = new GridFSCollections(mongoDriver, bucket)
+    private lazy val collections = SyncGridFS.newGridFSCollections(mongoDriver, bucket)
 
     override def sync(implicit context : Context) : SyncGridFS = new ConcreteSyncGridFS(collections, context)
 }

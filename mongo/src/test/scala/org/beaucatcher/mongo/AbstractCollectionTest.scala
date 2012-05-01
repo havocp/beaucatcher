@@ -117,14 +117,6 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         assertEquals("woohoo", f.stringField)
     }
 
-    @Test
-    def testEmptyQuery() {
-        val e1 = Foo.sync[BObject].emptyQuery
-        assertEquals(BObject.empty, e1)
-        val e2 = Foo.sync[Foo].emptyQuery
-        assertEquals(BObject.empty, e2)
-    }
-
     private def create1234() {
         for (i <- 1 to 4) {
             val foo = newFoo(ObjectId(), i, i.toString)
@@ -853,14 +845,14 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         Foo.sync[Foo].updateUpsert(BObject("_id" -> f._id), f)
         assertEquals(1, Foo.sync.count())
         val foundById = Foo.sync[Foo].findOneById(f._id)
-        assertTrue(foundById.isDefined)
+        assertTrue("found by ID", foundById.isDefined)
         assertEquals(14, foundById.get.intField)
 
         // duplicate should not throw on an upsert
         Foo.sync[Foo].updateUpsert(BObject("_id" -> f._id), f)
         assertEquals(1, Foo.sync.count())
         val foundById2 = Foo.sync[Foo].findOneById(f._id)
-        assertTrue(foundById2.isDefined)
+        assertTrue("found by ID 2", foundById2.isDefined)
         assertEquals(14, foundById2.get.intField)
 
         // making a change should be possible with an upsert
@@ -868,7 +860,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         Foo.sync[Foo].updateUpsert(BObject("_id" -> f2._id), f2)
         assertEquals(1, Foo.sync.count())
         val foundById3 = Foo.sync[Foo].findOneById(f2._id)
-        assertTrue(foundById3.isDefined)
+        assertTrue("found by ID 3", foundById3.isDefined)
         assertEquals(15, foundById3.get.intField)
         assertEquals(f._id, foundById3.get._id)
     }

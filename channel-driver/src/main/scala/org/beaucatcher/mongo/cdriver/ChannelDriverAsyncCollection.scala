@@ -5,27 +5,20 @@ import akka.util.duration._
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import org.beaucatcher.channel._
+import org.beaucatcher.driver._
 import org.beaucatcher.wire._
 
-private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityType, IdType <: Any, ValueType] extends AsyncCollection[QueryType, EntityType, IdType, ValueType] {
+private[cdriver] final class ChannelDriverAsyncCollection(override val name: String, override val context: ChannelDriverContext) extends AsyncDriverCollection {
 
     import RawEncoded._
 
-    private[beaucatcher] override def context: ChannelDriverContext
-
     private[cdriver] def connection: Connection = context.connection
-
-    override def name: String
-
-    protected[beaucatcher] implicit def queryEncoder: QueryEncoder[QueryType]
-    protected[beaucatcher] implicit def entityDecoder: QueryResultDecoder[EntityType]
-    protected[beaucatcher] implicit def entityEncoder: EntityEncodeSupport[EntityType]
 
     private def newRaw() = RawEncoded(context.driver.backend)
     // must be lazy since it uses stuff that isn't available at construct
     private implicit lazy val fieldsEncoder = newFieldsQueryEncoder(context.driver.backend)
 
-    override def count(query: QueryType, options: CountOptions): Future[Long] = {
+    override def count[Q](query: Q, options: CountOptions)(implicit queryEncoder: QueryEncoder[Q]): Future[Long] = {
         val raw = newRaw()
         raw.writeField("count", name)
         raw.writeField("query", query)
@@ -34,7 +27,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
         raw.writeField("fields", options.fields)
 
         connection.sendCommand(queryFlags(options.overrideQueryFlags), database.name, raw) map { reply =>
-            val result = decodeCommandResult(reply, "n")
+            val result = decodeCommandResult[BugIfDecoded](reply, "n")
             result.result.throwIfNotOk()
             result.fields.get("n") match {
                 case Some(n: Number) =>
@@ -45,24 +38,23 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
         }
     }
 
-    protected def wrapValue(v: Any): ValueType
-
     // TODO there is no reason this should have an Iterator[Future] because it
     // never does batch paging like a cursor it looks like
-    override def distinct(key: String, options: DistinctOptions[QueryType]): Future[Iterator[Future[ValueType]]] = {
+    override def distinct[Q, V](key: String, options: DistinctOptions[Q])(implicit queryEncoder: QueryEncoder[Q], valueDecoder: ValueDecoder[V]): Future[Iterator[V]] = {
+        import Codecs._
+
         val raw = newRaw()
         raw.writeField("distinct", name)
         raw.writeField("key", key)
         raw.writeField("query", options.query)
 
         connection.sendCommand(queryFlags(options.overrideQueryFlags), database.name, raw) map { reply =>
-            val result = decodeCommandResult(reply, "values")
+            val result = decodeCommandResultFields[BugIfDecoded](reply, RawField("values", Some(RawBufferDecoded.rawBufferValueDecoder)))
             result.result.throwIfNotOk()
             result.fields.get("values") match {
-                case Some(s: Seq[_]) =>
-                    s.map({ v =>
-                        Promise.successful(wrapValue(v))(connection.system.dispatcher)
-                    }).iterator
+                case Some(RawBufferDecoded(buf)) =>
+                    // 'buf' should be an encoded array value
+                    readArrayValues[V](buf).iterator
                 case _ =>
                     throw new MongoException("Missing/incorrect 'values' field in distinct command result: " + result)
             }
@@ -77,64 +69,56 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
         (batchSize, limit)
     }
 
-    // TODO we want to change the interface to use AsyncCursor natively so this
-    // conversion should go away. This function is a temporary hack.
-    private def cursorToIterator(cursor: AsyncCursor[EntityType]): Iterator[Future[EntityType]] = {
-        // blocking is the simplest, so use that for our temp hack.
-        cursor.blocking(1 minute).map(Promise.successful(_)(connection.system.dispatcher))
-    }
-
-    override def find(query: QueryType, options: FindOptions): Future[Iterator[Future[EntityType]]] = {
+    override def find[Q, E](query: Q, options: FindOptions)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Future[AsyncCursor[E]] = {
         val skip = options.skip.getOrElse(0L)
         val (batchSize, limit) = computeBatchSize(options.batchSize.getOrElse(0), options.limit.getOrElse(0L))
 
-        connection.sendQuery[QueryType, Fields](queryFlags(options.overrideQueryFlags), fullName,
+        connection.sendQuery[Q, Fields](queryFlags(options.overrideQueryFlags), fullName,
             skip.intValue, batchSize, limit, query, options.fields)
             .map({ replyCursor =>
                 replyCursor.flatMap({ reply =>
-                    reply.iterator[EntityType]()
+                    reply.iterator[E]()
                 })
-            })
-            .map({ entityCursor =>
-                cursorToIterator(entityCursor)
             })
     }
 
-    private def findOne[Q](flags: Int, query: Q, fields: Option[Fields])(implicit querySupport: QueryEncoder[Q]): Future[Option[EntityType]] = {
+    private def findOne[Q, E](flags: Int, query: Q, fields: Option[Fields])(implicit querySupport: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Future[Option[E]] = {
         connection.sendQueryOne[Q, Fields](flags, fullName, query, fields)
             .map({ replyOption =>
                 replyOption.map({ reply =>
-                    reply.iterator[EntityType]().next()
+                    reply.iterator[E]().next()
                 })
             })
     }
 
-    override def findOne(query: QueryType, options: FindOneOptions): Future[Option[EntityType]] = {
+    override def findOne[Q, E](query: Q, options: FindOneOptions)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Future[Option[E]] = {
         findOne(queryFlags(options.overrideQueryFlags), query, options.fields)
     }
 
-    override def findOneById(id: IdType, options: FindOneByIdOptions): Future[Option[EntityType]] = {
+    override def findOneById[I, E](id: I, options: FindOneByIdOptions)(implicit idEncoder: IdEncoder[I], resultDecoder: QueryResultDecoder[E]): Future[Option[E]] = {
         val raw = newRaw()
         raw.writeFieldAny("_id", id)
         findOne(queryFlags(options.overrideQueryFlags), raw, options.fields)
     }
 
-    override def findIndexes(): Future[Iterator[Future[CollectionIndex]]] =
+    override def findIndexes(): Future[AsyncCursor[CollectionIndex]] =
         throw new UnsupportedOperationException("FIXME") // TODO
 
-    override def entityToUpsertableObject(entity: EntityType): QueryType
+    override def findAndModify[Q, M, S, E](query: Q, modifier: Option[M], options: FindAndModifyOptions[S])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[M], resultDecoder: QueryResultDecoder[E], sortEncoder: QueryEncoder[S]): Future[Option[E]] = {
+        if (options.flags.contains(FindAndModifyRemove)) {
+            if (modifier.isDefined) {
+                throw new BugInSomethingMongoException("Does not make sense to provide a replacement or modifier object to findAndModify with remove flag")
+            }
+        } else if (modifier.isEmpty) {
+            throw new BugInSomethingMongoException("Must provide a replacement or modifier object to findAndModify")
+        }
 
-    override def entityToModifierObject(entity: EntityType): QueryType
-
-    override def entityToUpdateQuery(entity: EntityType): QueryType
-
-    override def findAndModify(query: QueryType, update: Option[QueryType], options: FindAndModifyOptions[QueryType]): Future[Option[EntityType]] = {
         val raw = newRaw()
         raw.writeField("findandmodify", name)
         raw.writeField("query", query)
         raw.writeField("fields", options.fields)
         raw.writeField("sort", options.sort)
-        raw.writeField("update", update)
+        raw.writeFieldAsModifier("update", modifier)
         for (flag <- options.flags) {
             flag match {
                 case FindAndModifyNew =>
@@ -147,10 +131,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
         }
 
         connection.sendCommand(0 /* flags */ , database.name, raw) map { reply =>
-            // TODO the Java driver has a hack to handle an error with string
-            // "No matching object found" ... unclear if modern mongo needs
-            // the hack, but at least test the case.
-            val result = decodeCommandResult[EntityType](reply, "value")
+            val result = decodeCommandResult[E](reply, "value")
             if (result.result.ok) {
                 result.fields.get("value") match {
                     case Some(null) =>
@@ -158,7 +139,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
                     case Some(x) =>
                         // note: this asInstanceOf doesn't do anything other than
                         // make it compile, due to erasure
-                        Some(x.asInstanceOf[EntityType])
+                        Some(x.asInstanceOf[E])
                     case _ =>
                         None
                 }
@@ -180,13 +161,13 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
         f.map(_.throwIfNotOk())
     }
 
-    override def insert(o: EntityType): Future[WriteResult] = {
+    override def insert[E](o: E)(implicit upsertEncoder: UpsertEncoder[E]): Future[WriteResult] = {
         // TODO have a way to set "continue on error" flag, which is in the
         // WriteConcern in the Java driver.
         throwOnFail(connection.sendInsert(0 /* flags */ , fullName, Seq(o), safe))
     }
 
-    override def update(query: QueryType, modifier: QueryType, options: UpdateOptions): Future[WriteResult] = {
+    private def updateFlags(options: UpdateOptions): Int = {
         var flags = 0
         for (flag <- options.flags) {
             flag match {
@@ -196,20 +177,32 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
                     flags |= Mongo.UPDATE_FLAG_MULTI_UPDATE
             }
         }
-        throwOnFail(connection.sendUpdate(fullName, flags, query, modifier, safe))
+        flags
+    }
+
+    override def save[Q](query: Q, options: UpdateOptions)(implicit queryEncoder: UpdateQueryEncoder[Q], upsertEncoder: UpsertEncoder[Q]): Future[WriteResult] = {
+        throwOnFail(connection.sendSave(fullName, updateFlags(options), query, safe))
+    }
+
+    override def update[Q, M](query: Q, modifier: M, options: UpdateOptions)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[M]): Future[WriteResult] = {
+        throwOnFail(connection.sendUpdate(fullName, updateFlags(options), query, modifier, safe))
+    }
+
+    override def updateUpsert[Q, U](query: Q, modifier: U, options: UpdateOptions)(implicit queryEncoder: QueryEncoder[Q], upsertEncoder: UpsertEncoder[U]): Future[WriteResult] = {
+        throwOnFail(connection.sendUpdateUpsert(fullName, updateFlags(options), query, modifier, safe))
     }
 
     private def remove[Q](flags: Int, query: Q)(implicit querySupport: QueryEncoder[Q]): Future[WriteResult] = {
         throwOnFail(connection.sendDelete(fullName, flags, query, safe))
     }
 
-    override def remove(query: QueryType): Future[WriteResult] = {
+    override def remove[Q](query: Q)(implicit queryEncoder: QueryEncoder[Q]): Future[WriteResult] = {
         // TODO support DELETE_FLAG_SINGLE_REMOVE (Java driver just sets
         // this iff the query has an _id in it)
-        remove[QueryType](0 /* flags */ , query)
+        remove[Q](0 /* flags */ , query)
     }
 
-    override def removeById(id: IdType): Future[WriteResult] = {
+    override def removeById[I](id: I)(implicit idEncoder: IdEncoder[I]): Future[WriteResult] = {
         val raw = newRaw()
         raw.writeFieldAny("_id", id)
         remove[RawEncoded](Mongo.DELETE_FLAG_SINGLE_REMOVE, raw)
@@ -226,7 +219,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
         defaultIndexName(bobj)
     }
 
-    override def ensureIndex(keys: QueryType, options: IndexOptions): Future[WriteResult] = {
+    override def ensureIndex[Q](keys: Q, options: IndexOptions)(implicit queryEncoder: QueryEncoder[Q]): Future[WriteResult] = {
         val indexName = options.name.getOrElse(indexNameHack(keys))
         val raw = newRaw()
         raw.writeField("name", indexName)
@@ -240,7 +233,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
                 case IndexSparse => raw.writeField("sparse", true)
             }
         }
-        raw.writeField[QueryType]("key", keys)
+        raw.writeField[Q]("key", keys)
 
         connection.sendInsert(0 /* flags */ , database.name + ".system.indexes", Seq(raw), safe)
     }
@@ -250,67 +243,7 @@ private[cdriver] abstract trait ChannelDriverAsyncCollection[QueryType, EntityTy
         raw.writeField("deleteIndexes", name)
         raw.writeField("index", indexName)
         connection.sendCommand(0 /* query flags */ , database.name, raw) map { reply =>
-            decodeCommandResult(reply).result.throwIfNotOk()
+            decodeCommandResult[BugIfDecoded](reply).result.throwIfNotOk()
         }
-    }
-}
-
-// This class is a temporary hack in essence; we want to remove
-// BObject knowledge from the driver.
-private[cdriver] abstract class BObjectChannelDriverAsyncCollection[IdType]
-    extends ChannelDriverAsyncCollection[BObject, BObject, IdType, BValue]
-    with BObjectAsyncCollection[IdType] {
-
-    protected[beaucatcher] override implicit def queryEncoder: QueryEncoder[BObject] = Codecs.bobjectQueryEncoder
-    protected[beaucatcher] override implicit def entityDecoder: QueryResultDecoder[BObject] = Codecs.bobjectQueryResultDecoder
-    protected[beaucatcher] override implicit def entityEncoder: EntityEncodeSupport[BObject] = Codecs.bobjectEntityEncodeSupport
-
-    protected override def wrapValue(v: Any): BValue = {
-        BValue.wrap(v)
-    }
-
-    override def emptyQuery = BObject.empty
-
-    override def entityToUpsertableObject(entity: BObject): BObject = {
-        entity
-    }
-
-    override def entityToModifierObject(entity: BObject): BObject = {
-        // not allowed to change the _id
-        entity - "_id"
-    }
-
-    override def entityToUpdateQuery(entity: BObject): BObject = {
-        BObject("_id" -> entity.getOrElse("_id", throw new IllegalArgumentException("only objects with an _id field work here")))
-    }
-}
-
-// Another temporary hack because right now drivers know about particular
-// query/entity types
-private[cdriver] abstract class EntityChannelDriverAsyncCollection[EntityType <: AnyRef, IdType](val entityBObjectEntityComposer: EntityComposer[EntityType, BObject])(
-    override implicit val entityDecoder: QueryResultDecoder[EntityType],
-    override implicit val entityEncoder: EntityEncodeSupport[EntityType])
-    extends ChannelDriverAsyncCollection[BObject, EntityType, IdType, Any]
-    with EntityAsyncCollection[BObject, EntityType, IdType] {
-    override implicit def queryEncoder: QueryEncoder[BObject] = Codecs.bobjectQueryEncoder
-
-    protected override def wrapValue(v: Any): Any = {
-        v
-    }
-
-    override def emptyQuery = BObject.empty
-
-    override def entityToUpsertableObject(entity: EntityType): BObject = {
-        entityBObjectEntityComposer.entityIn(entity)
-    }
-
-    override def entityToModifierObject(entity: EntityType): BObject = {
-        // not allowed to change the _id
-        entityBObjectEntityComposer.entityIn(entity) - "_id"
-    }
-
-    override def entityToUpdateQuery(entity: EntityType): BObject = {
-        val bobj = entityBObjectEntityComposer.entityIn(entity)
-        BObject("_id" -> bobj.getOrElse("_id", throw new IllegalArgumentException("only objects with an _id field work here")))
     }
 }

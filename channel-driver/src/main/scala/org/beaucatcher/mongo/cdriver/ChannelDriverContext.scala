@@ -2,18 +2,17 @@ package org.beaucatcher.mongo.cdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import org.beaucatcher.driver._
 import akka.actor.ActorSystem
 import java.net.InetSocketAddress
 import java.net.URI
 
-final class ChannelDriverContext private[cdriver] (override val driver: ChannelDriver,
-    override val config: MongoConfig,
-    override val actorSystem: ActorSystem)
-    extends Context {
+final class ChannelDriverContext private[cdriver] (override val driver: ChannelDriver, url: String, actorSystem: ActorSystem)
+    extends DriverContext {
 
     // FIXME using java.net.URI will barf on some mongo URLs so
     // we need our own parser
-    private val configURI = new URI(config.url)
+    private val configURI = new URI(url)
     private val dbName = {
         val p = configURI.getPath()
         if (p.startsWith("/"))
@@ -34,7 +33,7 @@ final class ChannelDriverContext private[cdriver] (override val driver: ChannelD
     private[cdriver] def connection = driverConnection
 
     override type DriverType = ChannelDriver
-    override type DatabaseType = Database // we have no cdriver-specific Database stuff
+    override type DatabaseType = ChannelDriverDatabase
 
     // since we aren't a wrapper, this is all just no-op
     override type UnderlyingConnectionType = Unit

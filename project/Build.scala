@@ -74,11 +74,18 @@ object BeaucatcherBuild extends Build {
 
     override lazy val settings = super.settings ++ globalSettings
 
+    // this is a weird syntax because the usual apply()
+    // is limited to 9 items in sbt 0.11
+    lazy val rootMembers: Seq[ProjectReference] =
+        Seq(base, channel, channelNetty, bson,
+            bsonJava, mongo, driver, jdriver,
+            channelDriver, mongoTest).map({ p: Project => LocalProject(p.id) })
+
     lazy val root = Project("beaucatcher",
         file("."),
+        aggregate = rootMembers,
         settings = projectSettings ++
-            Seq(publishArtifact := false)) aggregate (base, channel, channelNetty, bson,
-                                                      bsonJava, mongo, jdriver, channelDriver)
+            Seq(publishArtifact := false))
 
     // constants and other miscellany for the bson/mongo wire protocol
     lazy val base = Project("beaucatcher-base",
@@ -105,11 +112,19 @@ object BeaucatcherBuild extends Build {
             Seq(libraryDependencies := Seq(scalap, commonsCodec, jodaTime,
                     Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver))) dependsOn(base)
 
+    // interface to driver
+    lazy val driver = Project("beaucatcher-driver",
+        file("driver"),
+        settings = projectSettings ++
+              Seq(libraryDependencies ++= Seq(akkaActor))) dependsOn (base % "compile->compile;test->test",
+                                // FIXME don't depend on bson
+                                bson % "compile->compile;test->test")
+
     // mongo API
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
         settings = projectSettings ++
-              Seq(libraryDependencies ++= Seq(akkaActor))) dependsOn (bson % "compile->compile;test->test")
+              Seq()) dependsOn (bson % "compile->compile;test->test", driver % "compile->compile;test->test")
 
     // non-mongo aspects of mongo-java-driver
     lazy val bsonJava = Project("beaucatcher-bson-java",
@@ -121,11 +136,17 @@ object BeaucatcherBuild extends Build {
     lazy val jdriver = Project("beaucatcher-java-driver",
         file("jdriver"),
         settings = projectSettings ++
-              Seq(libraryDependencies ++= Seq(Test.commonsIO))) dependsOn (bsonJava, mongo % "compile->compile;test->test")
+              Seq(libraryDependencies ++= Seq(Test.commonsIO))) dependsOn (bsonJava, driver % "compile->compile;test->test")
 
-    // backend for beaucatcher-mongo based on channel-netty
+    // backend for beaucatcher-mongo based on channels
     lazy val channelDriver = Project("beaucatcher-channel-driver",
         file("channel-driver"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq())) dependsOn(channelNetty % "compile->compile;test->test", mongo % "compile->compile;test->test")
+            Seq(libraryDependencies := Seq())) dependsOn(channelNetty % "compile->compile;test->test", driver % "compile->compile;test->test")
+
+    // mongo tests at top of dependency chain
+    lazy val mongoTest = Project("beaucatcher-mongo-test",
+        file("mongo-test"),
+        settings = projectSettings ++
+              Seq()) dependsOn (mongo % "compile->compile;test->test", jdriver % "compile->compile;test->test", channelDriver % "compile->compile;test->test", bsonJava % "compile->compile;test->test")
 }

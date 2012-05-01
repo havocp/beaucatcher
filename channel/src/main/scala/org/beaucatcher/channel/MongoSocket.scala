@@ -38,13 +38,23 @@ private[beaucatcher] trait MongoSocket {
      * Parameters map directly to protocol and are in the same order as on the wire.
      */
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E)(implicit querySupport: QueryEncoder[Q], entitySupport: QueryEncoder[E]): Future[Unit]
+        query: Q, update: E)(implicit querySupport: QueryEncoder[Q], entitySupport: ModifierEncoder[E]): Future[Unit]
+
+    /**
+     * Send an OP_UPDATE using upsert encoders. No reply.
+     */
+    def sendSave[E](fullCollectionName: String, flags: Int, update: E)(implicit querySupport: UpdateQueryEncoder[E], upsertEncoder: UpsertEncoder[E]): Future[Unit]
+
+    /**
+     * Send an OP_UPDATE using upsert encoder for modifier but not query. No reply.
+     */
+    def sendUpdateUpsert[Q, E](fullCollectionName: String, flags: Int, query: Q, update: E)(implicit querySupport: QueryEncoder[Q], upsertEncoder: UpsertEncoder[E]): Future[Unit]
 
     /**
      * Send an OP_INSERT. No reply.
      * Parameters map directly to protocol and are in the same order as on the wire.
      */
-    def sendInsert[E](flags: Int, fullCollectionName: String, docs: Traversable[E])(implicit entitySupport: EntityEncodeSupport[E]): Future[Unit]
+    def sendInsert[E](flags: Int, fullCollectionName: String, docs: Traversable[E])(implicit entitySupport: UpsertEncoder[E]): Future[Unit]
 
     /**
      * Send an OP_DELETE. No reply.

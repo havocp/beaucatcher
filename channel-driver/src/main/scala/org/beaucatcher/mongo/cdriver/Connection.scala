@@ -1,6 +1,5 @@
 package org.beaucatcher.mongo.cdriver
 
-import Codecs._
 import akka.actor._
 import akka.dispatch._
 import akka.pattern._
@@ -8,7 +7,7 @@ import akka.util._
 import akka.util.duration._
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
-import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.driver._
 import org.beaucatcher.channel._
 import java.net.SocketAddress
 
@@ -105,12 +104,21 @@ private[cdriver] class Connection(private val backend: ChannelBackend, private[c
             })
     }
 
+    def sendSave[E](fullCollectionName: String, flags: Int, update: E, gle: GetLastError)(implicit querySupport: UpdateQueryEncoder[E], entitySupport: UpsertEncoder[E]): Future[WriteResult] = {
+        acquireSocket().flatMap(withLastError(_, gle, _.sendSave(fullCollectionName, flags, update)))
+    }
+
     def sendUpdate[Q, E](fullCollectionName: String, flags: Int,
-        query: Q, update: E, gle: GetLastError)(implicit querySupport: QueryEncoder[Q], entitySupport: QueryEncoder[E]): Future[WriteResult] = {
+        query: Q, update: E, gle: GetLastError)(implicit querySupport: QueryEncoder[Q], entitySupport: ModifierEncoder[E]): Future[WriteResult] = {
         acquireSocket().flatMap(withLastError(_, gle, _.sendUpdate(fullCollectionName, flags, query, update)))
     }
 
-    def sendInsert[E](flags: Int, fullCollectionName: String, docs: Traversable[E], gle: GetLastError)(implicit entitySupport: EntityEncodeSupport[E]): Future[WriteResult] = {
+    def sendUpdateUpsert[Q, U](fullCollectionName: String, flags: Int,
+        query: Q, update: U, gle: GetLastError)(implicit querySupport: QueryEncoder[Q], entitySupport: UpsertEncoder[U]): Future[WriteResult] = {
+        acquireSocket().flatMap(withLastError(_, gle, _.sendUpdateUpsert(fullCollectionName, flags, query, update)))
+    }
+
+    def sendInsert[E](flags: Int, fullCollectionName: String, docs: Traversable[E], gle: GetLastError)(implicit entitySupport: UpsertEncoder[E]): Future[WriteResult] = {
         acquireSocket().flatMap(withLastError(_, gle, _.sendInsert(flags, fullCollectionName, docs)))
     }
 
@@ -129,7 +137,7 @@ private[cdriver] class Connection(private val backend: ChannelBackend, private[c
         raw.writeField("fsync", false)
         val step2 = socket.sendCommand(0 /* flags */ , gle.database, raw)
         step1.flatMap(_ => step2.map({ reply =>
-            val result = decodeWriteResult(reply)
+            val result = decodeWriteResult[BugIfDecoded](reply)
             result.result
         }))
     }
@@ -165,8 +173,10 @@ private[cdriver] class ConnectionActor(val backend: ChannelBackend, val addr: So
 
     private def newSocket(): Future[MongoSocket] = {
         socketFactory.connect(addr) flatMap { socket =>
+            import Implicits._ // TODO use RawEncoder rather than BObject
+            import Codecs._
             socket.sendCommand(0 /* flags */ , "admin", BObject("ismaster" -> 1)) map { reply =>
-                val doc = reply.iterator().next()
+                val doc = reply.iterator[BObject]().next()
                 if (doc.getUnwrappedAs[Boolean]("ismaster")) {
                     val maxSize = doc.getUnwrappedAs[Int]("maxBsonObjectSize")
                     socket.maxDocumentSize = maxSize

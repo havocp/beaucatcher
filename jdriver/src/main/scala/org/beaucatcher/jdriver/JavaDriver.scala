@@ -2,6 +2,7 @@ package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import org.beaucatcher.driver._
 import com.mongodb._
 import org.bson.types.{ ObjectId => JavaObjectId, _ }
 import org.joda.time.DateTime
@@ -16,45 +17,40 @@ import akka.actor.ActorSystem
 final class JavaDriver private[jdriver] ()
     extends Driver {
 
-    override final def createCollectionFactory[EntityType <: AnyRef : Manifest, IdType : Manifest](collectionName : String,
-        caseClassBObjectQueryComposer : QueryComposer[BObject, BObject],
-        caseClassBObjectEntityComposer : EntityComposer[EntityType, BObject]) : CollectionFactory[EntityType, IdType, IdType] = {
-        val identityIdComposer = new IdentityIdComposer[IdType]
-        val idManifest = manifest[IdType]
-        if (idManifest <:< manifest[ObjectId]) {
-            // special-case ObjectId to map Beaucatcher ObjectId to the org.bson version
-            new EntityBObjectJavaDriverCollectionFactory[EntityType, IdType, IdType, JavaObjectId](this,
-                collectionName,
-                caseClassBObjectQueryComposer,
-                caseClassBObjectEntityComposer,
-                identityIdComposer,
-                JavaDriver.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
-        } else {
-            new EntityBObjectJavaDriverCollectionFactory[EntityType, IdType, IdType, IdType](this,
-                collectionName,
-                caseClassBObjectQueryComposer,
-                caseClassBObjectEntityComposer,
-                identityIdComposer,
-                identityIdComposer)
-        }
+    private[beaucatcher] override def newBObjectCodecSet[IdType : IdEncoder]() : CollectionCodecSet[BObject, BObject, IdType, BValue] =
+        JavaCodecs.newBObjectCodecSet()
+
+    private[beaucatcher] override def newCaseClassCodecSet[EntityType <: Product : Manifest, IdType : IdEncoder]() : CollectionCodecSet[BObject, EntityType, IdType, Any] =
+        JavaCodecs.newCaseClassCodecSet()
+
+    private[beaucatcher] override def newStringIdEncoder() : IdEncoder[String] =
+        JavaCodecs.stringIdEncoder
+
+    private[beaucatcher] override def newObjectIdIdEncoder() : IdEncoder[ObjectId] =
+        JavaCodecs.objectIdIdEncoder
+
+    private[beaucatcher] override def newBObjectBasedCodecs[E](toBObject : (E) => BObject,
+        fromBObject : (BObject) => E) : BObjectBasedCodecs[E] = {
+        import JavaCodecs._
+        JavaBObjectBasedCodecs[E](toBObject, fromBObject)
     }
 
-    override def createCollectionFactoryWithoutEntity[IdType : Manifest](collectionName : String) : CollectionFactoryWithoutEntity[IdType] = {
-        val idManifest = manifest[IdType]
-        if (idManifest <:< manifest[ObjectId]) {
-            new BObjectJavaDriverCollectionFactory[IdType, JavaObjectId](this,
-                collectionName,
-                JavaDriver.scalaToJavaObjectIdComposer.asInstanceOf[IdComposer[IdType, JavaObjectId]])
-        } else {
-            val identityIdComposer = new IdentityIdComposer[IdType]
-            new BObjectJavaDriverCollectionFactory[IdType, IdType](this,
-                collectionName,
-                identityIdComposer)
-        }
+    private[beaucatcher] override def newSyncCollection(name : String)(implicit context : DriverContext) : SyncDriverCollection = {
+        import Implicits._
+
+        val jContext = context.asJavaContext
+        val underlying = jContext.underlyingCollection(name)
+        new JavaDriverSyncCollection(underlying, jContext)
     }
 
-    def newContext(config : MongoConfig, system : ActorSystem) : Context = {
-        new JavaDriverContext(this, config, system)
+    private[beaucatcher] override def newAsyncCollection(name : String)(implicit context : DriverContext) : AsyncDriverCollection = {
+        import Implicits._
+        implicit val executor = context.asJavaContext.actorSystem.dispatcher
+        AsyncDriverCollection.fromSync(newSyncCollection(name))
+    }
+
+    private[beaucatcher] override def newContext(url : String, system : ActorSystem) : DriverContext = {
+        new JavaDriverContext(this, url, system)
     }
 }
 

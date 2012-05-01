@@ -84,6 +84,8 @@ private[netty] final class Buffer private (private val buf: ChannelBuffer)
     override def skipBytes(length: Int): Unit = buf.skipBytes(length)
 
     override def bytesBefore(value: Byte): Int = buf.bytesBefore(value)
+
+    override def slice(index: Int, length: Int): DecodeBuffer = Buffer(buf.slice(index, length))
 }
 
 private[netty] object Buffer {

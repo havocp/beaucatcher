@@ -6,6 +6,43 @@ import org.beaucatcher.channel._
 import org.beaucatcher.wire._
 import java.nio.ByteOrder
 
+private[cdriver] trait BugIfDecoded
+
+private[cdriver] object BugIfDecoded {
+
+    implicit lazy val bugIfDecodedDecoder = new QueryResultDecoder[BugIfDecoded] {
+        override def decode(buf: DecodeBuffer): BugIfDecoded = {
+            throw new BugInSomethingMongoException("Wasn't expecting to try to decode an object value here")
+        }
+    }
+
+}
+
+private[cdriver] case class RawBufferDecoded(buf: DecodeBuffer)
+
+private[cdriver] object RawBufferDecoded {
+
+    implicit lazy val rawBufferDecoder = new QueryResultDecoder[RawBufferDecoded] {
+        override def decode(buf: DecodeBuffer): RawBufferDecoded = {
+            val len = buf.readInt()
+            val slice = buf.slice(buf.readerIndex - 4, len)
+            buf.skipBytes(len - 4)
+            RawBufferDecoded(slice)
+        }
+    }
+
+    lazy val rawBufferValueDecoder = new ValueDecoder[RawBufferDecoded] {
+        override def decode(what: Byte, buf: DecodeBuffer): RawBufferDecoded = {
+            what match {
+                case Bson.OBJECT | Bson.ARRAY =>
+                    rawBufferDecoder.decode(buf)
+                case _ =>
+                    throw new BugInSomethingMongoException("Unexpected value type: " + what)
+            }
+        }
+    }
+}
+
 private[cdriver] class RawEncoded(val backend: ChannelBackend) {
     import Codecs._
     import CodecUtils._
@@ -76,7 +113,16 @@ private[cdriver] class RawEncoded(val backend: ChannelBackend) {
 
     def writeField[Q](name: String, query: Q)(implicit querySupport: QueryEncoder[Q]): Unit = {
         ensureFieldBytes(name)
-        writeFieldObject(buf, name, query)
+        writeFieldQuery(buf, name, query)
+    }
+
+    def writeFieldAsModifier[M](name: String, query: Option[M])(implicit modifierEncoder: ModifierEncoder[M]): Unit = {
+        query.foreach({ v => writeFieldAsModifier(name, v) })
+    }
+
+    def writeFieldAsModifier[M](name: String, query: M)(implicit modifierEncoder: ModifierEncoder[M]): Unit = {
+        ensureFieldBytes(name)
+        writeFieldModifier(buf, name, query)
     }
 
     def writeField(name: String, value: Boolean): Unit = {
@@ -118,14 +164,14 @@ private[cdriver] class RawEncoded(val backend: ChannelBackend) {
 object RawEncoded {
     private object RawEncodeSupport
         extends QueryEncoder[RawEncoded]
-        with EntityEncodeSupport[RawEncoded] {
+        with UpsertEncoder[RawEncoded] {
         override final def encode(buf: EncodeBuffer, t: RawEncoded): Unit = {
             t.writeTo(buf)
         }
     }
 
     implicit def rawQueryEncoder: QueryEncoder[RawEncoded] = RawEncodeSupport
-    implicit def rawEntityEncodeSupport: EntityEncodeSupport[RawEncoded] = RawEncodeSupport
+    implicit def rawUpsertEncoder: UpsertEncoder[RawEncoded] = RawEncodeSupport
 
     def apply(backend: ChannelBackend): RawEncoded = new RawEncoded(backend)
 
@@ -141,89 +187,20 @@ object RawEncoded {
     def newFieldsQueryEncoder(backend: ChannelBackend): QueryEncoder[Fields] = new FieldsEncodeSupport(backend)
 }
 
+private[cdriver] case class RawField(name: String, decoder: Option[ValueDecoder[_]])
+
 private[cdriver] class RawDecoded {
     import Codecs._
 
     var fields: Map[String, Any] = Map.empty
 }
 
-object RawDecoded {
+private[cdriver] object RawDecoded {
     import Codecs._
     import CodecUtils._
 
-    private class RawDecodeSupport[NestedEntityType](val needed: Seq[String])(implicit val nestedDecodeSupport: QueryResultDecoder[NestedEntityType])
+    private class RawDecodeSupport[NestedEntityType](val needed: Map[String, Option[ValueDecoder[_]]])(implicit val nestedDecodeSupport: QueryResultDecoder[NestedEntityType])
         extends QueryResultDecoder[RawDecoded] {
-
-        private def readArray(buf: DecodeBuffer): Seq[Any] = {
-            val len = buf.readInt()
-            if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
-                buf.skipBytes(len - 4)
-                Seq.empty
-            } else {
-                val b = Seq.newBuilder[Any]
-
-                var what = buf.readByte()
-                while (what != Bson.EOO) {
-
-                    // the names in an array are just the indices, so nobody cares
-                    skipNulString(buf)
-
-                    b += readAny(what, buf)
-
-                    what = buf.readByte()
-                }
-
-                b.result()
-            }
-        }
-
-        private def readAny(what: Byte, buf: DecodeBuffer): Any = {
-            what match {
-                case Bson.NUMBER =>
-                    buf.readDouble()
-                case Bson.STRING =>
-                    readLengthString(buf)
-                case Bson.OID =>
-                    // the mongo wiki says the numbers are really
-                    // 4 bytes, 5 bytes, and 3 bytes but the java
-                    // driver does 4,4,4 and it looks like the C driver too.
-                    // so not sure what to make of it.
-                    // http://www.mongodb.org/display/DOCS/Object+IDs
-                    // the object ID is also big-endian unlike everything else
-                    val time = swapInt(buf.readInt())
-                    val machine = swapInt(buf.readInt())
-                    val inc = swapInt(buf.readInt())
-                    ObjectId(time, machine, inc)
-                case Bson.BOOLEAN =>
-                    buf.readByte() != 0
-                case Bson.DATE =>
-                    buf.readLong()
-                case Bson.NULL =>
-                    null
-                case Bson.NUMBER_INT =>
-                    buf.readInt()
-                case Bson.TIMESTAMP =>
-                    val inc = buf.readInt()
-                    val time = buf.readInt()
-                    Timestamp(time, inc)
-                case Bson.NUMBER_LONG =>
-                    buf.readLong()
-                case Bson.ARRAY =>
-                    readArray(buf)
-                case Bson.OBJECT =>
-                    readEntity[NestedEntityType](buf)
-                case Bson.BINARY |
-                    Bson.UNDEFINED |
-                    Bson.REGEX |
-                    Bson.REF |
-                    Bson.CODE |
-                    Bson.SYMBOL |
-                    Bson.CODE_W_SCOPE |
-                    Bson.MINKEY |
-                    Bson.MAXKEY =>
-                    throw new MongoException("Encountered value of type " + Integer.toHexString(what) + " which is currently unsupported")
-            }
-        }
 
         override final def decode(buf: DecodeBuffer): RawDecoded = {
             val raw = RawDecoded()
@@ -232,10 +209,13 @@ object RawDecoded {
             while (what != Bson.EOO) {
                 val name = readNulString(buf)
 
-                if (needed.contains(name)) {
-                    raw.fields += (name -> readAny(what, buf))
-                } else {
-                    skipValue(what, buf)
+                needed.get(name) match {
+                    case Some(Some(decoder)) =>
+                        raw.fields += (name -> decoder.decode(what, buf))
+                    case Some(None) =>
+                        raw.fields += (name -> readAny[NestedEntityType](what, buf))
+                    case None =>
+                        skipValue(what, buf)
                 }
 
                 what = buf.readByte()
@@ -246,7 +226,10 @@ object RawDecoded {
     }
 
     def rawQueryResultDecoder[NestedEntityType](needed: Seq[String])(implicit nestedSupport: QueryResultDecoder[NestedEntityType]): QueryResultDecoder[RawDecoded] =
-        new RawDecodeSupport(needed)
+        new RawDecodeSupport[NestedEntityType](Map(needed.map((_, None: Option[ValueDecoder[_]])): _*))
+
+    def rawQueryResultDecoderFields[NestedEntityType](needed: Seq[RawField])(implicit nestedSupport: QueryResultDecoder[NestedEntityType]): QueryResultDecoder[RawDecoded] =
+        new RawDecodeSupport[NestedEntityType](Map(needed.map({ f => (f.name, f.decoder) }): _*))
 
     def apply(): RawDecoded = new RawDecoded()
 }

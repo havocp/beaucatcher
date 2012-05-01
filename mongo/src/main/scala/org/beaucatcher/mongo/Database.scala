@@ -2,6 +2,7 @@ package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.driver._
 import akka.dispatch.Future
 
 /**
@@ -10,7 +11,9 @@ import akka.dispatch.Future
  * you can't construct a [[org.beaucatcher.mongo.SystemCollections]] directly.
  */
 final class SystemCollections private[mongo] (driver : Driver) {
-    private def createCollectionAccess[EntityType <: Product : Manifest, IdType : Manifest](name : String) = {
+    private implicit val stringIdEncoder = driver.newStringIdEncoder()
+
+    private def createCollectionAccess[EntityType <: Product : Manifest, IdType : IdEncoder](name : String) = {
         val d = driver
         new CollectionAccessWithCaseClass[EntityType, IdType] with DriverProvider {
             override val mongoDriver = d
@@ -18,13 +21,17 @@ final class SystemCollections private[mongo] (driver : Driver) {
         }
     }
 
-    lazy val indexes : CollectionAccessTrait[CollectionIndex, String] = {
+    private lazy val _indexes = {
         createCollectionAccess[CollectionIndex, String]("system.indexes")
     }
 
-    lazy val namespaces : CollectionAccessTrait[Namespace, String] = {
+    def indexes : CollectionAccessTrait[CollectionIndex, String] = _indexes
+
+    private lazy val _namespaces = {
         createCollectionAccess[Namespace, String]("system.namespaces")
     }
+
+    def namespaces : CollectionAccessTrait[Namespace, String] = _namespaces
 
     // TODO system.users
 }
@@ -54,16 +61,12 @@ private[beaucatcher] object CreateCollectionOptions {
     }
 }
 
-case class CommandOptions(overrideQueryFlags : Option[Set[QueryFlag]] = None)
-
-private[beaucatcher] object CommandOptions {
-    final val empty = CommandOptions(None)
-}
-
 trait SyncDatabase {
-    protected def database : Database
+    protected[mongo] def database : Database
 
-    private implicit def context = database.context
+    private implicit def context : Context = database.context
+
+    private lazy val underlying = context.driverContext.database.sync
 
     // TODO authenticate()
     // TODO addUser(), removeUser()
@@ -71,7 +74,8 @@ trait SyncDatabase {
 
     final def command(cmd : BObject) : CommandResult = command(cmd, CommandOptions.empty)
 
-    def command(cmd : BObject, options : CommandOptions) : CommandResult
+    def command(cmd : BObject, options : CommandOptions) : CommandResult =
+        underlying.command(cmd, options)
 
     final def createCollection(name : String) : CommandResult = {
         createCollection(name, CreateCollectionOptions.empty)
@@ -81,6 +85,7 @@ trait SyncDatabase {
         command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
     }
 
+    // TODO should return Cursor which requires Cursor to have CanBuildFrom machinery
     def collectionNames : Iterator[String] = {
         database.system.namespaces.sync[BObject].find(BObject.empty, IncludedFields("name")) map {
             obj =>
@@ -94,9 +99,11 @@ trait SyncDatabase {
 }
 
 trait AsyncDatabase {
-    protected def database : Database
+    protected[mongo] def database : Database
 
-    private implicit def context = database.context
+    private implicit def context : Context = database.context
+
+    private lazy val underlying = context.driverContext.database.async
 
     // TODO authenticate()
     // TODO addUser(), removeUser()
@@ -104,7 +111,8 @@ trait AsyncDatabase {
 
     final def command(cmd : BObject) : Future[CommandResult] = command(cmd, CommandOptions.empty)
 
-    def command(cmd : BObject, options : CommandOptions) : Future[CommandResult]
+    def command(cmd : BObject, options : CommandOptions) : Future[CommandResult] =
+        context.driverContext.database.async.command(cmd, options)
 
     final def createCollection(name : String) : Future[CommandResult] = {
         createCollection(name, CreateCollectionOptions.empty)
@@ -114,10 +122,10 @@ trait AsyncDatabase {
         command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
     }
 
-    def collectionNames : Future[Iterator[Future[String]]] = {
-        database.system.namespaces.async[BObject].find(BObject.empty, IncludedFields("name")) map { i =>
-            i.map({ f =>
-                f.map(_.getUnwrappedAs[String]("name"))
+    def collectionNames : Future[AsyncCursor[String]] = {
+        database.system.namespaces.async[BObject].find(BObject.empty, IncludedFields("name")) map { cursor =>
+            cursor.map({ obj =>
+                obj.getUnwrappedAs[String]("name")
             })
         }
     }
@@ -128,15 +136,31 @@ trait AsyncDatabase {
 }
 
 trait Database {
-    protected def driver : Driver
-
     def context : Context
 
     def name : String
 
-    lazy val system : SystemCollections = new SystemCollections(driver)
+    private lazy val _system = new SystemCollections(context.driver)
+
+    def system : SystemCollections = _system
 
     def sync : SyncDatabase
 
     def async : AsyncDatabase
+}
+
+object Database {
+    private class SyncImpl(override val database : Database) extends SyncDatabase
+    private class AsyncImpl(override val database : Database) extends AsyncDatabase
+
+    private class DatabaseImpl(override val context : Context) extends Database {
+        val underlying = context.driverContext.database
+        override def name = underlying.name
+        override lazy val sync = new SyncImpl(this)
+        override lazy val async = new AsyncImpl(this)
+    }
+
+    def apply(implicit context : Context) : Database = {
+        new DatabaseImpl(context)
+    }
 }

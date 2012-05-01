@@ -2,6 +2,7 @@ package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import org.beaucatcher.driver._
 import com.mongodb._
 import org.bson.types.{ ObjectId => JavaObjectId, _ }
 import org.joda.time.DateTime
@@ -14,17 +15,16 @@ import akka.actor.ActorSystem
  * you could use for this, `JavaDriver.instance.newContext()`.
  */
 final class JavaDriverContext private[jdriver] (override val driver : JavaDriver,
-    override val config : MongoConfig,
-    override val actorSystem : ActorSystem)
-    extends Context {
+    val url : String, val actorSystem : ActorSystem)
+    extends DriverContext {
 
-    private lazy val jdriverURI = new MongoURI(config.url)
+    private lazy val jdriverURI = new MongoURI(url)
 
     private lazy val driverConnection = JavaDriverConnection.acquireConnection(jdriverURI)
     private def connection = driverConnection.underlying
 
     override type DriverType = JavaDriver
-    override type DatabaseType = Database // we have no jdriver-specific Database stuff
+    override type DatabaseType = JavaDriverDatabase // we have no jdriver-specific Database stuff
     override type UnderlyingConnectionType = Mongo
     override type UnderlyingDatabaseType = DB
     override type UnderlyingCollectionType = DBCollection

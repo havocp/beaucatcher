@@ -67,18 +67,34 @@ private[beaucatcher] object CodecUtils {
         encodeSupport.encode(buf, doc)
         val size = buf.writerIndex - start
         if (size > maxSize)
-            throw new MongoDocumentTooLargeException("Document is too large (" + size + " bytes but the max is " + maxSize + ")")
+            throw new DocumentTooLargeMongoException("Document is too large (" + size + " bytes but the max is " + maxSize + ")")
     }
 
     def writeQuery[Q](buf: EncodeBuffer, query: Q, maxSize: Int)(implicit querySupport: QueryEncoder[Q]): Unit = {
         writeDocument(buf, query, maxSize)
     }
 
-    def writeEntity[E](buf: EncodeBuffer, entity: E, maxSize: Int)(implicit entitySupport: EntityEncodeSupport[E]): Unit = {
+    def writeUpdateQuery[Q](buf: EncodeBuffer, query: Q, maxSize: Int)(implicit querySupport: UpdateQueryEncoder[Q]): Unit = {
+        writeDocument(buf, query, maxSize)
+    }
+
+    def writeModifier[E](buf: EncodeBuffer, entity: E, maxSize: Int)(implicit entitySupport: ModifierEncoder[E]): Unit = {
         writeDocument(buf, entity, maxSize)
+    }
+
+    def writeUpsert[E](buf: EncodeBuffer, entity: E, maxSize: Int)(implicit entitySupport: UpsertEncoder[E]): Unit = {
+        writeDocument(buf, entity, maxSize)
+    }
+
+    def writeIdField[I](buf: EncodeBuffer, name: String, id: I)(implicit idEncoder: IdEncoder[I]): Unit = {
+        idEncoder.encodeField(buf, name, id)
     }
 
     def readEntity[E](buf: DecodeBuffer)(implicit entitySupport: QueryResultDecoder[E]): E = {
         entitySupport.decode(buf)
+    }
+
+    def readValue[V](what: Byte, buf: DecodeBuffer)(implicit valueDecoder: ValueDecoder[V]): V = {
+        valueDecoder.decode(what, buf)
     }
 }

@@ -2,20 +2,23 @@ package org.beaucatcher.jdriver
 
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
+import org.beaucatcher.driver._
 import org.bson.BSONObject
-import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, _ }
-
+import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, MongoException => JavaMongoException, _ }
 import JavaConversions._
+import org.bson.BSONException
 
-/**
- * Base trait that chains SyncCollection methods to a JavaDriver collection, which must be provided
- * by a subclass of this trait.
- */
-abstract trait JavaDriverSyncCollection[IdType <: Any] extends SyncCollection[DBObject, DBObject, IdType, Any] {
+private[jdriver] final class JavaDriverSyncCollection(val collection : DBCollection, override val context : JavaDriverContext) extends SyncDriverCollection {
 
-    override private[beaucatcher] def context : JavaDriverContext
-
-    protected def collection : DBCollection
+    private def withExceptionsMapped[A](body : => A) : A = {
+        try {
+            body
+        } catch {
+            case ex : JavaMongoException.DuplicateKey => throw new DuplicateKeyMongoException(ex.getMessage, ex)
+            case ex : JavaMongoException => throw new MongoException(ex.getMessage, ex)
+            case ex : BSONException => throw new MongoException(ex.getMessage, ex)
+        }
+    }
 
     private implicit def fields2dbobject(fields : Fields) : DBObject = {
         val builder = new BasicDBObjectBuilder()
@@ -29,19 +32,6 @@ abstract trait JavaDriverSyncCollection[IdType <: Any] extends SyncCollection[DB
     }
 
     override def name : String = collection.getName()
-
-    override def emptyQuery : DBObject = new BasicDBObject() // not immutable, so we always make a new one
-
-    override def entityToUpsertableObject(entity : DBObject) : DBObject = {
-        // maybe we should copy this since it isn't immutable :-/
-        // however at the moment I don't think the app can get a reference to it,
-        // at least not easily, so copying would just be paranoia
-        entity
-    }
-
-    override def entityToModifierObject(entity : DBObject) : DBObject = {
-        entityToUpsertableObject(entity)
-    }
 
     private def withQueryFlags[R](maybeOverrideFlags : Option[Set[QueryFlag]])(body : => R) : R = {
         if (maybeOverrideFlags.isDefined) {
@@ -57,44 +47,43 @@ abstract trait JavaDriverSyncCollection[IdType <: Any] extends SyncCollection[DB
 
             collection.resetOptions()
             collection.addOption(saved)
-            throw new UnsupportedOperationException("JavaDriver backend can't override query options on this operation")
+            throw new MongoException("JavaDriver backend can't override query options on this operation")
             //result
         } else {
             body
         }
     }
 
-    override def entityToUpdateQuery(entity : DBObject) : DBObject = {
-        if (!entity.containsField("_id"))
-            throw new IllegalArgumentException("Object is missing an _id field, can't save() or whatever you are doing")
-        val obj = new BasicDBObject()
-        obj.put("_id", entity.get("_id"))
-        obj
-    }
+    private def emptyQuery : DBObject = new BasicDBObject() // not immutable, so we always make a new one
 
-    override def count(query : DBObject, options : CountOptions) : Long = {
+    private def q[Q](query : Q)(implicit queryEncoder : QueryEncoder[Q]) =
+        convertQueryToJava[Q](query)
+
+    override def count[Q](query : Q, options : CountOptions)(implicit queryEncoder : QueryEncoder[Q]) : Long = withExceptionsMapped {
         withQueryFlags(options.overrideQueryFlags) {
             val fieldsQuery = if (options.fields.isDefined) options.fields.get : DBObject else emptyQuery
             if (options.limit.isDefined || options.skip.isDefined)
-                collection.getCount(query, fieldsQuery, options.limit.getOrElse(0), options.skip.getOrElse(0))
+                collection.getCount(q(query), fieldsQuery, options.limit.getOrElse(0), options.skip.getOrElse(0))
             else
-                collection.getCount(query, fieldsQuery)
+                collection.getCount(q(query), fieldsQuery)
         }
     }
 
-    override def distinct(key : String, options : DistinctOptions[DBObject]) : Iterator[Any] = {
+    override def distinct[Q, V](key : String, options : DistinctOptions[Q])(implicit queryEncoder : QueryEncoder[Q], valueDecoder : ValueDecoder[V]) : Iterator[V] = withExceptionsMapped {
         import scala.collection.JavaConverters._
 
-        withQueryFlags(options.overrideQueryFlags) {
+        val results : Seq[Any] = withQueryFlags(options.overrideQueryFlags) {
             if (options.query.isDefined)
-                collection.distinct(key, options.query.get).asScala.iterator
+                collection.distinct(key, q(options.query.get)).asScala.toSeq
             else
-                collection.distinct(key).asScala.iterator
+                collection.distinct(key).asScala.toSeq
         }
+
+        results.map({ v => convertValueFromJava[V](v.asInstanceOf[AnyRef]) }).iterator
     }
 
-    // adapter from DBCursor to scala Iterator
-    private class CursorIterator(cursor : DBCursor) extends Iterator[DBObject] {
+    // adapter from DBCursor to our Cursor
+    private class JavaCursor(cursor : DBCursor) extends Cursor[DBObject] {
         override def next() : DBObject = {
             cursor.next()
         }
@@ -102,16 +91,20 @@ abstract trait JavaDriverSyncCollection[IdType <: Any] extends SyncCollection[DB
         override def hasNext() : Boolean = {
             cursor.hasNext()
         }
+
+        override def close() : Unit = {
+            cursor.close()
+        }
     }
 
-    override def find(query : DBObject, options : FindOptions) : Iterator[DBObject] = {
+    override def find[Q, E](query : Q, options : FindOptions)(implicit queryEncoder : QueryEncoder[Q], resultDecoder : QueryResultDecoder[E]) : Cursor[E] = withExceptionsMapped {
         import scala.collection.JavaConverters._
 
         val cursor = {
             if (options.fields.isDefined) {
-                collection.find(query, options.fields.get)
+                collection.find(q(query), options.fields.get)
             } else {
-                collection.find(query)
+                collection.find(q(query))
             }
         }
         if (options.skip.isDefined)
@@ -124,105 +117,128 @@ abstract trait JavaDriverSyncCollection[IdType <: Any] extends SyncCollection[DB
             cursor.setOptions(options.overrideQueryFlags.get)
         }
 
-        new CursorIterator(cursor)
+        (new JavaCursor(cursor)).map(convertResultFromJava[E](_))
     }
 
-    override def findOne(query : DBObject, options : FindOneOptions) : Option[DBObject] = {
-        withQueryFlags(options.overrideQueryFlags) {
+    private def findOneImpl[E](query : DBObject, options : FindOneOptions)(implicit resultDecoder : QueryResultDecoder[E]) : Option[E] = {
+        val results = withQueryFlags(options.overrideQueryFlags) {
             if (options.fields.isDefined) {
                 Option(collection.findOne(query, options.fields.get))
             } else {
                 Option(collection.findOne(query))
             }
         }
+        results.map(convertResultFromJava[E](_))
     }
 
-    override def findOneById(id : IdType, options : FindOneByIdOptions) : Option[DBObject] = {
+    override def findOne[Q, E](query : Q, options : FindOneOptions)(implicit queryEncoder : QueryEncoder[Q], resultDecoder : QueryResultDecoder[E]) : Option[E] = withExceptionsMapped {
+        findOneImpl(q(query), options)
+    }
+
+    override def findOneById[I, E](id : I, options : FindOneByIdOptions)(implicit idEncoder : IdEncoder[I], resultDecoder : QueryResultDecoder[E]) : Option[E] = withExceptionsMapped {
         val query = new BasicDBObject()
-        query.put("_id", id)
-        findOne(query, FindOneOptions(options.fields, options.overrideQueryFlags))
+        putIdToJava(query, "_id", id)
+        findOneImpl(query, FindOneOptions(options.fields, options.overrideQueryFlags))
     }
 
-    override def findAndModify(query : DBObject, update : Option[DBObject], options : FindAndModifyOptions[DBObject]) : Option[DBObject] = {
-        if (options.flags.contains(FindAndModifyRemove)) {
-            if (update.isDefined)
-                throw new IllegalArgumentException("Does not make sense to provide a replacement or modifier object to findAndModify with remove flag")
-            Option(collection.findAndRemove(query))
-        } else if (!update.isDefined) {
-            throw new IllegalArgumentException("Must provide a replacement or modifier object to findAndModify")
-        } else if (options.flags.isEmpty && !options.fields.isDefined) {
-            if (options.sort.isDefined)
-                Option(collection.findAndModify(query, options.sort.get, update.get))
-            else
-                Option(collection.findAndModify(query, update.get))
-        } else {
-            Option(collection.findAndModify(query,
-                // getOrElse mixes poorly with implicit conversion from Fields
-                if (options.fields.isDefined) { options.fields.get : DBObject } else { emptyQuery },
-                options.sort.getOrElse(emptyQuery),
-                false, // remove
-                update.get,
-                options.flags.contains(FindAndModifyNew),
-                options.flags.contains(FindAndModifyUpsert)))
-        }
+    override def findIndexes() : Cursor[CollectionIndex] = withExceptionsMapped {
+        // TODO
+        throw new MongoException("findIndexes() not yet implemented")
     }
 
-    override def insert(o : DBObject) : WriteResult = {
+    override def findAndModify[Q, M, S, E](query : Q, modifier : Option[M], options : FindAndModifyOptions[S])(implicit queryEncoder : QueryEncoder[Q], modifierEncoder : ModifierEncoder[M], resultDecoder : QueryResultDecoder[E], sortEncoder : QueryEncoder[S]) : Option[E] = withExceptionsMapped {
+        val result =
+            if (options.flags.contains(FindAndModifyRemove)) {
+                if (modifier.isDefined)
+                    throw new IllegalArgumentException("Does not make sense to provide a replacement or modifier object to findAndModify with remove flag")
+                Option(collection.findAndRemove(q(query)))
+            } else if (!modifier.isDefined) {
+                throw new IllegalArgumentException("Must provide a replacement or modifier object to findAndModify")
+            } else if (options.flags.isEmpty && !options.fields.isDefined) {
+                if (options.sort.isDefined)
+                    Option(collection.findAndModify(q(query), q(options.sort.get),
+                        convertModifierToJava(modifier.get)))
+                else
+                    Option(collection.findAndModify(q(query),
+                        convertModifierToJava(modifier.get)))
+            } else {
+                Option(collection.findAndModify(q(query),
+                    // getOrElse mixes poorly with implicit conversion from Fields
+                    if (options.fields.isDefined) { options.fields.get : DBObject } else { emptyQuery },
+                    options.sort.map(q(_)).getOrElse(emptyQuery),
+                    false, // remove
+                    convertModifierToJava(modifier.get),
+                    options.flags.contains(FindAndModifyNew),
+                    options.flags.contains(FindAndModifyUpsert)))
+            }
+        result.map(convertResultFromJava[E](_))
+    }
+
+    override def insert[E](o : E)(implicit upsertEncoder : UpsertEncoder[E]) : WriteResult = withExceptionsMapped {
         import Implicits._
-        collection.insert(o)
+        collection.insert(convertUpsertToJava(o))
     }
 
-    override def update(query : DBObject, modifier : DBObject, options : UpdateOptions) : WriteResult = {
+    override def save[Q](query : Q, options : UpdateOptions)(implicit queryEncoder : UpdateQueryEncoder[Q], upsertEncoder : UpsertEncoder[Q]) : WriteResult = withExceptionsMapped {
         import Implicits._
-        collection.update(query, modifier, options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
+        collection.update(convertUpdateQueryToJava(query), convertUpsertToJava(query),
+            options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
     }
 
-    override def remove(query : DBObject) : WriteResult = {
+    override def update[Q, M](query : Q, modifier : M, options : UpdateOptions)(implicit queryEncoder : QueryEncoder[Q], modifierEncoder : ModifierEncoder[M]) : WriteResult = withExceptionsMapped {
         import Implicits._
+        collection.update(q(query), convertModifierToJava(modifier),
+            options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
+    }
+
+    override def updateUpsert[Q, U](query : Q, update : U, options : UpdateOptions)(implicit queryEncoder : QueryEncoder[Q], upsertEncoder : UpsertEncoder[U]) : WriteResult = withExceptionsMapped {
+        import Implicits._
+        collection.update(q(query), convertUpsertToJava(update),
+            options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
+    }
+
+    override def remove[Q](query : Q)(implicit queryEncoder : QueryEncoder[Q]) : WriteResult = withExceptionsMapped {
+        import Implicits._
+        collection.remove(q(query))
+    }
+
+    override def removeById[I](id : I)(implicit idEncoder : IdEncoder[I]) : WriteResult = withExceptionsMapped {
+        import Implicits._
+        val query = new BasicDBObject()
+        putIdToJava(query, "_id", id)
         collection.remove(query)
     }
 
-    override def removeById(id : IdType) : WriteResult = {
+    override def ensureIndex[Q](keys : Q, options : IndexOptions)(implicit queryEncoder : QueryEncoder[Q]) : WriteResult = withExceptionsMapped {
         import Implicits._
-        val obj = new BasicDBObject()
-        obj.put("_id", id)
-        collection.remove(obj)
+
+        val dbOptions = new BasicDBObject()
+        options.name.foreach({ name =>
+            dbOptions.put("name", name)
+        })
+
+        options.v foreach { v => dbOptions.put("v", v) }
+
+        for (flag <- options.flags) {
+            flag match {
+                case IndexUnique => dbOptions.put("unique", true)
+                case IndexBackground => dbOptions.put("background", true)
+                case IndexDropDups => dbOptions.put("dropDups", true)
+                case IndexSparse => dbOptions.put("sparse", true)
+            }
+        }
+
+        collection.ensureIndex(q(keys), dbOptions)
+
+        // Java driver returns void from ensureIndex (it just eats the writeResult)
+        WriteResult(ok = true)
     }
 
-    override def ensureIndex(keys : DBObject, options : IndexOptions) : WriteResult = {
-        throw new BugInSomethingMongoException("ensureIndex() should be implemented on an outer wrapper Collection and not make it here")
+    override def dropIndex(indexName : String) : CommandResult = withExceptionsMapped {
+        import Implicits._
+        collection.dropIndex(indexName)
+
+        // Java driver returns void from dropIndex (it throws on failure)
+        CommandResult(ok = true)
     }
-
-    override def dropIndex(indexName : String) : CommandResult = {
-        throw new BugInSomethingMongoException("dropIndex() should be implemented on an outer wrapper Collection and not make it here")
-    }
-}
-
-private[jdriver] class BObjectJavaDriverQueryComposer extends QueryComposer[BObject, DBObject] {
-    import org.beaucatcher.jdriver.Implicits._
-
-    override def queryIn(q : BObject) : DBObject = new BObjectDBObject(q)
-    override def queryOut(q : DBObject) : BObject = q
-}
-
-private[jdriver] class BObjectJavaDriverEntityComposer extends EntityComposer[BObject, DBObject] {
-    import org.beaucatcher.jdriver.Implicits._
-
-    override def entityIn(o : BObject) : DBObject = new BObjectDBObject(o)
-    override def entityOut(o : DBObject) : BObject = o
-}
-
-/**
- * A BObject Collection that specifically backends to a JavaDriver Collection.
- * Subclass would provide the backend and could override the in/out type converters.
- */
-private[jdriver] abstract trait BObjectJavaDriverSyncCollection[OuterIdType, InnerIdType]
-    extends BObjectComposedSyncCollection[OuterIdType, DBObject, DBObject, InnerIdType, Any] {
-    override protected val inner : JavaDriverSyncCollection[InnerIdType]
-
-    override protected val queryComposer : QueryComposer[BObject, DBObject]
-    override protected val entityComposer : EntityComposer[BObject, DBObject]
-    override protected val idComposer : IdComposer[OuterIdType, InnerIdType]
-    override protected val valueComposer : ValueComposer[BValue, Any]
-    override protected val exceptionMapper = jdriverExceptionMapper
 }

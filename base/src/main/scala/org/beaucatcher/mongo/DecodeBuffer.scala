@@ -41,4 +41,7 @@ trait DecodeBuffer {
 
     // not required to make a copy, may share content
     def toByteBuffer(): ByteBuffer
+
+    // not required to make a copy, may share content
+    def slice(index: Int, length: Int): DecodeBuffer
 }

@@ -2,7 +2,7 @@ package org.beaucatcher.bson
 
 import org.bson.{ types => j }
 import org.bson.BSONObject
-
+import com.mongodb.DBObject
 import org.joda.time._
 
 object JavaConversions {
@@ -134,5 +134,27 @@ object JavaConversions {
                     println(k + "=" + v)
             }
         }
+    }
+
+    private[beaucatcher] trait BValueDBObject extends DBObject {
+        private[this] var isPartial : Boolean = false
+
+        override def isPartialObject() : Boolean = isPartial
+
+        override def markAsPartialObject() : Unit = {
+            isPartial = true
+        }
+    }
+
+    /**
+     * adds DBObject extensions to BSONObject.
+     * This is an internal implementation class not exported by the library.
+     */
+    private[beaucatcher] class BObjectDBObject(b : BObject = BObject.empty) extends BObjectBSONObject(b) with BValueDBObject {
+
+    }
+
+    private[beaucatcher] class BArrayDBObject(b : BArray = BArray.empty) extends BArrayBSONObject(b) with BValueDBObject {
+
     }
 }

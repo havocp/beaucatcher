@@ -1,6 +1,7 @@
 package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
+import org.beaucatcher.driver._
 import scala.annotation.implicitNotFound
 
 /**
@@ -12,13 +13,6 @@ import scala.annotation.implicitNotFound
  */
 trait CollectionAccessBaseTrait[IdType] {
     self : DriverProvider =>
-
-    /**
-     * Because traits can't have constructor arguments or context bounds, a subtype of this
-     * trait has to provide the manifest for the IdType. See [[org.beaucatcher.mongo.CollectionAccess]]
-     * which is an abstract class rather than a trait, and thus implements this method.
-     */
-    implicit protected def idTypeManifest : Manifest[IdType]
 
     /**
      * The name of the collection. Defaults to the unqualified (no package) name of the object,
@@ -76,12 +70,13 @@ trait CollectionAccessBaseTrait[IdType] {
 trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTrait[IdType] {
     self : DriverProvider =>
 
-    private lazy val collectionGroup : CollectionFactoryWithoutEntity[IdType] =
-        mongoDriver.createCollectionFactoryWithoutEntity(collectionName)
+    protected implicit def idEncoder : IdEncoder[IdType]
+
+    private lazy val bobjectCodecSet = mongoDriver.newBObjectCodecSet[IdType]()
 
     private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        collectionGroup.newBObjectSync
+        SyncCollection(collectionName, bobjectCodecSet)
     }
 
     /**
@@ -92,7 +87,7 @@ trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTra
 
     private lazy val bobjectAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        collectionGroup.newBObjectAsync
+        AsyncCollection(collectionName, bobjectCodecSet)
     }
 
     /**
@@ -117,7 +112,7 @@ trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTra
  * The trait doesn't have knowledge of a specific MongoDB implementation
  * (Hammersmith, Casbah, etc.)
  *
- * A subclass of this trait has to provide a [[org.beaucatcher.mongo.MongoBackend]] which has
+ * A subclass of this trait has to provide a [[org.beaucatcher.driver.Driver]] which has
  * a concrete connection to a specific MongoDB implementation.
  *
  * Implementation note: many values in this class are lazy, because otherwise class and object
@@ -128,31 +123,24 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     import CollectionAccessTrait._
 
-    /**
-     * Because traits can't have constructor arguments or context bounds, a subtype of this
-     * trait has to provide the manifest for the EntityType. See [[org.beaucatcher.mongo.CollectionAccess]]
-     * which is an abstract class rather than a trait, and thus implements this method.
-     */
-    implicit protected def entityTypeManifest : Manifest[EntityType]
+    protected implicit def idEncoder : IdEncoder[IdType]
 
-    private lazy val collectionGroup : CollectionFactory[EntityType, IdType, IdType] = {
-        require(entityTypeManifest != null)
-        mongoDriver.createCollectionFactory(collectionName, entityBObjectQueryComposer,
-            entityBObjectEntityComposer)
-    }
+    private lazy val bobjectCodecSet = mongoDriver.newBObjectCodecSet()
 
     private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        collectionGroup.newBObjectSync
+        SyncCollection(collectionName, bobjectCodecSet)
     }
 
     /** Synchronous Collection returning BObject values from the collection */
     private[mongo] final def bobjectSync(implicit context : Context) : BObjectSyncCollection[IdType] =
         bobjectSyncCache.get
 
+    protected def entityCodecSet : CollectionCodecSet[BObject, EntityType, IdType, Any]
+
     private lazy val entitySyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        collectionGroup.newEntitySync
+        SyncCollection(collectionName, entityCodecSet)
     }
 
     /** Synchronous Collection returning case class entity values from the collection */
@@ -161,7 +149,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     private lazy val bobjectAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        collectionGroup.newBObjectAsync
+        AsyncCollection(collectionName, bobjectCodecSet)
     }
 
     /** Asynchronous Collection returning BObject values from the collection */
@@ -170,7 +158,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     private lazy val entityAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        collectionGroup.newEntityAsync
+        AsyncCollection(collectionName, entityCodecSet)
     }
 
     /** Asynchronous Collection returning case class entity values from the collection */
@@ -272,23 +260,6 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * value type.
      */
     def async(implicit context : Context) : AsyncCollection[BObject, _, IdType, _] = bobjectAsync
-
-    /**
-     * There probably isn't a reason to override this, but it would modify a query
-     * as it went from the case class Collection to the BObject Collection.
-     */
-    protected lazy val entityBObjectQueryComposer : QueryComposer[BObject, BObject] =
-        new IdentityQueryComposer()
-
-    /**
-     * You would override this if you want to adjust how a BObject is mapped to a
-     * case class entity. For example if you need to deal with missing fields or
-     * database format changes, you could do that in this composer. Or if you
-     * wanted to do a type mapping, say from Int to an enumeration, you could do that
-     * here. Many things you might do with an annotation in something like JPA
-     * could instead be done by subclassing CaseClassBObjectEntityComposer, in theory.
-     */
-    protected def entityBObjectEntityComposer : EntityComposer[EntityType, BObject]
 }
 
 object CollectionAccessTrait {
@@ -340,8 +311,6 @@ trait CollectionAccessWithCaseClassTrait[EntityType <: Product, IdType]
     extends CollectionAccessTrait[EntityType, IdType] {
     self : DriverProvider =>
 
-    override protected lazy val entityBObjectEntityComposer : EntityComposer[EntityType, BObject] =
-        new CaseClassBObjectEntityComposer[EntityType]
 }
 
 /**
@@ -351,10 +320,10 @@ trait CollectionAccessWithCaseClassTrait[EntityType <: Product, IdType]
  * [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]]
  * if you want to sometimes treat the collection as a collection of custom objects.
  */
-abstract class CollectionAccessWithoutEntity[IdType : Manifest]
+abstract class CollectionAccessWithoutEntity[IdType : IdEncoder]
     extends CollectionAccessWithoutEntityTrait[IdType] {
     self : DriverProvider =>
-    override final val idTypeManifest = manifest[IdType]
+    override final val idEncoder = implicitly[IdEncoder[IdType]]
 }
 
 /**
@@ -364,11 +333,10 @@ abstract class CollectionAccessWithoutEntity[IdType : Manifest]
  * the entity to and from `BObject`. With [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]] the
  * conversion is automatic but your entity must be a case class.
  */
-abstract class CollectionAccess[EntityType <: AnyRef : Manifest, IdType : Manifest]
+abstract class CollectionAccess[EntityType <: AnyRef, IdType : IdEncoder]
     extends CollectionAccessTrait[EntityType, IdType] {
     self : DriverProvider =>
-    override final val entityTypeManifest = manifest[EntityType]
-    override final val idTypeManifest = manifest[IdType]
+    override final val idEncoder = implicitly[IdEncoder[IdType]]
 }
 
 /**
@@ -378,9 +346,10 @@ abstract class CollectionAccess[EntityType <: AnyRef : Manifest, IdType : Manife
  * a case class. With [[org.beaucatcher.mongo.CollectionAccess]] you can use
  * any class (non-case classes), but you have to write a converter.
  */
-abstract class CollectionAccessWithCaseClass[EntityType <: Product : Manifest, IdType : Manifest]
+abstract class CollectionAccessWithCaseClass[EntityType <: Product : Manifest, IdType : IdEncoder]
     extends CollectionAccess[EntityType, IdType]
     with CollectionAccessWithCaseClassTrait[EntityType, IdType] {
     self : DriverProvider =>
 
+    override final lazy val entityCodecSet = mongoDriver.newCaseClassCodecSet[EntityType, IdType]()
 }
