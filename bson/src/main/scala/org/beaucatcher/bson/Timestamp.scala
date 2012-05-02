@@ -20,7 +20,6 @@
 
 package org.beaucatcher.bson
 
-import org.joda.time.DateTime
 import java.util.Date
 
 /**
@@ -31,7 +30,6 @@ import java.util.Date
  */
 case class Timestamp(time : Int, inc : Int) {
     def timeMillis = time * 1000L
-    def dateTime = new DateTime(timeMillis)
     def date = new Date(timeMillis)
     /**
      * convert to milliseconds and treat the "increment" as milliseconds after

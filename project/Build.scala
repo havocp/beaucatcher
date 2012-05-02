@@ -54,7 +54,6 @@ object Dependencies {
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.7.3"
     val akkaActor = "com.typesafe.akka" % "akka-actor" % "2.0"
-    val jodaTime = "joda-time" % "joda-time" % "1.6.2"
     val netty = "io.netty" % "netty" % "3.3.1.Final"
 
     // Dependencies in "test" configuration
@@ -109,7 +108,7 @@ object BeaucatcherBuild extends Build {
     lazy val bson = Project("beaucatcher-bson",
         file("bson"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(scalap, commonsCodec, jodaTime,
+            Seq(libraryDependencies := Seq(scalap, commonsCodec,
                     Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver))) dependsOn(base)
 
     // interface to driver

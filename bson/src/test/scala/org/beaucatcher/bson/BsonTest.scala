@@ -4,7 +4,6 @@ import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import java.util.Date
-import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
 import org.junit._
 
@@ -266,7 +265,7 @@ class BsonTest extends TestUtils {
         // FIXME is the base64 encoding really supposed to have \r\n instead of a carriage return newline?
         val expected = "{\"null\":null,\"int\":42,\"long\":37,\"bigint\":42,\"double\":3.14159," +
             "\"float\":3.141590118408203,\"bigdecimal\":23.49,\"boolean\":true,\"string\":\"quick brown fox\"," +
-            "\"date\":837017400000,\"datetime\":837017400000,\"timestamp\":837017400001,\"objectid\":\"4dbf8ea93364e3bd9745723c\"," +
+            "\"date\":837017400000,\"timestamp\":837017400001,\"objectid\":\"4dbf8ea93364e3bd9745723c\"," +
             "\"binary\":\"AAAAAAAAAAAAAA==\\r\\n\",\"map_int\":{\"a\":20,\"b\":21}," +
             "\"map_date\":{\"a\":837017400000,\"b\":837017400000},\"seq_string\":[\"a\",\"b\",\"c\",\"d\"]," +
             "\"seq_int\":[1,2,3,4],\"bobj\":{\"foo\":6789,\"bar\":4321}}"
@@ -314,7 +313,7 @@ class BsonTest extends TestUtils {
     def barrayToJson() = {
         val barray = makeArrayManyTypes()
         val jsonString = barray.toJson(JsonFlavor.CLEAN)
-        val expected = "[null,42,37,42,3.14159,3.141590118408203,23.49,true,\"quick brown fox\",837017400000,837017400000,837017400001,\"4dbf8ea93364e3bd9745723c\",\"AAAAAAAAAAAAAA==\\r\\n\",{\"a\":20,\"b\":21},{\"a\":837017400000,\"b\":837017400000},[\"a\",\"b\",\"c\",\"d\"],[1,2,3,4],{\"foo\":6789,\"bar\":4321}]"
+        val expected = "[null,42,37,42,3.14159,3.141590118408203,23.49,true,\"quick brown fox\",837017400000,837017400001,\"4dbf8ea93364e3bd9745723c\",\"AAAAAAAAAAAAAA==\\r\\n\",{\"a\":20,\"b\":21},{\"a\":837017400000,\"b\":837017400000},[\"a\",\"b\",\"c\",\"d\"],[1,2,3,4],{\"foo\":6789,\"bar\":4321}]"
         assertEquals(expected, jsonString)
 
         // FIXME test pretty string, test other json flavors
@@ -386,13 +385,14 @@ class BsonTest extends TestUtils {
 
     @Test
     def wrapJavaDate() = {
-        assertEquals(BISODate.fromDateTime(new DateTime(someJavaDate)), BValue.wrap(someJavaDate))
+        assertEquals(BISODate(someJavaDate), BValue.wrap(someJavaDate))
 
         // the main point of this is to be sure BISODate can be used in a match,
         // even though the constructor is private.
         BValue.wrap(someJavaDate) match {
-            case BISODate(dateTime) =>
-                assertEquals(dateTime.getMillis, someJavaDate.getTime)
+            case BISODate(date) =>
+                assertEquals(date.getTime, someJavaDate.getTime)
+                assertEquals(date, someJavaDate)
             case whatever =>
                 throw new IllegalStateException("wrapped java date in non-BISODate: " + whatever)
         }
@@ -673,19 +673,10 @@ class BsonTest extends TestUtils {
         rightType[String]("string", "quick brown fox")
         wrongType[Int]("string")
 
-        // java Date becomes a DateTime
-        // FIXME there's some time zone problem or something here
-        //rightType[DateTime]("date", someDateTime)
-        wrongType[Date]("date")
+        rightType[Date]("date", someJavaDate)
         wrongType[Long]("date")
 
-        // FIXME there's some time zone problem or something here
-        //rightType[DateTime]("datetime", someDateTime)
-        wrongType[Date]("datetime")
-        wrongType[Long]("datetime")
-
         rightType[Timestamp]("timestamp", Timestamp((someJavaDate.getTime / 1000).toInt, 1))
-        wrongType[DateTime]("timestamp")
         wrongType[Long]("timestamp")
 
         rightType[ObjectId]("objectid", ObjectId("4dbf8ea93364e3bd9745723c"))
@@ -722,8 +713,7 @@ class BsonTest extends TestUtils {
 
 object BsonTest {
 
-    val someDateTime = new DateTime(1996, 7, 10, 16, 50, 00, 00, DateTimeZone.UTC)
-    val someJavaDate = someDateTime.toDate()
+    val someJavaDate = new Date(837017400000L)
 
     def makeObjectManyTypes() = {
         BObject("null" -> null,
@@ -736,7 +726,6 @@ object BsonTest {
             "boolean" -> true,
             "string" -> "quick brown fox",
             "date" -> someJavaDate,
-            "datetime" -> someDateTime,
             "timestamp" -> Timestamp((someJavaDate.getTime / 1000).toInt, 1),
             "objectid" -> ObjectId("4dbf8ea93364e3bd9745723c"),
             "binary" -> Binary(new Array[Byte](10), BsonSubtype.GENERAL),
@@ -760,7 +749,6 @@ object BsonTest {
             true,
             "quick brown fox",
             someJavaDate,
-            someDateTime,
             Timestamp((someJavaDate.getTime / 1000).toInt, 1),
             ObjectId("4dbf8ea93364e3bd9745723c"),
             Binary(new Array[Byte](10), BsonSubtype.GENERAL),

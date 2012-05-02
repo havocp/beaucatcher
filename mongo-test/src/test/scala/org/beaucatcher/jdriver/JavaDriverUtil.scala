@@ -5,7 +5,6 @@ import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.mongo._
 import org.beaucatcher.jdriver._
-import org.joda.time.DateTime
 import akka.actor.ActorSystem
 
 trait JavaDriverTestContextProvider

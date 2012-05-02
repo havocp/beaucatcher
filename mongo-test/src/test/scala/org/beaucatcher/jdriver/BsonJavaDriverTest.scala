@@ -6,7 +6,6 @@ import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.jdriver.Implicits._
 import com.mongodb.BasicDBObject
 import java.util.Date
-import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
 import org.junit._
 
@@ -41,7 +40,7 @@ class BsonJavaDriverTest {
         val bobj = makeObjectWithImplicits()
         val fromDBObj = bobj.getOrElse("bsonobj", throw new Exception("bsonobj not got"))
         fromDBObj match {
-            case o : BObject =>
+            case o: BObject =>
                 assertTrue(o.contains("a"))
                 assertTrue(o.contains("b"))
                 assertTrue(!o.contains("c"))
@@ -58,7 +57,7 @@ class BsonJavaDriverTest {
         val barray = makeArrayWithImplicits()
         val fromDBObj = barray(1)
         fromDBObj match {
-            case o : BObject =>
+            case o: BObject =>
                 assertTrue(o.contains("a"))
                 assertTrue(o.contains("b"))
                 assertTrue(!o.contains("c"))

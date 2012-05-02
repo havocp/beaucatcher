@@ -4,7 +4,7 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 
-import org.joda.time._
+import java.util.Date
 
 case class CreateOptions(filename : Option[String] = None, contentType : Option[String] = None,
     chunkSize : Option[Long] = None, aliases : Seq[String] = Nil, metadata : BObject = BObject.empty) {
@@ -52,7 +52,7 @@ class GridFSFile private[gridfs] (private[gridfs] val underlying : BObject) {
     /** get the file's chunk size or throw NoSuchElementException */
     def chunkSize = underlying.getUnwrappedAs[Long]("chunkSize") // using "Long" is silly (Input/OutputStream don't) but Java driver stores as Int64
     /** get the file's uploadDate or throw NoSuchElementException */
-    def uploadDate = underlying.getUnwrappedAs[DateTime]("uploadDate")
+    def uploadDate = underlying.getUnwrappedAs[Date]("uploadDate")
     /** get the file's aliases or throw NoSuchElementException */
     def aliases : Seq[String] = underlying.getUnwrappedAs[List[String]]("aliases")
     /** get the file's metadata object or an empty object (throw NoSuchElementException only if there's a broken non-object under "metadata") */

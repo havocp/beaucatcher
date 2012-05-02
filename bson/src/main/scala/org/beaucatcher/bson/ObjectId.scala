@@ -22,7 +22,6 @@ package org.beaucatcher.bson
 
 import java.nio.ByteBuffer
 import java.util.Date
-import org.joda.time.DateTime
 import java.util.concurrent.atomic.AtomicInteger
 import java.net.NetworkInterface
 import scala.collection.JavaConversions._
@@ -57,11 +56,6 @@ object ObjectId {
 
     def apply(date : Date, machine : Int, inc : Int) : ObjectId = {
         val time = (date.getTime() / 1000).intValue
-        ObjectId(time, machine, inc)
-    }
-
-    def apply(date : DateTime, machine : Int, inc : Int) : ObjectId = {
-        val time = (date.getMillis / 1000).intValue
         ObjectId(time, machine, inc)
     }
 

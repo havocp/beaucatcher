@@ -30,7 +30,6 @@ import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable
 import java.util.Date
 import org.apache.commons.codec.binary.Base64
-import org.joda.time._
 import scala.io.Source
 
 /**
@@ -608,26 +607,15 @@ case class BBoolean(override val value : Boolean) extends BSingleValue(BsonType.
 }
 
 /**
- * A BSON date time value, wrapping [[org.joda.time.DateTime]].
- * The DateTime is always in the UTC time zone because Mongo doesn't store the time zone.
- * Because a case class offers no way to enforce the time zone rule, the constructor is
- * private and you have to use BISODate.fromDateTime() (or BISODate(millis) or BISODate(javadate)).
- * Those methods of creating a BISODate all enforce the proper UTC time zone.
- *
- * If a non-UTC timezone is allowed then round trips through JSON or MongoDB don't work,
- * i.e. the BISODate changes when stored and reloaded. An earlier approach was to
- * redefine equals and hashCode to ignore the timezone, but this current approach
- * seems safer since it completely canonicalizes the timezone in all situations.
+ * A BSON date time value, wrapping [[java.util.Date]].
  */
-case class BISODate private[BISODate] (override val value : DateTime) extends BSingleValue(BsonType.DATE, value) {
-    require(value.getZone == DateTimeZone.UTC, throw new IllegalArgumentException("BISODate must be created with a UTC time"))
-
+case class BISODate(override val value : Date) extends BSingleValue(BsonType.DATE, value) {
     override def toJValue(flavor : JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
-                BInt64(value.getMillis)
+                BInt64(value.getTime)
             case JsonFlavor.STRICT =>
-                JObject(("$date", BInt64(value.getMillis)))
+                JObject(("$date", BInt64(value.getTime)))
             case _ =>
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
@@ -635,19 +623,12 @@ case class BISODate private[BISODate] (override val value : DateTime) extends BS
 }
 
 object BISODate {
+
     def apply(millis : Long) : BISODate =
-        BISODate(new DateTime(millis, DateTimeZone.UTC))
-
-    def apply(date : Date) : BISODate =
-        BISODate(new DateTime(date, DateTimeZone.UTC))
-
-    // it's pretty annoying that this can't be an apply() because
-    // it conflicts with the one generated for the case class.
-    def fromDateTime(dateTime : DateTime) =
-        BISODate(dateTime.withZone(DateTimeZone.UTC))
+        BISODate(new Date(millis))
 
     def now = {
-        BISODate(new DateTime(DateTimeZone.UTC))
+        BISODate(new Date())
     }
 }
 
@@ -955,8 +936,6 @@ object BValue {
             // conversion if you need to. For example ("foo", 10) or ("foo", BDouble(10))
             case bvalue : BValue =>
                 bvalue
-            case d : DateTime =>
-                BISODate.fromDateTime(d)
             case d : Date =>
                 BISODate(d)
             case oid : ObjectId =>

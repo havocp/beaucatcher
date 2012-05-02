@@ -2,9 +2,9 @@ package org.beaucatcher.bson
 
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
-import org.joda.time.{ DateTimeZone, DateTime }
 import org.junit.Assert._
 import org.junit._
+import java.util.Date
 
 package bar {
     case class LotsOfTypes(anInt : Int,
@@ -12,7 +12,7 @@ package bar {
         aDouble : Double,
         aBoolean : Boolean,
         aString : String,
-        aDateTime : DateTime,
+        aDate : Date,
         aTimestamp : Timestamp,
         anObjectId : ObjectId,
         aBinary : Binary,
@@ -34,7 +34,7 @@ class ValidationTest {
     def setup() {
     }
 
-    private val someDateTime = new DateTime(1996, 7, 10, 16, 50, 00, 00, DateTimeZone.UTC)
+    private val someDate = new Date(837017400000L)
 
     private def lotsOfTypesAsBObject() = {
         BObject("anInt" -> 42,
@@ -42,8 +42,8 @@ class ValidationTest {
             "aDouble" -> 3.14,
             "aBoolean" -> true,
             "aString" -> "lazy dog",
-            "aDateTime" -> someDateTime,
-            "aTimestamp" -> Timestamp((someDateTime.getMillis / 1000).toInt, 1),
+            "aDate" -> someDate,
+            "aTimestamp" -> Timestamp((someDate.getTime() / 1000).toInt, 1),
             "anObjectId" -> ObjectId("4dbf8ea93364e3bd9745723c"),
             "aBinary" -> Binary(new Array[Byte](10), BsonSubtype.GENERAL),
             "aMap" -> Map[String, Int]("a" -> 20, "b" -> 21),
@@ -60,7 +60,7 @@ class ValidationTest {
   "aDouble":3.14,
   "aBoolean":true,
   "aString":"lazy dog",
-  "aDateTime":837017400000,
+  "aDate":837017400000,
   "aTimestamp":837017400001,
   "anObjectId":"4dbf8ea93364e3bd9745723c",
   "aBinary":"AAAAAAAAAAAAAA==\r\n",

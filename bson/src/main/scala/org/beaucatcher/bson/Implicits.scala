@@ -1,7 +1,6 @@
 package org.beaucatcher.bson
 
 import java.util.Date
-import org.joda.time._
 
 /**
  * Object containing implicit conversions from primitive types into [[org.beaucatcher.bson.BValue]].
@@ -28,7 +27,6 @@ trait Implicits {
     implicit def boolean2bvalue(x : Boolean) = BBoolean(x)
     implicit def string2bvalue(x : String) = BString(x)
     implicit def date2bvalue(x : Date) = BISODate(x)
-    implicit def datetime2bvalue(x : DateTime) = BISODate.fromDateTime(x)
     implicit def timestamp2bvalue(x : Timestamp) = BTimestamp(x)
     implicit def objectid2bvalue(x : ObjectId) = BObjectId(x)
     implicit def binary2bvalue(x : Binary) = BBinary(x)

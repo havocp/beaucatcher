@@ -1,7 +1,6 @@
 package org.beaucatcher.bson
 
 import org.apache.commons.codec.binary.Base64
-import org.joda.time.{ DateTime, DateTimeZone }
 import scala.tools.scalap.scalax.rules.scalasig.{ Type, TypeRefType, Symbol }
 
 private[bson] object BsonValidation {
@@ -98,7 +97,7 @@ private[bson] object BsonValidation {
                 case _ =>
                     throw new UnhandledTypeException(fieldName, symbol.path)
             }
-            case "org.joda.time.DateTime" => value match {
+            case "java.util.Date" => value match {
                 case n : BNumericValue[_] =>
                     BISODate(n.longValue)
                 case _ =>

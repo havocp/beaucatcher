@@ -245,7 +245,7 @@ object Codecs {
             case v : BISODate =>
                 buf.writeByte(Bson.DATE)
                 writeNulString(buf, name)
-                buf.writeLong(v.value.getMillis())
+                buf.writeLong(v.value.getTime)
             case v : BBinary =>
                 buf.writeByte(Bson.BINARY)
                 writeNulString(buf, name)

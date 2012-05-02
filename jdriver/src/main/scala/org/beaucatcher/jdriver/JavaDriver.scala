@@ -5,7 +5,6 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.driver._
 import com.mongodb._
 import org.bson.types.{ ObjectId => JavaObjectId, _ }
-import org.joda.time.DateTime
 import akka.actor.ActorSystem
 
 /**
