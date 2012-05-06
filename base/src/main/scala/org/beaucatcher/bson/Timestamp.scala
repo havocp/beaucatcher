@@ -28,7 +28,7 @@ import java.util.Date
  * The "time" is in seconds since epoch while the "inc" is just an
  * incrementing serial.
  */
-case class Timestamp(time : Int, inc : Int) {
+case class Timestamp(time: Int, inc: Int) {
     def timeMillis = time * 1000L
     def date = new Date(timeMillis)
     /**
@@ -39,7 +39,8 @@ case class Timestamp(time : Int, inc : Int) {
 }
 
 object Timestamp {
-    val zero : Timestamp = Timestamp(0, 0)
+    private lazy val _zero = Timestamp(0, 0)
+    def zero: Timestamp = _zero
 
-    def fromNumber(n : Number) = Timestamp((n.longValue / 1000).intValue, (n.longValue % 1000).intValue)
+    def fromNumber(n: Number) = Timestamp((n.longValue / 1000).intValue, (n.longValue % 1000).intValue)
 }

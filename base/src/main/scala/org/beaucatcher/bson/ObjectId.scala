@@ -20,11 +20,13 @@
 
 package org.beaucatcher.bson
 
-import java.nio.ByteBuffer
-import java.util.Date
-import java.util.concurrent.atomic.AtomicInteger
 import java.net.NetworkInterface
-import scala.collection.JavaConversions._
+import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.Date
+import scala.collection.JavaConversions.enumerationAsScalaIterator
+
+import org.beaucatcher.util.toHex
 
 /**
  * A globally unique identifier for objects.
@@ -38,7 +40,7 @@ import scala.collection.JavaConversions._
  * </table>
  * </pre></blockquote>
  */
-case class ObjectId(time : Int, machine : Int, inc : Int) {
+case class ObjectId(time: Int, machine: Int, inc: Int) {
 
     /** Time of the ID in milliseconds (the regular time field is in seconds) */
     def timeMillis = time * 1000L
@@ -52,24 +54,24 @@ case class ObjectId(time : Int, machine : Int, inc : Int) {
 
 object ObjectId {
 
-    private[bson] case class ObjectIdParts(time : Int, machine : Int, inc : Int)
+    private[bson] case class ObjectIdParts(time: Int, machine: Int, inc: Int)
 
-    def apply(date : Date, machine : Int, inc : Int) : ObjectId = {
+    def apply(date: Date, machine: Int, inc: Int): ObjectId = {
         val time = (date.getTime() / 1000).intValue
         ObjectId(time, machine, inc)
     }
 
-    def apply(string : String) : ObjectId = {
+    def apply(string: String): ObjectId = {
         val parts = disassembleString(string)
         ObjectId(parts.time, parts.machine, parts.inc)
     }
 
-    def apply() : ObjectId = {
+    def apply(): ObjectId = {
         val time = (System.currentTimeMillis / 1000).intValue
         ObjectId(time, machine, nextInc)
     }
 
-    protected[bson] def assembleBytes(time : Int, machine : Int, inc : Int) = {
+    protected[bson] def assembleBytes(time: Int, machine: Int, inc: Int) = {
         val b = new Array[Byte](12)
         val bb = ByteBuffer.wrap(b)
         // by default BB is big endian like we need
@@ -79,20 +81,20 @@ object ObjectId {
         b
     }
 
-    protected[bson] def disassembleBytes(bytes : Array[Byte]) = {
+    protected[bson] def disassembleBytes(bytes: Array[Byte]) = {
         if (bytes.length != 12)
             throw new IllegalArgumentException("BSON object ID byte[] has length " + bytes.length + " should be 12")
         val bb = ByteBuffer.wrap(bytes)
         ObjectIdParts(bb.getInt(), bb.getInt(), bb.getInt())
     }
 
-    protected[bson] def assembleString(time : Int, machine : Int, inc : Int) = {
+    protected[bson] def assembleString(time: Int, machine: Int, inc: Int) = {
         val bytes = assembleBytes(time, machine, inc)
 
         toHex(bytes)
     }
 
-    protected[bson] def disassembleString(string : String) : ObjectIdParts = {
+    protected[bson] def disassembleString(string: String): ObjectIdParts = {
         if (string.length != 24)
             throw new IllegalArgumentException("BSON object ID string has length " + string.length + " should be 24")
         val bytes = new Array[Byte](12)
@@ -100,12 +102,12 @@ object ObjectId {
             val parsed = try {
                 Integer.parseInt(string.substring(i * 2, i * 2 + 2), 16)
             } catch {
-                case nfe : NumberFormatException =>
+                case nfe: NumberFormatException =>
                     throw new IllegalArgumentException("BSON object ID string contains invalid hex: " + string)
             }
             if (parsed < 0 || parsed > 255)
                 throw new IllegalArgumentException("BSON object ID contains invalid number: " + parsed)
-            val b : Byte = parsed.byteValue
+            val b: Byte = parsed.byteValue
             bytes.update(i, b)
         }
         disassembleBytes(bytes)
