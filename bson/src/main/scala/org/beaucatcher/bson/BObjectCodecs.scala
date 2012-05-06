@@ -146,49 +146,22 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
     private[beaucatcher] object BObjectDecoder
         extends QueryResultDecoder[BObject] {
         override def decode(buf : DecodeBuffer) : BObject = {
-            val len = buf.readInt()
-            if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
-                buf.skipBytes(len - 4)
-                BObject.empty
-            } else {
-                val b = BObject.newBuilder
+            val b = BObject.newBuilder
+            decodeDocumentForeach(buf, { (what, name, buf) =>
+                b += (name -> readBValue(what, buf))
+            })
 
-                var what = buf.readByte()
-                while (what != Bson.EOO) {
-
-                    val name = readNulString(buf)
-
-                    b += (name -> readBValue(what, buf))
-
-                    what = buf.readByte()
-                }
-
-                b.result()
-            }
+            b.result()
         }
     }
 
     private def readBArray(buf : DecodeBuffer) : BArray = {
-        val len = buf.readInt()
-        if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
-            buf.skipBytes(len - 4)
-            BArray.empty
-        } else {
-            val b = BArray.newBuilder
+        val b = BArray.newBuilder
+        decodeArrayForeach(buf, { (what, buf) =>
+            b += readBValue(what, buf)
+        })
 
-            var what = buf.readByte()
-            while (what != Bson.EOO) {
-
-                // the names in an array are just the indices, so nobody cares
-                skipNulString(buf)
-
-                b += readBValue(what, buf)
-
-                what = buf.readByte()
-            }
-
-            b.result()
-        }
+        b.result()
     }
 
     private def readBValue(what : Byte, buf : DecodeBuffer) : BValue = {

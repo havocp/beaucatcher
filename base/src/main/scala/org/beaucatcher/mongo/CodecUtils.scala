@@ -277,26 +277,11 @@ private[beaucatcher] object CodecUtils {
     }
 
     def readArrayValues[E](buf: DecodeBuffer)(implicit elementDecoder: ValueDecoder[E]): Seq[E] = {
-        val len = buf.readInt()
-        if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
-            buf.skipBytes(len - 4)
-            Seq.empty
-        } else {
-            val b = Seq.newBuilder[E]
-
-            var what = buf.readByte()
-            while (what != Bson.EOO) {
-
-                // the names in an array are just the indices, so nobody cares
-                skipNulString(buf)
-
-                b += elementDecoder.decode(what, buf)
-
-                what = buf.readByte()
-            }
-
-            b.result()
-        }
+        val b = Seq.newBuilder[E]
+        decodeArrayForeach(buf, { (what, buf) =>
+            b += elementDecoder.decode(what, buf)
+        })
+        b.result()
     }
 
     def readAny[E](what: Byte, buf: DecodeBuffer)(implicit nestedDecoder: QueryResultDecoder[E]): Any = {
@@ -354,25 +339,45 @@ private[beaucatcher] object CodecUtils {
     }
 
     private def readArrayAny[E](buf: DecodeBuffer)(implicit nestedDecoder: QueryResultDecoder[E]): Seq[Any] = {
+        val b = Seq.newBuilder[Any]
+        decodeArrayForeach(buf, { (what, buf) =>
+            b += readAny(what, buf)
+        })
+        b.result()
+    }
+
+    def decodeDocumentForeach[T](buf: DecodeBuffer, func: (Byte, String, DecodeBuffer) => Unit): Unit = {
         val len = buf.readInt()
         if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
             buf.skipBytes(len - 4)
-            Seq.empty
         } else {
-            val b = Seq.newBuilder[Any]
+            var what = buf.readByte()
+            while (what != Bson.EOO) {
 
+                val name = readNulString(buf)
+
+                func(what, name, buf)
+
+                what = buf.readByte()
+            }
+        }
+    }
+
+    def decodeArrayForeach[T](buf: DecodeBuffer, func: (Byte, DecodeBuffer) => Unit): Unit = {
+        val len = buf.readInt()
+        if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
+            buf.skipBytes(len - 4)
+        } else {
             var what = buf.readByte()
             while (what != Bson.EOO) {
 
                 // the names in an array are just the indices, so nobody cares
                 skipNulString(buf)
 
-                b += readAny(what, buf)
+                func(what, buf)
 
                 what = buf.readByte()
             }
-
-            b.result()
         }
     }
 }

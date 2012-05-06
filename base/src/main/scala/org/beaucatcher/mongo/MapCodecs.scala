@@ -60,48 +60,21 @@ object MapCodecs extends IdEncoders with ValueDecoders {
     private[beaucatcher] object MapDecoder
         extends QueryResultDecoder[Map[String, Any]] {
         override def decode(buf: DecodeBuffer): Map[String, Any] = {
-            val len = buf.readInt()
-            if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
-                buf.skipBytes(len - 4)
-                Map.empty
-            } else {
-                val b = Map.newBuilder[String, Any]
-
-                var what = buf.readByte()
-                while (what != Bson.EOO) {
-
-                    val name = readNulString(buf)
-
-                    b += (name -> readAny[Map[String, Any]](what, buf))
-
-                    what = buf.readByte()
-                }
-
-                b.result()
-            }
+            val b = Map.newBuilder[String, Any]
+            decodeDocumentForeach(buf, { (what, name, buf) =>
+                b += (name -> readAny[Map[String, Any]](what, buf))
+            })
+            b.result()
         }
     }
 
     private def readArray(buf: DecodeBuffer): IndexedSeq[Any] = {
-        val len = buf.readInt()
-        if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
-            buf.skipBytes(len - 4)
-            IndexedSeq.empty[Any]
-        } else {
-            val b = IndexedSeq.newBuilder[Any]
+        val b = IndexedSeq.newBuilder[Any]
 
-            var what = buf.readByte()
-            while (what != Bson.EOO) {
+        decodeArrayForeach(buf, { (what, buf) =>
+            b += readAny[Map[String, Any]](what, buf)
+        })
 
-                // the names in an array are just the indices, so nobody cares
-                skipNulString(buf)
-
-                b += readAny[Map[String, Any]](what, buf)
-
-                what = buf.readByte()
-            }
-
-            b.result()
-        }
+        b.result()
     }
 }
