@@ -43,7 +43,7 @@ private[mongo] case class CommandResultImpl(ok: Boolean,
 
     // getLastError reply can violate this, we're supposed to
     // fix it before we get here.
-    require(ok == err.isEmpty)
+    require(ok == (err.isEmpty && errmsg.isEmpty))
 }
 
 object CommandResult {
