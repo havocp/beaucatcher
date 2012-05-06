@@ -6,6 +6,13 @@ import org.beaucatcher.wire._
 object BObjectCodecs extends IdEncoders with ValueDecoders {
     import CodecUtils._
 
+    // can't be implicit since it would always apply
+    // we also offer "bvalueValueDecoder" that
+    // will decode docs as BObject, so here we
+    // decode them as plain maps.
+    def anyValueDecoder : ValueDecoder[Any] =
+        MapCodecs.anyValueDecoder
+
     implicit def bvalueValueDecoder : ValueDecoder[BValue] =
         BValueValueDecoder
 

@@ -101,13 +101,13 @@ private[beaucatcher] object CodecUtils {
             Integer.toString(i)
     }
 
-    private def writeArray(buf: EncodeBuffer, array: Seq[Any])(implicit encoder: QueryEncoder[Map[String, Any]]): Unit = {
+    def writeArrayAny(buf: EncodeBuffer, array: Seq[Any], documentFieldWriter: FieldWriter): Unit = {
         val start = buf.writerIndex
         buf.ensureWritableBytes(32) // some prealloc for efficiency
         buf.writeInt(0) // will write this later
         var i = 0
         for (element <- array) {
-            writeValueAny(buf, arrayIndex(i), element)
+            writeValueAny(buf, arrayIndex(i), element, documentFieldWriter)
             i += 1
         }
         buf.ensureWritableBytes(1)
@@ -161,7 +161,9 @@ private[beaucatcher] object CodecUtils {
         writeFieldDocument(buf, name, query)(querySupport)
     }
 
-    def writeValueAny(buf: EncodeBuffer, name: String, value: Any)(implicit encoder: QueryEncoder[Map[String, Any]]): Unit = {
+    type FieldWriter = PartialFunction[(EncodeBuffer, String, Any), Unit]
+
+    def writeValueAny(buf: EncodeBuffer, name: String, value: Any, documentFieldWriter: FieldWriter): Unit = {
         buf.ensureWritableBytes(1 + name.length() + 1 + 16) // typecode + name + nul + large value size
         value match {
             case null =>
@@ -180,12 +182,6 @@ private[beaucatcher] object CodecUtils {
                 writeFieldObjectId(buf, name, v)
             case v: String =>
                 writeFieldString(buf, name, v)
-            case v: Map[_, _] =>
-                writeFieldQuery(buf, name, v.asInstanceOf[Map[String, Any]])
-            case v: Seq[_] =>
-                buf.writeByte(Bson.ARRAY)
-                writeNulString(buf, name)
-                writeArray(buf, v)
             case v: Timestamp =>
                 buf.writeByte(Bson.TIMESTAMP)
                 writeNulString(buf, name)
@@ -205,6 +201,16 @@ private[beaucatcher] object CodecUtils {
                 buf.writeBytes(bytes)
             case v: Boolean =>
                 writeFieldBoolean(buf, name, v)
+            // handles document objects
+            case v if documentFieldWriter.isDefinedAt((buf, name, v)) =>
+                documentFieldWriter.apply((buf, name, v))
+            // handle arrays after documents, in case the
+            // documentFieldWriter wants to try to special-case
+            // certain Seq
+            case v: Seq[_] =>
+                buf.writeByte(Bson.ARRAY)
+                writeNulString(buf, name)
+                writeArrayAny(buf, v, documentFieldWriter)
         }
     }
 
@@ -359,6 +365,30 @@ private[beaucatcher] object CodecUtils {
                 func(what, name, buf)
 
                 what = buf.readByte()
+            }
+        }
+    }
+
+    def decodeDocumentIterator[T](buf: DecodeBuffer, func: (Byte, String, DecodeBuffer) => T): Iterator[(String, T)] = {
+        val len = buf.readInt()
+        if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
+            buf.skipBytes(len - 4)
+            Iterator.empty
+        } else {
+            new Iterator[(String, T)]() {
+                private var nextWhat = buf.readByte()
+
+                override def hasNext = nextWhat != Bson.EOO
+
+                override def next() = {
+                    if (nextWhat == Bson.EOO)
+                        throw new NoSuchElementException("Reached end of BSON document")
+                    val name = readNulString(buf)
+                    val t = func(nextWhat, name, buf)
+
+                    nextWhat = buf.readByte()
+                    (name -> t)
+                }
             }
         }
     }

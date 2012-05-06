@@ -4,12 +4,19 @@ import org.beaucatcher.bson._
 import org.beaucatcher.wire._
 
 /**
- * Import MapCodecs._ to encode and decode `scala.immutable.Map[String,Any]`.
+ * Import MapCodecs._ to encode and decode `scala.collection.immutable.Map[String,Any]`.
  * The `Any` can be an Int, Long, Double, String, Null, Boolean, ObjectId, Binary, Timestamp,
  * java.util.Date, nested Map[String,Any], or Seq[Any].
  */
 object MapCodecs extends IdEncoders with ValueDecoders {
     import CodecUtils._
+
+    private lazy val _anyValueDecoder =
+        ValueDecoders.anyValueDecoder[Map[String, Any]]()
+
+    // can't be implicit since it would always apply
+    def anyValueDecoder: ValueDecoder[Any] =
+        _anyValueDecoder
 
     implicit def mapQueryEncoder: QueryEncoder[Map[String, Any]] =
         MapUnmodifiedEncoder
@@ -29,11 +36,17 @@ object MapCodecs extends IdEncoders with ValueDecoders {
     private[beaucatcher] object MapUnmodifiedEncoder
         extends QueryEncoder[Map[String, Any]]
         with UpsertEncoder[Map[String, Any]] {
+
+        private val fieldWriter: FieldWriter = {
+            case (buf, name, doc: Map[_, _]) =>
+                writeFieldDocument(buf, name, doc.asInstanceOf[Map[String, Any]])(MapUnmodifiedEncoder)
+        }
+
         override def encode(buf: EncodeBuffer, t: Map[String, Any]): Unit = {
             val start = writeOpenDocument(buf)
 
             for (field <- t) {
-                writeValueAny(buf, field._1, field._2)
+                writeValueAny(buf, field._1, field._2, fieldWriter)
             }
 
             writeCloseDocument(buf, start)
@@ -66,15 +79,5 @@ object MapCodecs extends IdEncoders with ValueDecoders {
             })
             b.result()
         }
-    }
-
-    private def readArray(buf: DecodeBuffer): IndexedSeq[Any] = {
-        val b = IndexedSeq.newBuilder[Any]
-
-        decodeArrayForeach(buf, { (what, buf) =>
-            b += readAny[Map[String, Any]](what, buf)
-        })
-
-        b.result()
     }
 }
