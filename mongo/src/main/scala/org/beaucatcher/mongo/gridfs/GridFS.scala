@@ -44,7 +44,7 @@ private[gridfs] class GridFSCollections(driver : Driver, val bucket : String)(im
     }
 
     lazy val files : CollectionAccessTrait[GridFSFile, ObjectId] = {
-        import Codecs._
+        import BObjectCodecs._
         val access = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files",
             fileCodecSet,
             { (access, context) =>
@@ -56,7 +56,7 @@ private[gridfs] class GridFSCollections(driver : Driver, val bucket : String)(im
     }
 
     lazy val chunks : CollectionAccessWithoutEntityTrait[ObjectId] = {
-        import Codecs._
+        import BObjectCodecs._
         val access = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks",
             { (access, context) =>
                 access.sync(context).ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))

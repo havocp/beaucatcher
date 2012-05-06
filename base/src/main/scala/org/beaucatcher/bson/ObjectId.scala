@@ -71,7 +71,7 @@ object ObjectId {
         ObjectId(time, machine, nextInc)
     }
 
-    protected[bson] def assembleBytes(time: Int, machine: Int, inc: Int) = {
+    private[bson] def assembleBytes(time: Int, machine: Int, inc: Int) = {
         val b = new Array[Byte](12)
         val bb = ByteBuffer.wrap(b)
         // by default BB is big endian like we need
@@ -81,20 +81,20 @@ object ObjectId {
         b
     }
 
-    protected[bson] def disassembleBytes(bytes: Array[Byte]) = {
+    private[bson] def disassembleBytes(bytes: Array[Byte]) = {
         if (bytes.length != 12)
             throw new IllegalArgumentException("BSON object ID byte[] has length " + bytes.length + " should be 12")
         val bb = ByteBuffer.wrap(bytes)
         ObjectIdParts(bb.getInt(), bb.getInt(), bb.getInt())
     }
 
-    protected[bson] def assembleString(time: Int, machine: Int, inc: Int) = {
+    private[bson] def assembleString(time: Int, machine: Int, inc: Int) = {
         val bytes = assembleBytes(time, machine, inc)
 
         toHex(bytes)
     }
 
-    protected[bson] def disassembleString(string: String): ObjectIdParts = {
+    private[bson] def disassembleString(string: String): ObjectIdParts = {
         if (string.length != 24)
             throw new IllegalArgumentException("BSON object ID string has length " + string.length + " should be 24")
         val bytes = new Array[Byte](12)
@@ -113,11 +113,11 @@ object ObjectId {
         disassembleBytes(bytes)
     }
 
-    protected[bson] val _nextInc = new AtomicInteger((new java.util.Random()).nextInt())
+    private[bson] val _nextInc = new AtomicInteger((new java.util.Random()).nextInt())
 
-    protected[bson] def nextInc = _nextInc.getAndIncrement()
+    private[bson] def nextInc = _nextInc.getAndIncrement()
 
-    protected[bson] lazy val machine = {
+    private[bson] lazy val machine = {
         // build a 2-byte machine piece based on NICs info
         val machinePiece = {
             val sb = new StringBuilder()

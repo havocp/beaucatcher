@@ -2,12 +2,20 @@ package org.beaucatcher.mongo
 
 import java.nio.charset.Charset
 import org.beaucatcher.wire._
+import org.beaucatcher.bson._
 
 // All these private utility methods would need cleaning up if made public
 private[beaucatcher] object CodecUtils {
 
     private[this] val zeroByte = 0.toByte
     private[this] val utf8Charset = Charset.forName("UTF-8");
+
+    def swapInt(value: Int): Int = {
+        (((value >> 0) & 0xff) << 24) |
+            (((value >> 8) & 0xff) << 16) |
+            (((value >> 16) & 0xff) << 8) |
+            (((value >> 24) & 0xff) << 0)
+    }
 
     def writeNulString(buf: EncodeBuffer, s: String): Unit = {
         val bytes = s.getBytes(utf8Charset)
@@ -62,12 +70,142 @@ private[beaucatcher] object CodecUtils {
         buf.writeByte(zeroByte)
     }
 
+    def writeOpenDocument(buf: EncodeBuffer): Int = {
+        val start = buf.writerIndex
+        buf.ensureWritableBytes(32) // min size is 5, but prealloc for efficiency
+        buf.writeInt(0) // will write this later
+        start
+    }
+
+    def writeCloseDocument(buf: EncodeBuffer, start: Int) = {
+        buf.ensureWritableBytes(1)
+        buf.writeByte('\0')
+        buf.setInt(start, buf.writerIndex - start)
+    }
+
     def writeDocument[D](buf: EncodeBuffer, doc: D, maxSize: Int)(implicit encodeSupport: DocumentEncoder[D]): Unit = {
         val start = buf.writerIndex
         encodeSupport.encode(buf, doc)
         val size = buf.writerIndex - start
         if (size > maxSize)
             throw new DocumentTooLargeMongoException("Document is too large (" + size + " bytes but the max is " + maxSize + ")")
+    }
+
+    private[this] val intStrings = Seq("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+        "11", "12", "13", "14", "15", "16", "17", "18", "19", "20").toArray(manifest[String])
+
+    private[this] def arrayIndex(i: Int): String = {
+        if (i < intStrings.length)
+            intStrings(i)
+        else
+            Integer.toString(i)
+    }
+
+    private def writeArray(buf: EncodeBuffer, array: Seq[Any])(implicit encoder: QueryEncoder[Map[String, Any]]): Unit = {
+        val start = buf.writerIndex
+        buf.ensureWritableBytes(32) // some prealloc for efficiency
+        buf.writeInt(0) // will write this later
+        var i = 0
+        for (element <- array) {
+            writeValueAny(buf, arrayIndex(i), element)
+            i += 1
+        }
+        buf.ensureWritableBytes(1)
+        buf.writeByte('\0')
+        buf.setInt(start, buf.writerIndex - start)
+    }
+
+    def writeFieldInt(buf: EncodeBuffer, name: String, value: Int): Unit = {
+        buf.writeByte(Bson.NUMBER_INT)
+        writeNulString(buf, name)
+        buf.writeInt(value)
+    }
+
+    def writeFieldLong(buf: EncodeBuffer, name: String, value: Long): Unit = {
+        buf.writeByte(Bson.NUMBER_LONG)
+        writeNulString(buf, name)
+        buf.writeLong(value)
+    }
+
+    def writeFieldString(buf: EncodeBuffer, name: String, value: String): Unit = {
+        buf.writeByte(Bson.STRING)
+        writeNulString(buf, name)
+        writeLengthString(buf, value)
+    }
+
+    def writeFieldBoolean(buf: EncodeBuffer, name: String, value: Boolean): Unit = {
+        buf.writeByte(Bson.BOOLEAN)
+        writeNulString(buf, name)
+        buf.writeByte(if (value) 1 else 0)
+    }
+
+    def writeFieldObjectId(buf: EncodeBuffer, name: String, value: ObjectId): Unit = {
+        buf.writeByte(Bson.OID)
+        writeNulString(buf, name)
+        buf.writeInt(swapInt(value.time))
+        buf.writeInt(swapInt(value.machine))
+        buf.writeInt(swapInt(value.inc))
+    }
+
+    def writeFieldDocument[Q](buf: EncodeBuffer, name: String, query: Q)(implicit querySupport: DocumentEncoder[Q]): Unit = {
+        buf.writeByte(Bson.OBJECT)
+        writeNulString(buf, name)
+        writeDocument(buf, query, Int.MaxValue /* max size; already checked for outer object */ )
+    }
+
+    def writeFieldQuery[Q](buf: EncodeBuffer, name: String, query: Q)(implicit querySupport: QueryEncoder[Q]): Unit = {
+        writeFieldDocument(buf, name, query)(querySupport)
+    }
+
+    def writeFieldModifier[Q](buf: EncodeBuffer, name: String, query: Q)(implicit querySupport: ModifierEncoder[Q]): Unit = {
+        writeFieldDocument(buf, name, query)(querySupport)
+    }
+
+    def writeValueAny(buf: EncodeBuffer, name: String, value: Any)(implicit encoder: QueryEncoder[Map[String, Any]]): Unit = {
+        buf.ensureWritableBytes(1 + name.length() + 1 + 16) // typecode + name + nul + large value size
+        value match {
+            case null =>
+                buf.writeByte(Bson.NULL)
+                writeNulString(buf, name)
+            // no data on the wire for null
+            case v: Int =>
+                writeFieldInt(buf, name, v)
+            case v: Long =>
+                writeFieldLong(buf, name, v)
+            case v: Double =>
+                buf.writeByte(Bson.NUMBER)
+                writeNulString(buf, name)
+                buf.writeDouble(v)
+            case v: ObjectId =>
+                writeFieldObjectId(buf, name, v)
+            case v: String =>
+                writeFieldString(buf, name, v)
+            case v: Map[_, _] =>
+                writeFieldQuery(buf, name, v.asInstanceOf[Map[String, Any]])
+            case v: Seq[_] =>
+                buf.writeByte(Bson.ARRAY)
+                writeNulString(buf, name)
+                writeArray(buf, v)
+            case v: Timestamp =>
+                buf.writeByte(Bson.TIMESTAMP)
+                writeNulString(buf, name)
+                buf.writeInt(v.inc)
+                buf.writeInt(v.time)
+            case v: java.util.Date =>
+                buf.writeByte(Bson.DATE)
+                writeNulString(buf, name)
+                buf.writeLong(v.getTime)
+            case v: Binary =>
+                buf.writeByte(Bson.BINARY)
+                writeNulString(buf, name)
+                val bytes = v.data
+                buf.ensureWritableBytes(bytes.length + 5)
+                buf.writeInt(bytes.length)
+                buf.writeByte(BsonSubtype.toByte(v.subtype))
+                buf.writeBytes(bytes)
+            case v: Boolean =>
+                writeFieldBoolean(buf, name, v)
+        }
     }
 
     def writeQuery[Q](buf: EncodeBuffer, query: Q, maxSize: Int)(implicit querySupport: QueryEncoder[Q]): Unit = {
@@ -96,5 +234,145 @@ private[beaucatcher] object CodecUtils {
 
     def readValue[V](what: Byte, buf: DecodeBuffer)(implicit valueDecoder: ValueDecoder[V]): V = {
         valueDecoder.decode(what, buf)
+    }
+
+    def skipValue(what: Byte, buf: DecodeBuffer): Unit = {
+        what match {
+            case Bson.NUMBER =>
+                buf.skipBytes(8)
+            case Bson.STRING =>
+                skipLengthString(buf)
+            case Bson.OBJECT =>
+                skipDocument(buf)
+            case Bson.ARRAY =>
+                skipDocument(buf)
+            case Bson.BINARY =>
+                val len = buf.readInt()
+                val subtype = buf.readByte()
+                buf.skipBytes(len)
+            case Bson.OID =>
+                buf.skipBytes(12)
+            case Bson.BOOLEAN =>
+                buf.skipBytes(1)
+            case Bson.DATE =>
+                buf.skipBytes(8)
+            case Bson.NULL => // nothing to skip
+            case Bson.NUMBER_INT =>
+                buf.skipBytes(4)
+            case Bson.TIMESTAMP =>
+                buf.skipBytes(8)
+            case Bson.NUMBER_LONG =>
+                buf.skipBytes(8)
+            case Bson.UNDEFINED |
+                Bson.REGEX |
+                Bson.REF |
+                Bson.CODE |
+                Bson.SYMBOL |
+                Bson.CODE_W_SCOPE |
+                Bson.MINKEY |
+                Bson.MAXKEY =>
+                // TODO
+                throw new MongoException("Encountered value of type " + Integer.toHexString(what) + " which is currently unsupported")
+        }
+    }
+
+    def readArrayValues[E](buf: DecodeBuffer)(implicit elementDecoder: ValueDecoder[E]): Seq[E] = {
+        val len = buf.readInt()
+        if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
+            buf.skipBytes(len - 4)
+            Seq.empty
+        } else {
+            val b = Seq.newBuilder[E]
+
+            var what = buf.readByte()
+            while (what != Bson.EOO) {
+
+                // the names in an array are just the indices, so nobody cares
+                skipNulString(buf)
+
+                b += elementDecoder.decode(what, buf)
+
+                what = buf.readByte()
+            }
+
+            b.result()
+        }
+    }
+
+    def readAny[E](what: Byte, buf: DecodeBuffer)(implicit nestedDecoder: QueryResultDecoder[E]): Any = {
+        what match {
+            case Bson.NUMBER =>
+                buf.readDouble()
+            case Bson.STRING =>
+                readLengthString(buf)
+            case Bson.OID =>
+                // the mongo wiki says the numbers are really
+                // 4 bytes, 5 bytes, and 3 bytes but the java
+                // driver does 4,4,4 and it looks like the C driver too.
+                // so not sure what to make of it.
+                // http://www.mongodb.org/display/DOCS/Object+IDs
+                // the object ID is also big-endian unlike everything else
+                val time = swapInt(buf.readInt())
+                val machine = swapInt(buf.readInt())
+                val inc = swapInt(buf.readInt())
+                ObjectId(time, machine, inc)
+            case Bson.BOOLEAN =>
+                buf.readByte() != 0
+            case Bson.DATE =>
+                new java.util.Date(buf.readLong())
+            case Bson.NULL =>
+                null
+            case Bson.NUMBER_INT =>
+                buf.readInt()
+            case Bson.TIMESTAMP =>
+                val inc = buf.readInt()
+                val time = buf.readInt()
+                Timestamp(time, inc)
+            case Bson.NUMBER_LONG =>
+                buf.readLong()
+            case Bson.ARRAY =>
+                readArrayAny[E](buf)
+            case Bson.OBJECT =>
+                readEntity[E](buf)
+            case Bson.BINARY =>
+                val len = buf.readInt()
+                val subtype = BsonSubtype.fromByte(buf.readByte()).getOrElse(BsonSubtype.GENERAL)
+                val bytes = new Array[Byte](len)
+                buf.readBytes(bytes)
+                Binary(bytes, subtype)
+            case Bson.UNDEFINED |
+                Bson.REGEX |
+                Bson.REF |
+                Bson.CODE |
+                Bson.SYMBOL |
+                Bson.CODE_W_SCOPE |
+                Bson.MINKEY |
+                Bson.MAXKEY =>
+                // TODO
+                throw new MongoException("Encountered value of type " + Integer.toHexString(what) + " which is currently unsupported")
+        }
+    }
+
+    private def readArrayAny[E](buf: DecodeBuffer)(implicit nestedDecoder: QueryResultDecoder[E]): Seq[Any] = {
+        val len = buf.readInt()
+        if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
+            buf.skipBytes(len - 4)
+            Seq.empty
+        } else {
+            val b = Seq.newBuilder[Any]
+
+            var what = buf.readByte()
+            while (what != Bson.EOO) {
+
+                // the names in an array are just the indices, so nobody cares
+                skipNulString(buf)
+
+                b += readAny(what, buf)
+
+                what = buf.readByte()
+            }
+
+            b.result()
+        }
     }
 }

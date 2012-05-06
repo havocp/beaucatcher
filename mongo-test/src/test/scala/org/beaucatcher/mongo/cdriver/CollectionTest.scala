@@ -9,7 +9,7 @@ import org.junit._
 import foo._
 
 package foo {
-    import Codecs._
+    import BObjectCodecs._
 
     case class Foo(_id: ObjectId, intField: Int, stringField: String) extends abstractfoo.AbstractFoo
 

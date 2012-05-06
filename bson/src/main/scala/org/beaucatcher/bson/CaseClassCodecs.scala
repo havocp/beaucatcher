@@ -37,10 +37,10 @@ final class CaseClassCodecs[E <: AnyRef with Product] private ()(implicit manife
 object CaseClassCodecs {
     /**
      * Create a set of codecs for a case class, with opaque implementation.
-     * (this method should change to not go via BObject).
+     * (TODO this method should change to not go via BObject).
      */
     def apply[E <: Product : Manifest]() : CaseClassCodecs[E] = {
-        import Codecs._
+        import BObjectCodecs._
         new CaseClassCodecs[E]
     }
 }

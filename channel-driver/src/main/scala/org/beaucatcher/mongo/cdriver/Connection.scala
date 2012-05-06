@@ -174,7 +174,7 @@ private[cdriver] class ConnectionActor(val backend: ChannelBackend, val addr: So
     private def newSocket(): Future[MongoSocket] = {
         socketFactory.connect(addr) flatMap { socket =>
             import Implicits._ // TODO use RawEncoder rather than BObject
-            import Codecs._
+            import BObjectCodecs._
             socket.sendCommand(0 /* flags */ , "admin", BObject("ismaster" -> 1)) map { reply =>
                 val doc = reply.iterator[BObject]().next()
                 if (doc.getUnwrappedAs[Boolean]("ismaster")) {

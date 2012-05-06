@@ -10,20 +10,20 @@ final class ChannelDriver private[cdriver] (private[cdriver] val backend: Channe
     extends Driver {
 
     private[beaucatcher] override def newBObjectCodecSet[IdType: IdEncoder](): CollectionCodecSet[BObject, BObject, IdType, BValue] =
-        Codecs.newBObjectCodecSet()
+        BObjectCodecs.newBObjectCodecSet()
 
     private[beaucatcher] override def newCaseClassCodecSet[EntityType <: Product: Manifest, IdType: IdEncoder](): CollectionCodecSet[BObject, EntityType, IdType, Any] =
-        Codecs.newCaseClassCodecSet()
+        BObjectCodecs.newCaseClassCodecSet()
 
     private[beaucatcher] override def newStringIdEncoder(): IdEncoder[String] =
-        Codecs.stringIdEncoder
+        BObjectCodecs.stringIdEncoder
 
     private[beaucatcher] override def newObjectIdIdEncoder(): IdEncoder[ObjectId] =
-        Codecs.objectIdIdEncoder
+        BObjectCodecs.objectIdIdEncoder
 
     private[beaucatcher] override def newBObjectBasedCodecs[E](toBObject: (E) => BObject,
         fromBObject: (BObject) => E): BObjectBasedCodecs[E] = {
-        import Codecs._
+        import BObjectCodecs._
         BObjectBasedCodecs[E](toBObject, fromBObject)
     }
 

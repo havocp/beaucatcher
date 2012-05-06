@@ -37,7 +37,7 @@ class ConnectionTest extends TestUtils {
 
     @Test
     def connectAndQuery(): Unit = withFactory { factory =>
-        import Codecs._
+        import BObjectCodecs._
         val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
@@ -50,7 +50,7 @@ class ConnectionTest extends TestUtils {
     }
 
     private def assertDocumentSmallEnough(socket: MongoSocket, b: Binary): Unit = {
-        import Codecs._
+        import BObjectCodecs._
 
         val futureReply = socket.sendCommand(0, /* flags */
             "admin", BObject("ismaster" -> 1, "ignored" -> b))
@@ -61,7 +61,7 @@ class ConnectionTest extends TestUtils {
     }
 
     private def assertDocumentTooLarge(socket: MongoSocket, b: Binary): Unit = {
-        import Codecs._
+        import BObjectCodecs._
 
         val futureReply = socket.sendCommand(0, /* flags */
             "admin", BObject("ismaster" -> 1, "ignored" -> b))
@@ -97,7 +97,7 @@ class ConnectionTest extends TestUtils {
 
     @Test
     def sendToClosedSocket(): Unit = withFactory { factory =>
-        import Codecs._
+        import BObjectCodecs._
         val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
@@ -113,7 +113,7 @@ class ConnectionTest extends TestUtils {
 
     @Test
     def sendToClosedFactory(): Unit = withFactory { factory =>
-        import Codecs._
+        import BObjectCodecs._
         val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 

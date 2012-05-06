@@ -44,7 +44,6 @@ private[cdriver] object RawBufferDecoded {
 }
 
 private[cdriver] class RawEncoded(val backend: ChannelBackend) {
-    import Codecs._
     import CodecUtils._
 
     private val buf: EncodeBuffer = backend.newDynamicEncodeBuffer(32)
@@ -190,13 +189,10 @@ object RawEncoded {
 private[cdriver] case class RawField(name: String, decoder: Option[ValueDecoder[_]])
 
 private[cdriver] class RawDecoded {
-    import Codecs._
-
     var fields: Map[String, Any] = Map.empty
 }
 
 private[cdriver] object RawDecoded {
-    import Codecs._
     import CodecUtils._
 
     private class RawDecodeSupport[NestedEntityType](val needed: Map[String, Option[ValueDecoder[_]]])(implicit val nestedDecodeSupport: QueryResultDecoder[NestedEntityType])

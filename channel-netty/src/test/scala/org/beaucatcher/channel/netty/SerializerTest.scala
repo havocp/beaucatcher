@@ -12,13 +12,12 @@ import java.util.Random
 
 class SerializerTest extends TestUtils {
 
-    private def testRoundTrip(bobj: BObject): Unit = {
-        import Codecs._
+    private def testRoundTrip[O](obj: O)(implicit encoder: QueryEncoder[O], decoder: QueryResultDecoder[O]): Unit = {
         import CodecUtils._
 
         val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 128)
 
-        writeQuery(Buffer(buf), bobj, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
+        writeQuery(Buffer(buf), obj, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
 
         /*
         System.err.println("Wrote " + bobj + " to buffer: " + buf)
@@ -37,13 +36,14 @@ class SerializerTest extends TestUtils {
         */
 
         buf.resetReaderIndex()
-        val decoded = readEntity[BObject](Buffer(buf))
+        val decoded = readEntity[O](Buffer(buf))
 
-        assertEquals(bobj, decoded)
+        assertEquals(obj, decoded)
     }
 
     @Test
     def roundTripBObject(): Unit = {
+        import BObjectCodecs._
         val many = BsonTest.makeObjectManyTypes()
         // first test each field separately
         for (field <- many.value) {
@@ -54,14 +54,22 @@ class SerializerTest extends TestUtils {
     }
 
     @Test
-    def growBufferWhenNeeded(): Unit = {
-        import Codecs._
+    def roundTripMap(): Unit = {
+        import MapCodecs._
+        val many: Map[String, Any] = BsonTest.makeObjectManyTypes().unwrapped
+        // first test each field separately
+        for (field <- many) {
+            testRoundTrip(Map(field._1 -> field._2))
+        }
+        // then test the whole giant object
+        testRoundTrip(many)
+    }
+
+    private def growBufferWhenNeeded[O](obj: O)(implicit encoder: QueryEncoder[O]): Unit = {
         import CodecUtils._
 
         val rand = new Random(1234L)
         val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 1)
-
-        val many = BsonTest.makeObjectManyTypes()
 
         for (i <- 1 to 100) {
             // nextInt(x) is exclusive of x, so we write between 0 and 7
@@ -71,10 +79,29 @@ class SerializerTest extends TestUtils {
                 buf.writeByte('X')
                 j -= 1
             }
-            for (field <- many.value) {
-                writeQuery(Buffer(buf), BObject(List(field)), Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
-            }
-            writeQuery(Buffer(buf), many, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
+            writeQuery(Buffer(buf), obj, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
         }
+    }
+
+    @Test
+    def growBufferWhenNeededBObject(): Unit = {
+        import BObjectCodecs._
+
+        val many = BsonTest.makeObjectManyTypes()
+        for (field <- many.value) {
+            growBufferWhenNeeded(BObject(List(field)))
+        }
+        growBufferWhenNeeded(many)
+    }
+
+    @Test
+    def growBufferWhenNeededMap(): Unit = {
+        import MapCodecs._
+
+        val many: Map[String, Any] = BsonTest.makeObjectManyTypes().unwrapped
+        for (field <- many) {
+            growBufferWhenNeeded(Map(field._1 -> field._2))
+        }
+        growBufferWhenNeeded(many)
     }
 }

@@ -41,7 +41,7 @@ private[cdriver] final class ChannelDriverAsyncCollection(override val name: Str
     // TODO there is no reason this should have an Iterator[Future] because it
     // never does batch paging like a cursor it looks like
     override def distinct[Q, V](key: String, options: DistinctOptions[Q])(implicit queryEncoder: QueryEncoder[Q], valueDecoder: ValueDecoder[V]): Future[Iterator[V]] = {
-        import Codecs._
+        import CodecUtils._
 
         val raw = newRaw()
         raw.writeField("distinct", name)
@@ -210,7 +210,7 @@ private[cdriver] final class ChannelDriverAsyncCollection(override val name: Str
 
     // TODO don't do it this way?
     private def indexNameHack[Q](keys: Q)(implicit querySupport: QueryEncoder[Q]): String = {
-        import Codecs._
+        import BObjectCodecs._
         // convert to BObject via serializing
         val buf = context.driver.backend.newDynamicEncodeBuffer(64)
         querySupport.encode(buf, keys)
