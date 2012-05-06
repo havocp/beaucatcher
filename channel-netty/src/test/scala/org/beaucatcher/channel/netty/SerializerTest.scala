@@ -65,6 +65,17 @@ class SerializerTest extends TestUtils {
         testRoundTrip(many)
     }
 
+    private def mapValuesToIterators(m: Map[String, Any]): Map[String, Any] = {
+        m.mapValues({ v =>
+            v match {
+                case m: Map[_, _] =>
+                    m.iterator
+                case v =>
+                    v
+            }
+        })
+    }
+
     private def growBufferWhenNeeded[O](obj: O)(implicit encoder: QueryEncoder[O]): Unit = {
         import CodecUtils._
 
@@ -103,5 +114,16 @@ class SerializerTest extends TestUtils {
             growBufferWhenNeeded(Map(field._1 -> field._2))
         }
         growBufferWhenNeeded(many)
+    }
+
+    @Test
+    def growBufferWhenNeededIterator(): Unit = {
+        import IteratorCodecs._
+
+        val many: Map[String, Any] = BsonTest.makeObjectManyTypes().unwrapped
+        for (field <- mapValuesToIterators(many)) {
+            growBufferWhenNeeded(Iterator(field._1 -> field._2))
+        }
+        growBufferWhenNeeded(mapValuesToIterators(many).iterator)
     }
 }

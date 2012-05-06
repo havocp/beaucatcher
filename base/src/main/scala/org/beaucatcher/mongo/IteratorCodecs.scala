@@ -7,6 +7,8 @@ import org.beaucatcher.wire._
  * Import IteratorCodecs._ to encode and decode `scala.collection.Iterator[(String,Any)]`.
  * The `Any` can be an Int, Long, Double, String, Null, Boolean, ObjectId, Binary, Timestamp,
  * java.util.Date, nested Iterator[(String,Any)], or Seq[Any].
+ *
+ * Obviously, due to the nature of iterators, you can only encode them one time.
  */
 object IteratorCodecs extends IdEncoders with ValueDecoders {
     import CodecUtils._
