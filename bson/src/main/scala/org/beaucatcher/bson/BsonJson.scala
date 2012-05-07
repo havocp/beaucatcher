@@ -22,11 +22,11 @@ import scala.collection.mutable.Builder
 import scala.io.Source
 
 /** An exception related to JSON parsing or generation. */
-abstract class JsonException(message : String, cause : Throwable = null) extends Exception(message, cause)
+abstract class JsonException(message: String, cause: Throwable = null) extends Exception(message, cause)
 /** An exception indicating that a JSON string was not well-formed or something went wrong while parsing. */
-class JsonParseException(message : String, cause : Throwable = null) extends JsonException(message, cause)
+class JsonParseException(message: String, cause: Throwable = null) extends JsonException(message, cause)
 /** An exception indicating that a JSON string was invalid (didn't conform to a schema, for example). */
-class JsonValidationException(message : String, cause : Throwable = null) extends JsonException(message, cause)
+class JsonValidationException(message: String, cause: Throwable = null) extends JsonException(message, cause)
 
 private[bson] object BsonJson {
     import JsonToken._
@@ -36,28 +36,28 @@ private[bson] object BsonJson {
         val Compact, Pretty = Value
     }
 
-    private def flattenStrings(i : Iterator[String]) : String = {
+    private def flattenStrings(i: Iterator[String]): String = {
         val sb = new StringBuilder
         i.foreach(sb.append(_))
         sb.toString
     }
 
-    def toJson(value : BValue, flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String = {
+    def toJson(value: BValue, flavor: JsonFlavor.Value = JsonFlavor.CLEAN): String = {
         require(value != null)
         flattenStrings(render(value.toJValue(flavor), 0, JsonFormatting.Compact))
     }
 
-    def toPrettyJson(value : BValue, flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String = {
+    def toPrettyJson(value: BValue, flavor: JsonFlavor.Value = JsonFlavor.CLEAN): String = {
         require(value != null)
         flattenStrings(render(value.toJValue(flavor), 0, JsonFormatting.Pretty))
     }
 
-    def fromJson(json : String) : JValue = parse(tokenize(json.iterator))
+    def fromJson(json: String): JValue = parse(tokenize(json.iterator))
 
-    def fromJson(json : Source) : JValue = parse(tokenize(json))
+    def fromJson(json: Source): JValue = parse(tokenize(json))
 
-    private def parse(tokens : Iterator[JsonToken]) : JValue = {
-        def parseValue(t : JsonToken, tokens : Iterator[JsonToken]) : JValue = {
+    private def parse(tokens: Iterator[JsonToken]): JValue = {
+        def parseValue(t: JsonToken, tokens: Iterator[JsonToken]): JValue = {
             t match {
                 case StringValue(x) => BString(x)
                 case LongValue(x) =>
@@ -76,7 +76,7 @@ private[bson] object BsonJson {
         }
 
         // this is just after the opening brace { for the object
-        def parseFields(builder : Builder[(String, JValue), List[(String, JValue)]], tokens : Iterator[JsonToken]) : Unit = {
+        def parseFields(builder: Builder[(String, JValue), List[(String, JValue)]], tokens: Iterator[JsonToken]): Unit = {
             val seen = mutable.Set[String]()
             while (true) {
                 tokens.next match {
@@ -107,11 +107,11 @@ private[bson] object BsonJson {
         }
 
         // this is just after the opening bracket [ for the array
-        def parseElements(builder : Builder[JValue, List[JValue]], tokens : Iterator[JsonToken]) : Unit = {
+        def parseElements(builder: Builder[JValue, List[JValue]], tokens: Iterator[JsonToken]): Unit = {
             // first element in the array
             tokens.next match {
                 case CloseArray => return
-                case t : Value => builder += parseValue(t, tokens)
+                case t: Value => builder += parseValue(t, tokens)
                 case OpenObject => builder += parseObj(tokens)
                 case OpenArray => builder += parseArr(tokens)
                 case whatever => throw new JsonParseException("JSON array should have had first element or ended with ], instead had %s".format(whatever))
@@ -125,7 +125,7 @@ private[bson] object BsonJson {
                 }
                 // now we are just after a comma
                 tokens.next match {
-                    case t : Value => builder += parseValue(t, tokens)
+                    case t: Value => builder += parseValue(t, tokens)
                     case OpenObject => builder += parseObj(tokens)
                     case OpenArray => builder += parseArr(tokens)
                     case whatever => throw new JsonParseException("JSON array should have had a new element after comma, instead had %s".format(whatever))
@@ -133,13 +133,13 @@ private[bson] object BsonJson {
             }
         }
 
-        def parseObj(tokens : Iterator[JsonToken]) : JObject = {
+        def parseObj(tokens: Iterator[JsonToken]): JObject = {
             val builder = List.newBuilder[(String, JValue)]
             parseFields(builder, tokens)
             JObject(builder.result)
         }
 
-        def parseArr(tokens : Iterator[JsonToken]) : JArray = {
+        def parseArr(tokens: Iterator[JsonToken]): JArray = {
             val builder = List.newBuilder[JValue]
             parseElements(builder, tokens)
             JArray(builder.result)
@@ -164,7 +164,7 @@ private[bson] object BsonJson {
         }
     }
 
-    private def renderString(s : String) : String = {
+    private def renderString(s: String): String = {
         val sb = new StringBuilder
         sb.append('"')
         for (c <- s) {
@@ -177,7 +177,7 @@ private[bson] object BsonJson {
                 case '\n' => "\\n"
                 case '\r' => "\\r"
                 case '\t' => "\\t"
-                case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c : Int)
+                case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
                 case c => c
             })
         }
@@ -185,9 +185,9 @@ private[bson] object BsonJson {
         sb.toString
     }
 
-    private def generateJoin[A](whatever : Iterator[A],
-        create : (A) => Iterator[String],
-        separator : String) : Iterator[String] = {
+    private def generateJoin[A](whatever: Iterator[A],
+        create: (A) => Iterator[String],
+        separator: String): Iterator[String] = {
         var first = true
         whatever.foldLeft[Iterator[String]](Iterator.empty)({ (soFar, a) =>
             if (first) {
@@ -199,14 +199,14 @@ private[bson] object BsonJson {
         })
     }
 
-    private def indentation(indentLevel : Int) = {
+    private def indentation(indentLevel: Int) = {
         val indent = "    "
         Iterator.fill(indentLevel)(indent)
     }
 
-    private def renderObject(o : JObject, indentLevel : Int, formatting : JsonFormatting.Value) : Iterator[String] = {
+    private def renderObject(o: JObject, indentLevel: Int, formatting: JsonFormatting.Value): Iterator[String] = {
         if (formatting == JsonFormatting.Pretty) {
-            val fields = generateJoin(o.iterator, { kv : (String, JValue) =>
+            val fields = generateJoin(o.iterator, { kv: (String, JValue) =>
                 indentation(indentLevel + 1) ++ Iterator(renderString(kv._1), " : ") ++
                     render(kv._2, indentLevel + 1, formatting)
             }, ",\n")
@@ -216,7 +216,7 @@ private[bson] object BsonJson {
                 Iterator.single("\n") ++
                 indentation(indentLevel) ++ Iterator.single("}")
         } else {
-            val fields = generateJoin(o.iterator, { kv : (String, JValue) =>
+            val fields = generateJoin(o.iterator, { kv: (String, JValue) =>
                 Iterator(renderString(kv._1), ":") ++
                     render(kv._2, indentLevel + 1, formatting)
             }, ",")
@@ -227,10 +227,10 @@ private[bson] object BsonJson {
         }
     }
 
-    private def renderArray(a : JArray, indentLevel : Int, formatting : JsonFormatting.Value) : Iterator[String] = {
+    private def renderArray(a: JArray, indentLevel: Int, formatting: JsonFormatting.Value): Iterator[String] = {
         if (formatting == JsonFormatting.Pretty) {
             val elements = generateJoin(a.iterator,
-                { e : JValue => indentation(indentLevel + 1) ++ render(e, indentLevel + 1, formatting) },
+                { e: JValue => indentation(indentLevel + 1) ++ render(e, indentLevel + 1, formatting) },
                 ",\n")
             Iterator.single("[\n") ++
                 elements ++
@@ -238,7 +238,7 @@ private[bson] object BsonJson {
                 indentation(indentLevel) ++ Iterator.single("]")
         } else {
             val elements = generateJoin(a.iterator,
-                { e : JValue => render(e, indentLevel + 1, formatting) },
+                { e: JValue => render(e, indentLevel + 1, formatting) },
                 ",")
             Iterator.single("[") ++
                 elements ++
@@ -264,10 +264,10 @@ private[bson] object BsonJson {
      * @param formatting Pretty to use extra whitespace and newlines, Compact to be small
      * @return JSON document as a series of strings that should be concatenated
      */
-    private[bson] def render(value : JValue, indentLevel : Int, formatting : JsonFormatting.Value) : Iterator[String] = {
+    private[bson] def render(value: JValue, indentLevel: Int, formatting: JsonFormatting.Value): Iterator[String] = {
         val rendered = value match {
-            case o : JObject => renderObject(o, indentLevel, formatting)
-            case a : JArray => renderArray(a, indentLevel, formatting)
+            case o: JObject => renderObject(o, indentLevel, formatting)
+            case a: JArray => renderArray(a, indentLevel, formatting)
             case BBoolean(b) => Iterator.single(if (b) "true" else "false")
             case BString(s) => Iterator.single(renderString(s))
             case BInt32(i) => Iterator.single(i.toString)

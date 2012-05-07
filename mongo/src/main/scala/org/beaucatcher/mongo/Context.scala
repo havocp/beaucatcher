@@ -22,34 +22,34 @@ trait Context {
     type UnderlyingDatabaseType
     type UnderlyingCollectionType
 
-    def underlyingConnection : UnderlyingConnectionType
-    def underlyingDatabase : UnderlyingDatabaseType
-    def underlyingCollection(name : String) : UnderlyingCollectionType
+    def underlyingConnection: UnderlyingConnectionType
+    def underlyingDatabase: UnderlyingDatabaseType
+    def underlyingCollection(name: String): UnderlyingCollectionType
 
-    private[beaucatcher] def driverContext : DriverContext
+    private[beaucatcher] def driverContext: DriverContext
 
-    def driver : DriverType
+    def driver: DriverType
 
-    def database : Database
+    def database: Database
 
-    def config : MongoConfig
+    def config: MongoConfig
 
-    def actorSystem : ActorSystem
+    def actorSystem: ActorSystem
 
     /**
      * Should close the connection to Mongo; will break any code currently trying to use this context,
      * or any collection or database objects that point to this context.
      */
-    def close : Unit
+    def close: Unit
 }
 
 trait ContextProvider extends DriverProvider {
-    def mongoContext : Context
+    def mongoContext: Context
     override final def mongoDriver = mongoContext.driver
 }
 
 object Context {
-    def apply[D <: Driver](driver : D, config : MongoConfig, system : ActorSystem) : Context = {
+    def apply[D <: Driver](driver: D, config: MongoConfig, system: ActorSystem): Context = {
         val outerDriver = driver
         val outerConfig = config
         new Context() {
@@ -58,7 +58,7 @@ object Context {
             override lazy val database = Database(this)
             override val config = outerConfig
             override val actorSystem = system
-            override def close() : Unit = driverContext.close()
+            override def close(): Unit = driverContext.close()
 
             override type DriverType = D
             override type UnderlyingConnectionType = driverContext.UnderlyingConnectionType
@@ -67,7 +67,7 @@ object Context {
 
             override def underlyingConnection = driverContext.underlyingConnection
             override def underlyingDatabase = driverContext.underlyingDatabase
-            override def underlyingCollection(name : String) = driverContext.underlyingCollection(name)
+            override def underlyingCollection(name: String) = driverContext.underlyingCollection(name)
 
         }
     }

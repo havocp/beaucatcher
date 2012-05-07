@@ -19,9 +19,9 @@ private[beaucatcher] final class Migrator {
     // To accomplish this we use a recursive lock so all other
     // threads block, and we only call migrate() on the outermost
     // lock.
-    def ensureMigrated(context : Context,
-        collectionName : String,
-        migrate : (Context) => Unit) : Unit = {
+    def ensureMigrated(context: Context,
+        collectionName: String,
+        migrate: (Context) => Unit): Unit = {
         // we're trying to avoid locking if we've
         // already done the migrate()
         val b = map.get(collectionName)

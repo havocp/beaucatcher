@@ -17,19 +17,19 @@ object Implicits extends Implicits
  * You can derive from this trait or import `org.beaucatcher.bson.Implicits._`, whichever you prefer.
  */
 trait Implicits {
-    implicit def null2bvalue(x : Null) = BNull // this never works I guess because null is-a BValue anyway
-    implicit def int2bvalue(x : Int) = BInt32(x)
-    implicit def long2bvalue(x : Long) = BInt64(x)
-    implicit def bigint2bvalue(x : BigInt) : BValue = if (x.isValidInt) BInt32(x.intValue) else BInt64(x.longValue)
-    implicit def double2bvalue(x : Double) = BDouble(x)
-    implicit def float2bvalue(x : Float) = BDouble(x)
-    implicit def bigdecimal2bvalue(x : BigDecimal) = BDouble(x.doubleValue)
-    implicit def boolean2bvalue(x : Boolean) = BBoolean(x)
-    implicit def string2bvalue(x : String) = BString(x)
-    implicit def date2bvalue(x : Date) = BISODate(x)
-    implicit def timestamp2bvalue(x : Timestamp) = BTimestamp(x)
-    implicit def objectid2bvalue(x : ObjectId) = BObjectId(x)
-    implicit def binary2bvalue(x : Binary) = BBinary(x)
-    implicit def map2bvalue[K <: String, V <% BValue](x : Map[K, V]) = BObject(x)
-    implicit def seq2bvalue[V <% BValue](x : Seq[V]) : BArray = BArray(x)
+    implicit def null2bvalue(x: Null) = BNull // this never works I guess because null is-a BValue anyway
+    implicit def int2bvalue(x: Int) = BInt32(x)
+    implicit def long2bvalue(x: Long) = BInt64(x)
+    implicit def bigint2bvalue(x: BigInt): BValue = if (x.isValidInt) BInt32(x.intValue) else BInt64(x.longValue)
+    implicit def double2bvalue(x: Double) = BDouble(x)
+    implicit def float2bvalue(x: Float) = BDouble(x)
+    implicit def bigdecimal2bvalue(x: BigDecimal) = BDouble(x.doubleValue)
+    implicit def boolean2bvalue(x: Boolean) = BBoolean(x)
+    implicit def string2bvalue(x: String) = BString(x)
+    implicit def date2bvalue(x: Date) = BISODate(x)
+    implicit def timestamp2bvalue(x: Timestamp) = BTimestamp(x)
+    implicit def objectid2bvalue(x: ObjectId) = BObjectId(x)
+    implicit def binary2bvalue(x: Binary) = BBinary(x)
+    implicit def map2bvalue[K <: String, V <% BValue](x: Map[K, V]) = BObject(x)
+    implicit def seq2bvalue[V <% BValue](x: Seq[V]): BArray = BArray(x)
 }

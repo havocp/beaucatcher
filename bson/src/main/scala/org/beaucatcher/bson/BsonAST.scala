@@ -71,12 +71,12 @@ sealed abstract trait BValue {
      * rather than a BSON type such as [[org.beaucatcher.bson.BInt32]]).
      * @return the unwrapped value
      */
-    def unwrapped : WrappedType
+    def unwrapped: WrappedType
 
     /**
      * The type "code" for this value's BSON type in the BSON/MongoDB wire protocol
      */
-    val bsonType : BsonType.Value
+    val bsonType: BsonType.Value
 
     /**
      * The value converted to a [[org.beaucatcher.bson.JValue]]. For many primitive types,
@@ -88,7 +88,7 @@ sealed abstract trait BValue {
      * @param flavor the style of mapping BSON to JSON see [[org.beaucatcher.bson.JsonFlavor]]
      * @return a JSON-only version of this value
      */
-    def toJValue(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : JValue
+    def toJValue(flavor: JsonFlavor.Value = JsonFlavor.CLEAN): JValue
 
     /**
      * The value converted to a compact JSON string.
@@ -96,7 +96,7 @@ sealed abstract trait BValue {
      * @param flavor the style of mapping BSON to JSON see [[org.beaucatcher.bson.JsonFlavor]]
      * @return a JSON string representation of this value
      */
-    def toJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
+    def toJson(flavor: JsonFlavor.Value = JsonFlavor.CLEAN): String =
         BsonJson.toJson(this, flavor)
 
     /**
@@ -105,11 +105,11 @@ sealed abstract trait BValue {
      * @param flavor the style of mapping BSON to JSON see [[org.beaucatcher.bson.JsonFlavor]]
      * @return a nicely-formatted JSON string representation of this value
      */
-    def toPrettyJson(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : String =
+    def toPrettyJson(flavor: JsonFlavor.Value = JsonFlavor.CLEAN): String =
         BsonJson.toPrettyJson(this, flavor)
 
     // this should match the widenings in Predef
-    private def numericWidening[A <: Any : ClassManifest](value : Any, valueBoxedClass : Class[_]) : Option[A] = {
+    private def numericWidening[A <: Any: ClassManifest](value: Any, valueBoxedClass: Class[_]): Option[A] = {
         val targetErasure = classManifest[A].erasure
         val optionalTargetBoxedClass = if (classOf[java.lang.Number].isAssignableFrom(targetErasure)) {
             Some(targetErasure)
@@ -118,7 +118,7 @@ sealed abstract trait BValue {
         }
         optionalTargetBoxedClass flatMap { targetBoxedClass =>
             try {
-                val result : Number = valueBoxedClass match {
+                val result: Number = valueBoxedClass match {
                     case k if k == classOf[java.lang.Byte] =>
                         targetBoxedClass match {
                             case t if t == classOf[java.lang.Short] => value.asInstanceOf[java.lang.Byte].toShort
@@ -159,7 +159,7 @@ sealed abstract trait BValue {
                 }
                 Some(result)
             } catch {
-                case ex : MatchError =>
+                case ex: MatchError =>
                     None
             }
         } map {
@@ -167,7 +167,7 @@ sealed abstract trait BValue {
         }
     }
 
-    final private val unboxedClasses : Map[Class[_], Class[_]] = Map(
+    final private val unboxedClasses: Map[Class[_], Class[_]] = Map(
         classOf[java.lang.Integer] -> classOf[Int],
         classOf[java.lang.Double] -> classOf[Double],
         classOf[java.lang.Boolean] -> classOf[Boolean],
@@ -178,14 +178,14 @@ sealed abstract trait BValue {
         classOf[java.lang.Float] -> classOf[Float],
         classOf[scala.runtime.BoxedUnit] -> classOf[Unit])
 
-    final lazy private val boxedClasses : Map[Class[_], Class[_]] = unboxedClasses map { _.swap }
+    final lazy private val boxedClasses: Map[Class[_], Class[_]] = unboxedClasses map { _.swap }
 
     // The trickiness here is that asInstanceOf[A] doesn't use the
     // manifest and thus doesn't do anything (no runtime type
     // check). So we have to do it by hand, special-casing
     // AnyVal primitives because Java Class.cast won't work
     // on them as desired.
-    private def checkedCast[A <: Any : ClassManifest](value : Any) : A = {
+    private def checkedCast[A <: Any: ClassManifest](value: Any): A = {
         if (value == null) {
             if (classManifest[A] <:< classManifest[AnyVal]) {
                 throw new ClassCastException("null can't be converted to AnyVal type " + classManifest[A])
@@ -224,7 +224,7 @@ sealed abstract trait BValue {
      * @return the unwrapped value
      * @tparam A the type that the value must have
      */
-    def unwrappedAs[A : Manifest] = checkedCast[A](unwrapped)
+    def unwrappedAs[A: Manifest] = checkedCast[A](unwrapped)
 
     /**
      * Select a list of matching child nodes using an XPath-inspired syntax.
@@ -244,7 +244,7 @@ sealed abstract trait BValue {
      * @param selector the selector expression
      * @return list of matching nodes
      */
-    def select(selector : String) : List[BValue] = {
+    def select(selector: String): List[BValue] = {
         Selector.select(this, selector)
     }
 
@@ -256,7 +256,7 @@ sealed abstract trait BValue {
      * @return list of matching unwrapped values
      * @tparam A type of values to return (nodes with the wrong type are filtered out)
      */
-    def selectAs[A : Manifest](selector : String) : List[A] = {
+    def selectAs[A: Manifest](selector: String): List[A] = {
         Selector.selectAs(this, selector)
     }
 
@@ -266,7 +266,7 @@ sealed abstract trait BValue {
      * @param selector the selector expression
      * @return first matching node or None
      */
-    def selectOne(selector : String) : Option[BValue] = {
+    def selectOne(selector: String): Option[BValue] = {
         select(selector).headOption
     }
 
@@ -277,7 +277,7 @@ sealed abstract trait BValue {
      * @return first value with the requested type that matches the selector
      * @tparam A type of values to return (nodes with the wrong type are filtered out)
      */
-    def selectOneAs[A : Manifest](selector : String) : Option[A] = {
+    def selectOneAs[A: Manifest](selector: String): Option[A] = {
         selectAs(selector).headOption
     }
 }
@@ -290,10 +290,10 @@ sealed abstract trait BValue {
 sealed abstract trait JValue extends BValue {
 
     // default implementation
-    override def toJValue(flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : JValue = this
+    override def toJValue(flavor: JsonFlavor.Value = JsonFlavor.CLEAN): JValue = this
 }
 
-private[bson] sealed abstract class BSingleValue[T](override val bsonType : BsonType.Value, val value : T) extends BValue {
+private[bson] sealed abstract class BSingleValue[T](override val bsonType: BsonType.Value, val value: T) extends BValue {
     override type WrappedType = T
     override def unwrapped = value
 
@@ -313,7 +313,7 @@ case object BNull extends JValue {
 /**
  * A BSON or JSON string value.
  */
-case class BString(override val value : String) extends BSingleValue(BsonType.STRING, value) with JValue {
+case class BString(override val value: String) extends BSingleValue(BsonType.STRING, value) with JValue {
 }
 
 /**
@@ -323,7 +323,7 @@ case class BString(override val value : String) extends BSingleValue(BsonType.ST
  *  @tparam T the underlying primitive type wrapped by this BSON node
  *  @param value the underlying primitive value
  */
-sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, val value : T)
+sealed abstract class BNumericValue[T](override val bsonType: BsonType.Value, val value: T)
     extends ScalaNumber
     with ScalaNumericConversions with JValue {
     override type WrappedType = T
@@ -335,15 +335,15 @@ sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, v
     override def floatValue = underlying.floatValue
     override def doubleValue = underlying.doubleValue
 
-    final protected def isPrimitiveNumber(x : Any) = {
+    final protected def isPrimitiveNumber(x: Any) = {
         x match {
-            case x : Char => true
-            case x : Byte => true
-            case x : Short => true
-            case x : Int => true
-            case x : Long => true
-            case x : Float => true
-            case x : Double => true
+            case x: Char => true
+            case x: Byte => true
+            case x: Short => true
+            case x: Int => true
+            case x: Long => true
+            case x: Float => true
+            case x: Double => true
             case _ => false
         }
     }
@@ -351,12 +351,12 @@ sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, v
     // we don't just override equals() here because
     // I'm worried the case class subclasses would
     // override it again.
-    final protected def unifiedBNumericEquals(that : Any) = {
+    final protected def unifiedBNumericEquals(that: Any) = {
         if (isPrimitiveNumber(that)) {
             unifiedPrimitiveEquals(that)
         } else {
             that match {
-                case numeric : BNumericValue[_] =>
+                case numeric: BNumericValue[_] =>
                     this.value == numeric.value
                 case _ =>
                     false
@@ -368,34 +368,34 @@ sealed abstract class BNumericValue[T](override val bsonType : BsonType.Value, v
 /**
  * A BSON or JSON floating-point value.
  */
-case class BDouble(override val value : Double) extends BNumericValue(BsonType.NUMBER, value) {
+case class BDouble(override val value: Double) extends BNumericValue(BsonType.NUMBER, value) {
     override def isWhole = (value % 1) == 0
     override def doubleValue = value
 
-    override def hashCode() : Int = if (isWhole) unifiedPrimitiveHashcode else value.##
-    override def equals(that : Any) : Boolean = unifiedBNumericEquals(that)
+    override def hashCode(): Int = if (isWhole) unifiedPrimitiveHashcode else value.##
+    override def equals(that: Any): Boolean = unifiedBNumericEquals(that)
 }
 
 /**
  * A BSON or JSON 32-bit signed integer value.
  */
-case class BInt32(override val value : Int) extends BNumericValue(BsonType.NUMBER_INT, value) {
+case class BInt32(override val value: Int) extends BNumericValue(BsonType.NUMBER_INT, value) {
     override def isWhole = true
     override def intValue = value
 
-    override def hashCode() : Int = unifiedPrimitiveHashcode
-    override def equals(that : Any) : Boolean = unifiedBNumericEquals(that)
+    override def hashCode(): Int = unifiedPrimitiveHashcode
+    override def equals(that: Any): Boolean = unifiedBNumericEquals(that)
 }
 
 /**
  * A BSON or JSON 64-bit signed integer value.
  */
-case class BInt64(override val value : Long) extends BNumericValue(BsonType.NUMBER_LONG, value) {
+case class BInt64(override val value: Long) extends BNumericValue(BsonType.NUMBER_LONG, value) {
     override def isWhole = true
     override def longValue = value
 
-    override def hashCode() : Int = unifiedPrimitiveHashcode
-    override def equals(that : Any) : Boolean = unifiedBNumericEquals(that)
+    override def hashCode(): Int = unifiedPrimitiveHashcode
+    override def equals(that: Any): Boolean = unifiedBNumericEquals(that)
 }
 
 /**
@@ -414,7 +414,7 @@ sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
      * the `unwrapped` method: `unwrapped`
      * unwraps the elements recursively, while this is a list of wrapped values.
      */
-    val value : List[ElementType]
+    val value: List[ElementType]
 
     override type WrappedType = List[Any]
     override lazy val unwrapped = value.map(_.unwrapped)
@@ -423,24 +423,24 @@ sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
     override def length = value.length
 
     // SeqLike: apply
-    override def apply(idx : Int) : ElementType = value.apply(idx)
+    override def apply(idx: Int): ElementType = value.apply(idx)
 
     // IterableLike: iterator
-    override def iterator : Iterator[ElementType] = value.iterator
+    override def iterator: Iterator[ElementType] = value.iterator
 }
 
 /**
  * Trait implementing companion object functionality for [[org.beaucatcher.bson.ArrayBase]] subtypes.
  */
 sealed trait ArrayBaseCompanion[ElementType <: BValue, Repr <: ArrayBase[ElementType]] {
-    protected[bson] def construct(seq : Seq[ElementType]) : Repr
-    protected[bson] def nullValue : ElementType
+    protected[bson] def construct(seq: Seq[ElementType]): Repr
+    protected[bson] def nullValue: ElementType
 
     /** An empty [[org.beaucatcher.bson.BArray]] or [[org.beaucatcher.bson.JArray]] */
-    val empty : Repr = construct(List())
+    val empty: Repr = construct(List())
 
     /** Constructs an empty [[org.beaucatcher.bson.BArray]] or [[org.beaucatcher.bson.JArray]] */
-    def apply() : Repr = {
+    def apply(): Repr = {
         empty
     }
 
@@ -449,7 +449,7 @@ sealed trait ArrayBaseCompanion[ElementType <: BValue, Repr <: ArrayBase[Element
      * @param v a value that can be wrapped in [[org.beaucatcher.bson.BValue]] for [[org.beaucatcher.bson.BArray]], [[org.beaucatcher.bson.JValue]] for [[org.beaucatcher.bson.JArray]]
      * @tparam V the type of the value
      */
-    def apply[V <% ElementType](v : V) : Repr = {
+    def apply[V <% ElementType](v: V): Repr = {
         construct(List[ElementType](if (v == null) nullValue else v))
     }
 
@@ -464,9 +464,9 @@ sealed trait ArrayBaseCompanion[ElementType <: BValue, Repr <: ArrayBase[Element
      * @param seq a sequence of values convertible to [[org.beaucatcher.bson.BValue]] or [[org.beaucatcher.bson.JValue]]
      * @tparam V type of elements in the sequence
      */
-    def apply[V <% ElementType](seq : Seq[V]) : Repr = {
+    def apply[V <% ElementType](seq: Seq[V]): Repr = {
         val bvalues = for { v <- seq }
-            yield if (v == null) nullValue else v : ElementType
+            yield if (v == null) nullValue else v: ElementType
         construct(bvalues.toSeq)
     }
 
@@ -478,7 +478,7 @@ sealed trait ArrayBaseCompanion[ElementType <: BValue, Repr <: ArrayBase[Element
      * @param v2 a second value
      * @param vs optional additional value
      */
-    def apply(v1 : ElementType, v2 : ElementType, vs : ElementType*) : Repr = {
+    def apply(v1: ElementType, v2: ElementType, vs: ElementType*): Repr = {
         construct((if (v1 == null) nullValue else v1) ::
             (if (v2 == null) nullValue else v2) ::
             vs.map({ v => if (v == null) nullValue else v }).toList)
@@ -488,20 +488,20 @@ sealed trait ArrayBaseCompanion[ElementType <: BValue, Repr <: ArrayBase[Element
      * Creates a builder object used to efficiently build a new [[org.beaucatcher.bson.Repr]]
      * @return a new builder for [[org.beaucatcher.bson.Repr]]
      */
-    def newBuilder : Builder[ElementType, Repr]
+    def newBuilder: Builder[ElementType, Repr]
 }
 
 /**
  * A BSON array of values. Implements [[scala.collection.LinearSeqLike]] so you can
  * use it like a regular Scala sequence of [[org.beaucatcher.bson.BValue]].
  */
-case class BArray(override val value : List[BValue])
+case class BArray(override val value: List[BValue])
     extends ArrayBase[BValue]
     with LinearSeqLike[BValue, BArray] {
 
     require(value != null)
 
-    override def toJValue(flavor : JsonFlavor.Value) : JValue = JArray(value.map(_.toJValue(flavor)))
+    override def toJValue(flavor: JsonFlavor.Value): JValue = JArray(value.map(_.toJValue(flavor)))
 
     override def newBuilder = BArray.newBuilder
 }
@@ -510,14 +510,14 @@ case class BArray(override val value : List[BValue])
  * Companion object for [[org.beaucatcher.bson.BArray]]
  */
 object BArray extends ArrayBaseCompanion[BValue, BArray] {
-    override def construct(elements : Seq[BValue]) : BArray = new BArray(elements.toList)
-    override def nullValue : BValue = BNull
-    override def newBuilder : Builder[BValue, BArray] = newArrayBuilder(list => BArray(list))
+    override def construct(elements: Seq[BValue]): BArray = new BArray(elements.toList)
+    override def nullValue: BValue = BNull
+    override def newBuilder: Builder[BValue, BArray] = newArrayBuilder(list => BArray(list))
 
-    implicit def canBuildFrom : CanBuildFrom[BArray, BValue, BArray] = {
+    implicit def canBuildFrom: CanBuildFrom[BArray, BValue, BArray] = {
         new CanBuildFrom[BArray, BValue, BArray] {
-            def apply() : Builder[BValue, BArray] = newBuilder
-            def apply(from : BArray) : Builder[BValue, BArray] = newBuilder
+            def apply(): Builder[BValue, BArray] = newBuilder
+            def apply(from: BArray): Builder[BValue, BArray] = newBuilder
         }
     }
 }
@@ -526,7 +526,7 @@ object BArray extends ArrayBaseCompanion[BValue, BArray] {
  * Exactly like [[org.beaucatcher.bson.BArray]] but guaranteed to contain only
  * [[org.beaucatcher.bson.JValue]] (all JSON, no BSON types).
  */
-case class JArray(override val value : List[JValue])
+case class JArray(override val value: List[JValue])
     extends ArrayBase[JValue]
     with LinearSeqLike[JValue, JArray]
     with JValue {
@@ -538,10 +538,10 @@ case class JArray(override val value : List[JValue])
 
     override def newBuilder = JArray.newBuilder
 
-    implicit def canBuildFrom : CanBuildFrom[JArray, JValue, JArray] = {
+    implicit def canBuildFrom: CanBuildFrom[JArray, JValue, JArray] = {
         new CanBuildFrom[JArray, JValue, JArray] {
-            def apply() : Builder[JValue, JArray] = newBuilder
-            def apply(from : JArray) : Builder[JValue, JArray] = newBuilder
+            def apply(): Builder[JValue, JArray] = newBuilder
+            def apply(from: JArray): Builder[JValue, JArray] = newBuilder
         }
     }
 }
@@ -550,9 +550,9 @@ case class JArray(override val value : List[JValue])
  * Companion object for [[org.beaucatcher.bson.JArray]]
  */
 object JArray extends ArrayBaseCompanion[JValue, JArray] {
-    override def construct(elements : Seq[JValue]) : JArray = new JArray(elements.toList)
-    override def nullValue : JValue = BNull
-    override def newBuilder : Builder[JValue, JArray] = newArrayBuilder(list => JArray(list))
+    override def construct(elements: Seq[JValue]): JArray = new JArray(elements.toList)
+    override def nullValue: JValue = BNull
+    override def newBuilder: Builder[JValue, JArray] = newArrayBuilder(list => JArray(list))
 }
 
 /**
@@ -560,15 +560,15 @@ object JArray extends ArrayBaseCompanion[JValue, JArray] {
  *
  * @param value the binary data
  */
-case class BBinary(override val value : Binary) extends BSingleValue(BsonType.BINARY, value) {
+case class BBinary(override val value: Binary) extends BSingleValue(BsonType.BINARY, value) {
 
-    override def toJValue(flavor : JsonFlavor.Value) = {
+    override def toJValue(flavor: JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
                 BString(Base64.encodeBase64String(value.data))
             case JsonFlavor.STRICT =>
                 JObject(List(("$binary", BString(Base64.encodeBase64String(value.data))),
-                    ("$type", BString("%02x".format("%02x", (BsonSubtype.toByte(value.subtype) : Int) & 0xff)))))
+                    ("$type", BString("%02x".format("%02x", (BsonSubtype.toByte(value.subtype): Int) & 0xff)))))
             case _ =>
                 throw new UnsupportedOperationException("Don't yet support JsonFlavor " + flavor)
         }
@@ -577,15 +577,15 @@ case class BBinary(override val value : Binary) extends BSingleValue(BsonType.BI
 
 /** Companion object for [[org.beaucatcher.bson.BBinary]]. */
 object BBinary {
-    def apply(data : Array[Byte], subtype : BsonSubtype.Value) : BBinary =
+    def apply(data: Array[Byte], subtype: BsonSubtype.Value): BBinary =
         BBinary(Binary(data, subtype))
 
-    def apply(data : Array[Byte]) : BBinary = BBinary(Binary(data))
+    def apply(data: Array[Byte]): BBinary = BBinary(Binary(data))
 }
 
 /** A BSON object ID value, wrapping [[org.beaucatcher.bson.ObjectId]]. */
-case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonType.OID, value) {
-    override def toJValue(flavor : JsonFlavor.Value) = {
+case class BObjectId(override val value: ObjectId) extends BSingleValue(BsonType.OID, value) {
+    override def toJValue(flavor: JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
                 BString(value.toString())
@@ -598,19 +598,19 @@ case class BObjectId(override val value : ObjectId) extends BSingleValue(BsonTyp
 }
 
 object BObjectId {
-    def apply(string : String) : BObjectId =
+    def apply(string: String): BObjectId =
         BObjectId(ObjectId(string))
 }
 
 /** A BSON or JSON boolean value. */
-case class BBoolean(override val value : Boolean) extends BSingleValue(BsonType.BOOLEAN, value) with JValue {
+case class BBoolean(override val value: Boolean) extends BSingleValue(BsonType.BOOLEAN, value) with JValue {
 }
 
 /**
  * A BSON date time value, wrapping [[java.util.Date]].
  */
-case class BISODate(override val value : Date) extends BSingleValue(BsonType.DATE, value) {
-    override def toJValue(flavor : JsonFlavor.Value) = {
+case class BISODate(override val value: Date) extends BSingleValue(BsonType.DATE, value) {
+    override def toJValue(flavor: JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
                 BInt64(value.getTime)
@@ -624,7 +624,7 @@ case class BISODate(override val value : Date) extends BSingleValue(BsonType.DAT
 
 object BISODate {
 
-    def apply(millis : Long) : BISODate =
+    def apply(millis: Long): BISODate =
         BISODate(new Date(millis))
 
     def now = {
@@ -633,8 +633,8 @@ object BISODate {
 }
 
 /** A BSON timestamp value, wrapping [[org.beaucatcher.bson.Timestamp]]. */
-case class BTimestamp(override val value : Timestamp) extends BSingleValue(BsonType.TIMESTAMP, value) {
-    override def toJValue(flavor : JsonFlavor.Value) = {
+case class BTimestamp(override val value: Timestamp) extends BSingleValue(BsonType.TIMESTAMP, value) {
+    override def toJValue(flavor: JsonFlavor.Value) = {
         flavor match {
             case JsonFlavor.CLEAN =>
                 BInt64(value.asLong)
@@ -646,7 +646,7 @@ case class BTimestamp(override val value : Timestamp) extends BSingleValue(BsonT
 }
 
 object BTimestamp {
-    def apply(time : Int, inc : Int) : BTimestamp = BTimestamp(Timestamp(time, inc))
+    def apply(time: Int, inc: Int): BTimestamp = BTimestamp(Timestamp(time, inc))
 }
 
 /**
@@ -665,20 +665,20 @@ abstract trait ObjectBase[+ValueType <: BValue, +Repr <: Map[String, ValueType]]
     override type WrappedType = Map[String, Any]
 
     // this uses BValue not ValueType so we can be covariant
-    def value : List[Field[BValue]] = realValue[BValue]
+    def value: List[Field[BValue]] = realValue[BValue]
 
-    protected[this] def realValue[V >: ValueType] : List[(String, V)]
+    protected[this] def realValue[V >: ValueType]: List[(String, V)]
 
     // it would be nice to use an ordered map like LinkedHashMap here,
     // but the only ordered map in standard collections is mutable, so
     // it isn't 100% no-brainer to use that.
-    override lazy val unwrapped = Map() ++ value.map({ field => (field._1, field._2.unwrapped : Any) })
+    override lazy val unwrapped = Map() ++ value.map({ field => (field._1, field._2.unwrapped: Any) })
 
     override val bsonType = BsonType.OBJECT
 
-    protected[this] def construct(list : List[Field[ValueType]]) : Repr
+    protected[this] def construct(list: List[Field[ValueType]]): Repr
 
-    protected[this] def withAddedField(field : Field[ValueType]) : Repr = {
+    protected[this] def withAddedField(field: Field[ValueType]): Repr = {
         // the basic assumption here is that the list will be short
         // so the O(n) is acceptable in exchange for a small simple
         // data structure. we'll see I guess.
@@ -692,22 +692,22 @@ abstract trait ObjectBase[+ValueType <: BValue, +Repr <: Map[String, ValueType]]
     //override def newBuilder : MapBuilder[String, ValueType, Repr]
 
     // Map: Removes a key from this map, returning a new map.
-    override def -(key : String) : Repr = {
+    override def -(key: String): Repr = {
         construct(realValue.filter(_._1 != key))
     }
 
-    private lazy val index : Option[Map[String, ValueType]] = {
+    private lazy val index: Option[Map[String, ValueType]] = {
         // for maps with more than 7 elements, we build an index.
         // otherwise we assume the cost of the index exceeds the
         // cost of O(n) searches.
         if (value.isDefinedAt(7))
-            Some(immutable.HashMap[String, ValueType](realValue : _*))
+            Some(immutable.HashMap[String, ValueType](realValue: _*))
         else
             None
     }
 
     // Map: Optionally returns the value associated with a key.
-    override def get(key : String) : Option[ValueType] = {
+    override def get(key: String): Option[ValueType] = {
         if (index.isDefined) {
             index.get.get(key)
         } else {
@@ -719,7 +719,7 @@ abstract trait ObjectBase[+ValueType <: BValue, +Repr <: Map[String, ValueType]]
     }
 
     // Map: Creates a new iterator over all key/value pairs of this map
-    override def iterator : Iterator[(String, ValueType)] = {
+    override def iterator: Iterator[(String, ValueType)] = {
         realValue[ValueType].map(field => (field._1, field._2)).iterator
     }
 
@@ -730,7 +730,7 @@ abstract trait ObjectBase[+ValueType <: BValue, +Repr <: Map[String, ValueType]]
      * @tparam A type to cast to
      * @param key the key to get
      */
-    def getUnwrappedAs[A : Manifest](key : String) : A = {
+    def getUnwrappedAs[A: Manifest](key: String): A = {
         get(key) match {
             case Some(bvalue) =>
                 bvalue.unwrappedAs[A]
@@ -741,8 +741,8 @@ abstract trait ObjectBase[+ValueType <: BValue, +Repr <: Map[String, ValueType]]
 }
 
 sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueType, Repr] with immutable.MapLike[String, ValueType, Repr]] {
-    protected[bson] def construct(list : List[Pair[String, ValueType]]) : Repr
-    protected[bson] def nullValue : ValueType
+    protected[bson] def construct(list: List[Pair[String, ValueType]]): Repr
+    protected[bson] def nullValue: ValueType
 
     /** An empty object with size 0. */
     val empty = construct(List())
@@ -752,7 +752,7 @@ sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueTy
      * the keys are strings and the values can be converted to [[org.beaucatcher.bson.BValue]]
      * or [[org.beaucatcher.bson.JValue]].
      */
-    def apply[K <: String, V <% ValueType](m : Map[K, V]) : Repr = {
+    def apply[K <: String, V <% ValueType](m: Map[K, V]): Repr = {
         val fields = for { (k, v) <- m }
             yield Pair[String, ValueType](k, if (v == null) nullValue else v)
         construct(fields.toList)
@@ -769,14 +769,14 @@ sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueTy
      * Otherwise the type of `V` would be inferred to `Any` if mixing different
      * value types in a list of key-value pairs, and the method would not apply.
      */
-    def apply[K <: String](pair1 : (K, ValueType), pair2 : (K, ValueType), pairs : (K, ValueType)*) : Repr = {
+    def apply[K <: String](pair1: (K, ValueType), pair2: (K, ValueType), pairs: (K, ValueType)*): Repr = {
         val fields = for { (k, v) <- List(pair1, pair2) ++ pairs }
             yield (k, if (v == null) nullValue else v)
         construct(fields.toList)
     }
 
     /** Construct a new empty object */
-    def apply() : Repr = {
+    def apply(): Repr = {
         empty
     }
 
@@ -795,8 +795,8 @@ sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueTy
      * so we need an overload that matches unambiguously prior to
      * any implicits. That's what this overload provides.
      */
-    def apply[K <: String, V <% ValueType](pair : (K, V)) : Repr = {
-        val bvalue : ValueType = if (pair._2 == null) nullValue else pair._2
+    def apply[K <: String, V <% ValueType](pair: (K, V)): Repr = {
+        val bvalue: ValueType = if (pair._2 == null) nullValue else pair._2
         construct(List((pair._1, bvalue)))
     }
 
@@ -804,7 +804,7 @@ sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueTy
      * Creates a new builder for efficiently generating a [[org.beaucatcher.bson.BObject]]
      * or [[org.beaucatcher.bson.JObject]]
      */
-    def newBuilder : MapBuilder[String, ValueType, Repr] =
+    def newBuilder: MapBuilder[String, ValueType, Repr] =
         new MapBuilder[String, ValueType, Repr](empty)
 }
 
@@ -815,25 +815,25 @@ sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueTy
  * [[org.beaucatcher.bson.BObject]] makes an additional guarantee beyond the usual [[scala.collection.immutable.Map]]
  * contract, which is that it's ordered. MongoDB relies on ordering in some cases.
  */
-case class BObject(override val value : List[BField]) extends ObjectBase[BValue, BObject]
+case class BObject(override val value: List[BField]) extends ObjectBase[BValue, BObject]
     with immutable.MapLike[String, BValue, BObject] {
 
-    protected[this] override def realValue[V >: BValue] : List[(String, V)] = value
+    protected[this] override def realValue[V >: BValue]: List[(String, V)] = value
 
-    override def toJValue(flavor : JsonFlavor.Value) = JObject(value.map(field => (field._1, field._2.toJValue(flavor))))
+    override def toJValue(flavor: JsonFlavor.Value) = JObject(value.map(field => (field._1, field._2.toJValue(flavor))))
 
     // lift-json fixes JObject equals() to ignore ordering; which makes
     // sense for JSON, but in BSON sometimes order matters.
 
-    override def construct(list : List[Field[BValue]]) : BObject = BObject(list)
+    override def construct(list: List[Field[BValue]]): BObject = BObject(list)
 
     // Map: empty map
-    override lazy val empty : BObject = BObject.empty
+    override lazy val empty: BObject = BObject.empty
 
     // Map: Adds a key/value pair to this map, returning a new map.
-    override def +[B1 >: BValue](kv : (String, B1)) : Map[String, B1] = {
+    override def +[B1 >: BValue](kv: (String, B1)): Map[String, B1] = {
         kv match {
-            case (key, bvalue : BValue) =>
+            case (key, bvalue: BValue) =>
                 withAddedField(Pair(key, bvalue))
             case _ =>
                 (Map() ++ this) + kv
@@ -846,7 +846,7 @@ case class BObject(override val value : List[BField]) extends ObjectBase[BValue,
      * @param kv the key-value pair to add
      * @return a new map with the new pair added (or replaced)
      */
-    def +(kv : (String, BValue))(implicit bf : CanBuildFrom[BObject, (String, BValue), BObject]) : BObject = {
+    def +(kv: (String, BValue))(implicit bf: CanBuildFrom[BObject, (String, BValue), BObject]): BObject = {
         val b = bf(empty)
         b ++= this
         b += kv
@@ -856,13 +856,13 @@ case class BObject(override val value : List[BField]) extends ObjectBase[BValue,
 
 /** Companion object for [[org.beaucatcher.bson.BObject]]. */
 object BObject extends ObjectBaseCompanion[BValue, BObject] {
-    override def construct(list : List[Pair[String, BValue]]) : BObject = new BObject(list)
-    override def nullValue : BValue = BNull
+    override def construct(list: List[Pair[String, BValue]]): BObject = new BObject(list)
+    override def nullValue: BValue = BNull
 
-    implicit def canBuildFrom : CanBuildFrom[BObject, (String, BValue), BObject] = {
+    implicit def canBuildFrom: CanBuildFrom[BObject, (String, BValue), BObject] = {
         new CanBuildFrom[BObject, (String, BValue), BObject] {
-            def apply() : Builder[(String, BValue), BObject] = newBuilder
-            def apply(from : BObject) : Builder[(String, BValue), BObject] = newBuilder
+            def apply(): Builder[(String, BValue), BObject] = newBuilder
+            def apply(from: BObject): Builder[(String, BValue), BObject] = newBuilder
         }
     }
 }
@@ -871,30 +871,30 @@ object BObject extends ObjectBaseCompanion[BValue, BObject] {
  * Exactly like [[org.beaucatcher.bson.BObject]] but guaranteed to contain only
  * [[org.beaucatcher.bson.JValue]] (all JSON, no BSON types).
  */
-case class JObject(override val value : List[JField]) extends ObjectBase[JValue, JObject]
+case class JObject(override val value: List[JField]) extends ObjectBase[JValue, JObject]
     with immutable.MapLike[String, JValue, JObject]
     with JValue {
 
-    protected[this] override def realValue[V >: JValue] : List[(String, V)] = value
+    protected[this] override def realValue[V >: JValue]: List[(String, V)] = value
 
     // Maybe equals() on JObject should ignore order, while on BObject
     // it should consider order? probably not a good idea.
     // Order at least matters for JObject when converting to BObject...
 
-    override def construct(list : List[Field[JValue]]) : JObject = JObject(list)
+    override def construct(list: List[Field[JValue]]): JObject = JObject(list)
 
-    override lazy val empty : JObject = JObject.empty
+    override lazy val empty: JObject = JObject.empty
 
-    override def +[B1 >: JValue](kv : (String, B1)) : Map[String, B1] = {
+    override def +[B1 >: JValue](kv: (String, B1)): Map[String, B1] = {
         kv match {
-            case (key, jvalue : JValue) =>
+            case (key, jvalue: JValue) =>
                 withAddedField(Pair(key, jvalue))
             case _ =>
                 (Map() ++ this) + kv
         }
     }
 
-    def +(kv : (String, JValue))(implicit bf : CanBuildFrom[JObject, (String, JValue), JObject]) : JObject = {
+    def +(kv: (String, JValue))(implicit bf: CanBuildFrom[JObject, (String, JValue), JObject]): JObject = {
         val b = bf(empty)
         b ++= this
         b += kv
@@ -907,13 +907,13 @@ case class JObject(override val value : List[JField]) extends ObjectBase[JValue,
  * for [[org.beaucatcher.bson.BObject]]'s companion object.
  */
 object JObject extends ObjectBaseCompanion[JValue, JObject] {
-    override def construct(list : List[Pair[String, JValue]]) : JObject = new JObject(list)
-    override def nullValue : JValue = BNull
+    override def construct(list: List[Pair[String, JValue]]): JObject = new JObject(list)
+    override def nullValue: JValue = BNull
 
-    implicit def canBuildFrom : CanBuildFrom[JObject, (String, JValue), JObject] = {
+    implicit def canBuildFrom: CanBuildFrom[JObject, (String, JValue), JObject] = {
         new CanBuildFrom[JObject, (String, JValue), JObject] {
-            def apply() : Builder[(String, JValue), JObject] = newBuilder
-            def apply(from : JObject) : Builder[(String, JValue), JObject] = newBuilder
+            def apply(): Builder[(String, JValue), JObject] = newBuilder
+            def apply(from: JObject): Builder[(String, JValue), JObject] = newBuilder
         }
     }
 }
@@ -932,7 +932,7 @@ object BValue {
      * because you can end up with a [[java.lang.Object]] that needs
      * wrapping, when dealing with say a Java collection.
      */
-    def wrap(value : Any) : BValue = {
+    def wrap(value: Any): BValue = {
         // a maintenance headache because the big case statement
         // has to be kept in sync with all the implicits.
         value match {
@@ -941,31 +941,31 @@ object BValue {
             // allowing BValue to be mixed in to a map or list of tuples
             // means you can force-specify rather than relying on implicit
             // conversion if you need to. For example ("foo", 10) or ("foo", BDouble(10))
-            case bvalue : BValue =>
+            case bvalue: BValue =>
                 bvalue
-            case d : Date =>
+            case d: Date =>
                 BISODate(d)
-            case oid : ObjectId =>
+            case oid: ObjectId =>
                 BObjectId(oid)
-            case b : Binary =>
+            case b: Binary =>
                 BBinary(b)
-            case t : Timestamp =>
+            case t: Timestamp =>
                 BTimestamp(t)
-            case b : Boolean =>
+            case b: Boolean =>
                 BBoolean(b)
-            case s : String =>
+            case s: String =>
                 BString(s)
-            case d : Double =>
+            case d: Double =>
                 BDouble(d)
-            case i : Long =>
+            case i: Long =>
                 BInt64(i)
-            case i : Int =>
+            case i: Int =>
                 BInt32(i)
-            case i : BigInt =>
+            case i: BigInt =>
                 if (i.isValidInt) BInt32(i.intValue) else BInt64(i.longValue)
-            case m : Map[_, _] =>
+            case m: Map[_, _] =>
                 BObject(m.iterator.map(kv => (kv._1.asInstanceOf[String], BValue.wrap(kv._2))).toList)
-            case seq : Seq[_] =>
+            case seq: Seq[_] =>
                 BArray(seq.map(BValue.wrap(_)).toList)
             case _ =>
                 val failedClassName = value.asInstanceOf[AnyRef].getClass.getSimpleName
@@ -988,21 +988,21 @@ object BValue {
      * @param flavor expected [[org.beaucatcher.bson.JsonFlavor]] of the incoming JSON
      * @return parse tree of values
      */
-    def parseJson(json : String, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : BValue =
+    def parseJson(json: String, schema: ClassAnalysis[_ <: Product], flavor: JsonFlavor.Value = JsonFlavor.CLEAN): BValue =
         BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), flavor)
 
     /**
      * Parse JSON from a [[java.io.Reader]], validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
      * (See documentation on the other version of `parseJson()` that takes a string parameter.)
      */
-    def parseJson(json : Source, schema : ClassAnalysis[_ <: Product]) : BValue =
+    def parseJson(json: Source, schema: ClassAnalysis[_ <: Product]): BValue =
         BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), JsonFlavor.CLEAN)
 
     /**
      * Parse JSON from a [[java.io.Reader]], validating it against the given [[org.beaucatcher.bson.ClassAnalysis]].
      * (See documentation on the other version of `parseJson()` that takes a string parameter.)
      */
-    def parseJson(json : Source, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value) : BValue =
+    def parseJson(json: Source, schema: ClassAnalysis[_ <: Product], flavor: JsonFlavor.Value): BValue =
         BsonValidation.validateAgainstCaseClass(schema, JValue.parseJson(json), flavor)
 
     /**
@@ -1017,7 +1017,7 @@ object BValue {
      * @param flavor expected [[org.beaucatcher.bson.JsonFlavor]] of the incoming JSON
      * @return parse tree of values
      */
-    def fromJValue(jvalue : JValue, schema : ClassAnalysis[_ <: Product], flavor : JsonFlavor.Value = JsonFlavor.CLEAN) : BValue =
+    def fromJValue(jvalue: JValue, schema: ClassAnalysis[_ <: Product], flavor: JsonFlavor.Value = JsonFlavor.CLEAN): BValue =
         BsonValidation.validateAgainstCaseClass(schema, jvalue, flavor)
 }
 
@@ -1030,13 +1030,13 @@ object JValue {
      * @param json a JSON string
      * @return a parse tree
      */
-    def parseJson(json : String) : JValue = BsonJson.fromJson(json)
+    def parseJson(json: String): JValue = BsonJson.fromJson(json)
 
     /**
      * Parses JSON from a [[scala.io.Source]] into a parse tree.
      * @param json a JSON string
      * @return a parse tree
      */
-    def parseJson(json : Source) : JValue = BsonJson.fromJson(json)
+    def parseJson(json: Source): JValue = BsonJson.fromJson(json)
 }
 

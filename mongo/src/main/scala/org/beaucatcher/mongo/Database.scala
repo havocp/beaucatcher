@@ -10,10 +10,10 @@ import akka.dispatch.Future
  * built-in collections. Obtain it through a [[org.beaucatcher.mongo.Database]] object,
  * you can't construct a [[org.beaucatcher.mongo.SystemCollections]] directly.
  */
-final class SystemCollections private[mongo] (driver : Driver) {
+final class SystemCollections private[mongo] (driver: Driver) {
     import IdEncoders._
 
-    private def createCollectionAccess[EntityType <: Product : Manifest, IdType : IdEncoder](name : String) = {
+    private def createCollectionAccess[EntityType <: Product: Manifest, IdType: IdEncoder](name: String) = {
         val d = driver
         new CollectionAccessWithCaseClass[EntityType, IdType] with DriverProvider {
             override val mongoDriver = d
@@ -25,24 +25,24 @@ final class SystemCollections private[mongo] (driver : Driver) {
         createCollectionAccess[CollectionIndex, String]("system.indexes")
     }
 
-    def indexes : CollectionAccessTrait[CollectionIndex, String] = _indexes
+    def indexes: CollectionAccessTrait[CollectionIndex, String] = _indexes
 
     private lazy val _namespaces = {
         createCollectionAccess[Namespace, String]("system.namespaces")
     }
 
-    def namespaces : CollectionAccessTrait[Namespace, String] = _namespaces
+    def namespaces: CollectionAccessTrait[Namespace, String] = _namespaces
 
     // TODO system.users
 }
 
-case class CreateCollectionOptions(autoIndexId : Option[Boolean] = None, capped : Option[Boolean] = None,
-    max : Option[Int] = None, size : Option[Int] = None, overrideQueryFlags : Option[Set[QueryFlag]] = None)
+case class CreateCollectionOptions(autoIndexId: Option[Boolean] = None, capped: Option[Boolean] = None,
+    max: Option[Int] = None, size: Option[Int] = None, overrideQueryFlags: Option[Set[QueryFlag]] = None)
 
 private[beaucatcher] object CreateCollectionOptions {
     final val empty = CreateCollectionOptions(None, None, None, None, None)
 
-    private[beaucatcher] def buildCommand(name : String, options : CreateCollectionOptions) : BObject = {
+    private[beaucatcher] def buildCommand(name: String, options: CreateCollectionOptions): BObject = {
         val builder = BObject.newBuilder
         // the Mongo docs say "createCollection" but driver uses "create"
         builder += ("create" -> name)
@@ -62,9 +62,9 @@ private[beaucatcher] object CreateCollectionOptions {
 }
 
 trait SyncDatabase {
-    protected[mongo] def database : Database
+    protected[mongo] def database: Database
 
-    private implicit def context : Context = database.context
+    private implicit def context: Context = database.context
 
     private lazy val underlying = context.driverContext.database.sync
 
@@ -72,38 +72,38 @@ trait SyncDatabase {
     // TODO addUser(), removeUser()
     // TODO eval()
 
-    final def command(cmd : BObject) : CommandResult = command(cmd, CommandOptions.empty)
+    final def command(cmd: BObject): CommandResult = command(cmd, CommandOptions.empty)
 
-    def command(cmd : BObject, options : CommandOptions) : CommandResult = {
+    def command(cmd: BObject, options: CommandOptions): CommandResult = {
         import BObjectCodecs._
         underlying.command(cmd, options)
     }
 
-    final def createCollection(name : String) : CommandResult = {
+    final def createCollection(name: String): CommandResult = {
         createCollection(name, CreateCollectionOptions.empty)
     }
 
-    final def createCollection(name : String, options : CreateCollectionOptions) : CommandResult = {
+    final def createCollection(name: String, options: CreateCollectionOptions): CommandResult = {
         command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
     }
 
     // TODO should return Cursor which requires Cursor to have CanBuildFrom machinery
-    def collectionNames : Iterator[String] = {
+    def collectionNames: Iterator[String] = {
         database.system.namespaces.sync[BObject].find(BObject.empty, IncludedFields("name")) map {
             obj =>
                 obj.getUnwrappedAs[String]("name")
         }
     }
 
-    def dropDatabase() : CommandResult = {
+    def dropDatabase(): CommandResult = {
         command(BObject("dropDatabase" -> 1))
     }
 }
 
 trait AsyncDatabase {
-    protected[mongo] def database : Database
+    protected[mongo] def database: Database
 
-    private implicit def context : Context = database.context
+    private implicit def context: Context = database.context
 
     private lazy val underlying = context.driverContext.database.async
 
@@ -111,22 +111,22 @@ trait AsyncDatabase {
     // TODO addUser(), removeUser()
     // TODO eval()
 
-    final def command(cmd : BObject) : Future[CommandResult] = command(cmd, CommandOptions.empty)
+    final def command(cmd: BObject): Future[CommandResult] = command(cmd, CommandOptions.empty)
 
-    def command(cmd : BObject, options : CommandOptions) : Future[CommandResult] = {
+    def command(cmd: BObject, options: CommandOptions): Future[CommandResult] = {
         import BObjectCodecs._
         underlying.command(cmd, options)
     }
 
-    final def createCollection(name : String) : Future[CommandResult] = {
+    final def createCollection(name: String): Future[CommandResult] = {
         createCollection(name, CreateCollectionOptions.empty)
     }
 
-    final def createCollection(name : String, options : CreateCollectionOptions) : Future[CommandResult] = {
+    final def createCollection(name: String, options: CreateCollectionOptions): Future[CommandResult] = {
         command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
     }
 
-    def collectionNames : Future[AsyncCursor[String]] = {
+    def collectionNames: Future[AsyncCursor[String]] = {
         database.system.namespaces.async[BObject].find(BObject.empty, IncludedFields("name")) map { cursor =>
             cursor.map({ obj =>
                 obj.getUnwrappedAs[String]("name")
@@ -134,37 +134,37 @@ trait AsyncDatabase {
         }
     }
 
-    def dropDatabase() : Future[CommandResult] = {
+    def dropDatabase(): Future[CommandResult] = {
         command(BObject("dropDatabase" -> 1))
     }
 }
 
 trait Database {
-    def context : Context
+    def context: Context
 
-    def name : String
+    def name: String
 
     private lazy val _system = new SystemCollections(context.driver)
 
-    def system : SystemCollections = _system
+    def system: SystemCollections = _system
 
-    def sync : SyncDatabase
+    def sync: SyncDatabase
 
-    def async : AsyncDatabase
+    def async: AsyncDatabase
 }
 
 object Database {
-    private class SyncImpl(override val database : Database) extends SyncDatabase
-    private class AsyncImpl(override val database : Database) extends AsyncDatabase
+    private class SyncImpl(override val database: Database) extends SyncDatabase
+    private class AsyncImpl(override val database: Database) extends AsyncDatabase
 
-    private class DatabaseImpl(override val context : Context) extends Database {
+    private class DatabaseImpl(override val context: Context) extends Database {
         val underlying = context.driverContext.database
         override def name = underlying.name
         override lazy val sync = new SyncImpl(this)
         override lazy val async = new AsyncImpl(this)
     }
 
-    def apply(implicit context : Context) : Database = {
+    def apply(implicit context: Context): Database = {
         new DatabaseImpl(context)
     }
 }

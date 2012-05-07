@@ -13,8 +13,8 @@ import akka.actor.ActorSystem
  * The [[org.beaucatcher.jdriver.JavaDriver]] companion object has a singleton `instance`
  * you could use for this, `JavaDriver.instance.newContext()`.
  */
-final class JavaDriverContext private[jdriver] (override val driver : JavaDriver,
-    val url : String, val actorSystem : ActorSystem)
+final class JavaDriverContext private[jdriver] (override val driver: JavaDriver,
+    val url: String, val actorSystem: ActorSystem)
     extends DriverContext {
 
     private lazy val jdriverURI = new MongoURI(url)
@@ -28,14 +28,14 @@ final class JavaDriverContext private[jdriver] (override val driver : JavaDriver
     override type UnderlyingDatabaseType = DB
     override type UnderlyingCollectionType = DBCollection
 
-    override def underlyingConnection : Mongo = connection
-    override def underlyingDatabase : DB = connection.getDB(jdriverURI.getDatabase())
-    override def underlyingCollection(name : String) : DBCollection = {
+    override def underlyingConnection: Mongo = connection
+    override def underlyingDatabase: DB = connection.getDB(jdriverURI.getDatabase())
+    override def underlyingCollection(name: String): DBCollection = {
         if (name == null)
             throw new IllegalArgumentException("null collection name")
-        val db : DB = underlyingDatabase
+        val db: DB = underlyingDatabase
         assert(db != null)
-        val coll : DBCollection = db.getCollection(name)
+        val coll: DBCollection = db.getCollection(name)
         assert(coll != null)
         coll
     }
@@ -44,7 +44,7 @@ final class JavaDriverContext private[jdriver] (override val driver : JavaDriver
         new JavaDriverDatabase(this)
     }
 
-    override def close() : Unit = {
+    override def close(): Unit = {
         JavaDriverConnection.releaseConnection(driverConnection)
     }
 }

@@ -40,21 +40,21 @@ object JsonToken {
     case object CloseArray extends JsonToken
 
     abstract trait Value extends JsonToken
-    case class StringValue(value : String) extends Value
-    case class LongValue(value : Long) extends Value
-    case class DoubleValue(value : Double) extends Value
-    abstract class BooleanValue(value : Boolean) extends Value
+    case class StringValue(value: String) extends Value
+    case class LongValue(value: Long) extends Value
+    case class DoubleValue(value: Double) extends Value
+    abstract class BooleanValue(value: Boolean) extends Value
     case object TrueValue extends BooleanValue(true)
     case object FalseValue extends BooleanValue(false)
     case object NullValue extends Value
 
-    private def parseError(message : String, cause : Throwable = null) = {
+    private def parseError(message: String, cause: Throwable = null) = {
         throw new JsonParseException(message, cause)
     }
 
-    private def headOrNone(i : BufferedIterator[Char]) : Option[Char] = if (i.hasNext) Some(i.head) else None
-    private def nextOrElse(i : Iterator[Char], action : => Char) : Char = if (i.hasNext) i.next else action
-    private def nextIsOrThrow(input : Iterator[Char], expectedBefore : String, expectedNow : String) : Unit = {
+    private def headOrNone(i: BufferedIterator[Char]): Option[Char] = if (i.hasNext) Some(i.head) else None
+    private def nextOrElse(i: Iterator[Char], action: => Char): Char = if (i.hasNext) i.next else action
+    private def nextIsOrThrow(input: Iterator[Char], expectedBefore: String, expectedNow: String): Unit = {
         for (c <- expectedNow) {
             val actual = nextOrElse(input, parseError("Expecting '%s%s' but input data ended".format(expectedBefore, expectedNow)))
             if (c != actual)
@@ -62,7 +62,7 @@ object JsonToken {
         }
     }
 
-    private def nextAfterWhitespace(i : Iterator[Char]) : Option[Char] = {
+    private def nextAfterWhitespace(i: Iterator[Char]): Option[Char] = {
         // this is clunky but not finding a nice pretty solution that seems efficient too
         if (i.hasNext) {
             var c = i.next
@@ -79,7 +79,7 @@ object JsonToken {
         }
     }
 
-    private def pullString(input : Iterator[Char]) : StringValue = {
+    private def pullString(input: Iterator[Char]): StringValue = {
         val sb = new java.lang.StringBuilder()
         var c = '\0' // value doesn't get used
         do {
@@ -104,12 +104,12 @@ object JsonToken {
                             for (i <- 0 to 3) {
                                 a.update(i, nextOrElse(input, missingHexDigit))
                             }
-                            val digits : String = new String(a)
+                            val digits: String = new String(a)
 
                             try {
                                 sb.appendCodePoint(Integer.parseInt(digits, 16))
                             } catch {
-                                case e : NumberFormatException =>
+                                case e: NumberFormatException =>
                                     parseError("Malformed hex digits after \\u escape in string: '%s'".format(digits), e)
                             }
                         }
@@ -123,25 +123,25 @@ object JsonToken {
         StringValue(sb.toString)
     }
 
-    private def pullTrue(input : Iterator[Char]) : JsonToken = {
+    private def pullTrue(input: Iterator[Char]): JsonToken = {
         // "t" has been already seen
         nextIsOrThrow(input, "t", "rue")
         TrueValue
     }
 
-    private def pullFalse(input : Iterator[Char]) : JsonToken = {
+    private def pullFalse(input: Iterator[Char]): JsonToken = {
         // "f" has already been seen
         nextIsOrThrow(input, "f", "alse")
         FalseValue
     }
 
-    private def pullNull(input : Iterator[Char]) : JsonToken = {
+    private def pullNull(input: Iterator[Char]): JsonToken = {
         // "n" has already been seen
         nextIsOrThrow(input, "n", "ull")
         NullValue
     }
 
-    private def pullNumber(input : BufferedIterator[Char], firstC : Char) : JsonToken = {
+    private def pullNumber(input: BufferedIterator[Char], firstC: Char): JsonToken = {
         val sb = new StringBuilder()
         sb.append(firstC)
         // we have to use head instead of next to peek, since we have no way to end
@@ -165,12 +165,12 @@ object JsonToken {
                 LongValue(java.lang.Long.parseLong(s))
             }
         } catch {
-            case e : NumberFormatException =>
+            case e: NumberFormatException =>
                 parseError("Invalid number", e)
         }
     }
 
-    private def pullNext(input : BufferedIterator[Char]) : JsonToken = {
+    private def pullNext(input: BufferedIterator[Char]): JsonToken = {
         val maybeC = nextAfterWhitespace(input)
         if (maybeC.isDefined) {
             maybeC.get match {
@@ -201,11 +201,11 @@ object JsonToken {
      * @param input iterator over characters
      * @return iterator over JSON tokens
      */
-    def tokenize(input : Iterator[Char]) : Iterator[JsonToken] = {
+    def tokenize(input: Iterator[Char]): Iterator[JsonToken] = {
         new Iterator[JsonToken]() {
             private val bufferedInput = input.buffered
             // the next token, we haven't returned it yet
-            var token : JsonToken = Start
+            var token: JsonToken = Start
             override def next = {
                 if (token == PastEnd)
                     throw new NoSuchElementException("No more JSON input data")

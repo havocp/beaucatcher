@@ -2,10 +2,10 @@ package org.beaucatcher.bson
 
 import scala.collection.mutable
 
-class BadSelectorException(message : String, cause : Throwable = null) extends Exception(message, cause)
+class BadSelectorException(message: String, cause: Throwable = null) extends Exception(message, cause)
 
 private[bson] object Selector {
-    private[bson] def headAndTail(selector : String) : (String, String) = {
+    private[bson] def headAndTail(selector: String): (String, String) = {
         if (selector.length == 0) {
             ("", "")
         } else if (selector.charAt(0) == '/') {
@@ -25,7 +25,7 @@ private[bson] object Selector {
         }
     }
 
-    private[bson] def splitSelector(selector : String) : List[String] = {
+    private[bson] def splitSelector(selector: String): List[String] = {
         headAndTail(selector) match {
             case ("", _) =>
                 Nil
@@ -34,37 +34,37 @@ private[bson] object Selector {
         }
     }
 
-    private[bson] def checkName(name : String) : Unit = {
+    private[bson] def checkName(name: String): Unit = {
         if (name.startsWith("/"))
             throw new BadSelectorException("Invalid selector has more than two '/' in a row")
     }
 
     // arrays are treated like objects indexed with numbers, so
     // "/foo/10" means "10th element of array foo"
-    private[bson] def arrayIndex(a : ArrayBase[BValue], s : String) : Option[BValue] = {
+    private[bson] def arrayIndex(a: ArrayBase[BValue], s: String): Option[BValue] = {
         try {
             val i = Integer.parseInt(s)
             Some(a(i))
         } catch {
-            case e : NumberFormatException =>
+            case e: NumberFormatException =>
                 None
-            case e : IndexOutOfBoundsException =>
+            case e: IndexOutOfBoundsException =>
                 None
         }
     }
 
-    private[bson] def matchingChildren(context : BValue, name : String) : TraversableOnce[BValue] = {
+    private[bson] def matchingChildren(context: BValue, name: String): TraversableOnce[BValue] = {
         checkName(name)
         if (name == ".") {
             Iterator(context)
         } else {
             context match {
-                case o : ObjectBase[_, _] =>
+                case o: ObjectBase[_, _] =>
                     if (name == "*")
                         o.values
                     else
                         o.get(name)
-                case a : ArrayBase[_] =>
+                case a: ArrayBase[_] =>
                     if (name == "*")
                         a.iterator
                     else
@@ -75,12 +75,12 @@ private[bson] object Selector {
         }
     }
 
-    private[bson] def findDescendants(context : BValue, name : String) : List[BValue] = {
+    private[bson] def findDescendants(context: BValue, name: String): List[BValue] = {
         checkName(name)
         val builder = List.newBuilder[BValue]
-        def findDescendantsHelper(context : BValue, name : String, builder : mutable.Builder[BValue, List[BValue]]) : Unit = {
+        def findDescendantsHelper(context: BValue, name: String, builder: mutable.Builder[BValue, List[BValue]]): Unit = {
             context match {
-                case o : ObjectBase[_, _] =>
+                case o: ObjectBase[_, _] =>
                     matchingChildren(o, name) foreach { c =>
                         builder += c
                     }
@@ -88,7 +88,7 @@ private[bson] object Selector {
                     o.foreach({ (kv) =>
                         findDescendantsHelper(kv._2, name, builder)
                     })
-                case a : ArrayBase[_] =>
+                case a: ArrayBase[_] =>
                     matchingChildren(a, name) foreach { c =>
                         builder += c
                     }
@@ -96,7 +96,7 @@ private[bson] object Selector {
                     a.foreach({ (elem) =>
                         findDescendantsHelper(elem, name, builder)
                     })
-                case v : BValue =>
+                case v: BValue =>
                     if (name == ".")
                         builder += v
             }
@@ -105,16 +105,16 @@ private[bson] object Selector {
         builder.result
     }
 
-    private[bson] def findChildren(context : BValue, name : String) : List[BValue] = {
+    private[bson] def findChildren(context: BValue, name: String): List[BValue] = {
         matchingChildren(context, name).toList
     }
 
-    private[bson] def select(contexts : List[BValue], split : List[String]) : List[BValue] = {
+    private[bson] def select(contexts: List[BValue], split: List[String]): List[BValue] = {
         contexts flatMap { context =>
             context match {
-                case o : ObjectBase[_, _] =>
+                case o: ObjectBase[_, _] =>
                     select(o, split)
-                case a : ArrayBase[_] =>
+                case a: ArrayBase[_] =>
                     select(a, split)
                 case _ =>
                     Nil
@@ -122,7 +122,7 @@ private[bson] object Selector {
         }
     }
 
-    private[bson] def select(context : BValue, split : List[String]) : List[BValue] = {
+    private[bson] def select(context: BValue, split: List[String]): List[BValue] = {
         split match {
             // Check valid ends of the selector, returning the results
             // and ending recursion. Only the last step in the selector
@@ -148,7 +148,7 @@ private[bson] object Selector {
         }
     }
 
-    private[bson] def validateSplit(split : List[String]) : Unit = {
+    private[bson] def validateSplit(split: List[String]): Unit = {
         split match {
             case childName :: "/" :: Nil =>
                 throw new BadSelectorException("Invalid selector ends with '/'")
@@ -170,13 +170,13 @@ private[bson] object Selector {
         }
     }
 
-    def select(context : BValue, selector : String) : List[BValue] = {
+    def select(context: BValue, selector: String): List[BValue] = {
         try {
             val split = splitSelector(selector)
             validateSplit(split)
             select(context :: Nil, split)
         } catch {
-            case e : BadSelectorException =>
+            case e: BadSelectorException =>
                 // add the problematic selector to the error. This is done here on the outermost
                 // part of the stack so we show the entire selector.
                 throw new BadSelectorException(e.getMessage + " '" + selector + "'", e)
@@ -188,12 +188,12 @@ private[bson] object Selector {
      * If nodes matching the selector have the wrong type, they are
      * simply filtered out (no exception is thrown).
      */
-    def selectAs[A : Manifest](context : BValue, selector : String) : List[A] = {
+    def selectAs[A: Manifest](context: BValue, selector: String): List[A] = {
         select(context, selector) flatMap { v =>
             try {
                 v.unwrappedAs[A] :: Nil
             } catch {
-                case e : ClassCastException =>
+                case e: ClassCastException =>
                     Nil
             }
         }

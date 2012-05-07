@@ -7,20 +7,20 @@ import java.util.concurrent.locks.ReentrantLock
 
 private[jdriver] class ConnectionDestroyedException extends Exception("Connection was destroyed before it was acquired")
 
-private[jdriver] case class ConnectionKey(key : String)
+private[jdriver] case class ConnectionKey(key: String)
 
 private[jdriver] object ConnectionKey {
     import scala.collection.JavaConverters._
-    private def makeKey(uri : MongoURI) = uri.getHosts().asScala.mkString(",") + "!" + uri.getUsername() + "!" + uri.getOptions()
+    private def makeKey(uri: MongoURI) = uri.getHosts().asScala.mkString(",") + "!" + uri.getUsername() + "!" + uri.getOptions()
 
-    def apply(uri : MongoURI) : ConnectionKey = ConnectionKey(makeKey(uri))
+    def apply(uri: MongoURI): ConnectionKey = ConnectionKey(makeKey(uri))
 }
 
-private[jdriver] class JavaDriverConnection(val key : ConnectionKey, val underlying : Mongo) {
+private[jdriver] class JavaDriverConnection(val key: ConnectionKey, val underlying: Mongo) {
     private var refcount = 1
     private var destroyed = false
 
-    def acquire() : Unit = synchronized {
+    def acquire(): Unit = synchronized {
         if (destroyed) {
             throw new ConnectionDestroyedException
         } else {
@@ -54,11 +54,11 @@ private[jdriver] object JavaDriverConnection {
         0.75f, /* load factor - this is the default */
         1) /* concurrency level - this is 1 writer, vs. the default of 16 */
 
-    private[jdriver] def acquireConnection(uri : MongoURI) : JavaDriverConnection = {
+    private[jdriver] def acquireConnection(uri: MongoURI): JavaDriverConnection = {
         acquireConnectionWithKey(ConnectionKey(uri), uri)
     }
 
-    private[this] def acquireConnectionWithKey(key : ConnectionKey, uri : MongoURI) : JavaDriverConnection = {
+    private[this] def acquireConnectionWithKey(key: ConnectionKey, uri: MongoURI): JavaDriverConnection = {
         val c = active.get(key)
         try {
             if (c eq null) {
@@ -85,12 +85,12 @@ private[jdriver] object JavaDriverConnection {
             }
         } catch {
             // if the connection is destroyed before we acquire it, start over
-            case e : ConnectionDestroyedException =>
+            case e: ConnectionDestroyedException =>
                 acquireConnectionWithKey(key, uri)
         }
     }
 
-    private[jdriver] def releaseConnection(connection : JavaDriverConnection) : Unit = {
+    private[jdriver] def releaseConnection(connection: JavaDriverConnection): Unit = {
         if (connection.release()) {
             active.remove(connection.key, connection)
             connection.underlying.close()

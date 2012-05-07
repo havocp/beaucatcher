@@ -6,17 +6,17 @@ import org.beaucatcher.driver._
 import com.mongodb.{ CommandResult => _, _ }
 import akka.dispatch.Future
 
-private[jdriver] class JavaDriverSyncDatabase(override protected val database : JavaDriverDatabase) extends SyncDriverDatabase {
-    override def command[Q](cmd : Q, options : CommandOptions)(implicit encoder : QueryEncoder[Q]) : CommandResult =
+private[jdriver] class JavaDriverSyncDatabase(override protected val database: JavaDriverDatabase) extends SyncDriverDatabase {
+    override def command[Q](cmd: Q, options: CommandOptions)(implicit encoder: QueryEncoder[Q]): CommandResult =
         database.command(cmd, options)
 }
 
-private[jdriver] class JavaDriverAsyncDatabase(override protected val database : JavaDriverDatabase) extends AsyncDriverDatabase {
-    override def command[Q](cmd : Q, options : CommandOptions)(implicit encoder : QueryEncoder[Q]) : Future[CommandResult] =
-        Future({ database.command(cmd, options) } : CommandResult)(database.context.actorSystem.dispatcher)
+private[jdriver] class JavaDriverAsyncDatabase(override protected val database: JavaDriverDatabase) extends AsyncDriverDatabase {
+    override def command[Q](cmd: Q, options: CommandOptions)(implicit encoder: QueryEncoder[Q]): Future[CommandResult] =
+        Future({ database.command(cmd, options) }: CommandResult)(database.context.actorSystem.dispatcher)
 }
 
-private[jdriver] class JavaDriverDatabase(override val context : JavaDriverContext)
+private[jdriver] class JavaDriverDatabase(override val context: JavaDriverContext)
     extends DriverDatabase {
     override def driver = context.driver
 
@@ -26,17 +26,17 @@ private[jdriver] class JavaDriverDatabase(override val context : JavaDriverConte
 
     override def name = context.underlyingDatabase.getName()
 
-    private[jdriver] def command[Q](cmd : Q, options : CommandOptions)(implicit encoder : QueryEncoder[Q]) : CommandResult = {
+    private[jdriver] def command[Q](cmd: Q, options: CommandOptions)(implicit encoder: QueryEncoder[Q]): CommandResult = {
         val jdriverDB = context.underlyingDatabase
-        val flags : Int = JavaDriverDatabase.commandFlags(options)
+        val flags: Int = JavaDriverDatabase.commandFlags(options)
         jdriverDB.command(convertQueryToJava(cmd), flags)
     }
 }
 
 private[jdriver] object JavaDriverDatabase {
-    private[jdriver] def commandFlags(options : CommandOptions) : Int = {
+    private[jdriver] def commandFlags(options: CommandOptions): Int = {
         // the Java driver users 0 for default flags, rather than db.getOptions, not sure why. we copy it though.
         // I guess we probably want to deprecate the global options since they aren't a thread-safe approach.
-        options.overrideQueryFlags map { flags => flags : Int } getOrElse 0
+        options.overrideQueryFlags map { flags => flags: Int } getOrElse 0
     }
 }

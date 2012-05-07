@@ -20,15 +20,15 @@
 
 package org.beaucatcher.bson
 
-case class Binary(val data : Array[Byte], val subtype : BsonSubtype.Value) {
+case class Binary(val data: Array[Byte], val subtype: BsonSubtype.Value) {
 
     def length = data.length
 
     // We have to fix equals() because default doesn't implement it
     // correctly (does not consider the contents of the byte[])
-    override def equals(other : Any) : Boolean = {
+    override def equals(other: Any): Boolean = {
         other match {
-            case that : Binary =>
+            case that: Binary =>
                 (that canEqual this) &&
                     (subtype == that.subtype) &&
                     (data.length == that.data.length) &&
@@ -39,18 +39,18 @@ case class Binary(val data : Array[Byte], val subtype : BsonSubtype.Value) {
 
     // have to make hashCode match equals (array hashCode doesn't
     // look at elements, Seq hashCode does)
-    override def hashCode() : Int = {
-        41 * (41 + subtype.hashCode) + (data : Seq[Byte]).hashCode
+    override def hashCode(): Int = {
+        41 * (41 + subtype.hashCode) + (data: Seq[Byte]).hashCode
     }
 
-    private def bytesAsString(sb : StringBuilder, i : Traversable[Byte]) = {
+    private def bytesAsString(sb: StringBuilder, i: Traversable[Byte]) = {
         for (b <- i) {
-            sb.append("%02x".format((b : Int) & 0xff))
+            sb.append("%02x".format((b: Int) & 0xff))
         }
     }
 
     // default toString just shows byte[] object id
-    override def toString() : String = {
+    override def toString(): String = {
         val sb = new StringBuilder
         sb.append("Binary(")
         val bytes = data.take(10)
@@ -67,7 +67,7 @@ case class Binary(val data : Array[Byte], val subtype : BsonSubtype.Value) {
 }
 
 object Binary {
-    def apply(data : Array[Byte]) : Binary = {
+    def apply(data: Array[Byte]): Binary = {
         Binary(data, BsonSubtype.GENERAL)
     }
 }

@@ -16,18 +16,18 @@ import akka.actor.ActorSystem
 final class JavaDriver private[jdriver] ()
     extends Driver {
 
-    private[beaucatcher] override def newSyncCollection(name : String)(implicit context : DriverContext) : SyncDriverCollection = {
+    private[beaucatcher] override def newSyncCollection(name: String)(implicit context: DriverContext): SyncDriverCollection = {
         val jContext = context.asJavaContext
         val underlying = jContext.underlyingCollection(name)
         new JavaDriverSyncCollection(underlying, jContext)
     }
 
-    private[beaucatcher] override def newAsyncCollection(name : String)(implicit context : DriverContext) : AsyncDriverCollection = {
+    private[beaucatcher] override def newAsyncCollection(name: String)(implicit context: DriverContext): AsyncDriverCollection = {
         implicit val executor = context.asJavaContext.actorSystem.dispatcher
         AsyncDriverCollection.fromSync(newSyncCollection(name))
     }
 
-    private[beaucatcher] override def newContext(url : String, system : ActorSystem) : DriverContext = {
+    private[beaucatcher] override def newContext(url: String, system: ActorSystem): DriverContext = {
         new JavaDriverContext(this, url, system)
     }
 }
@@ -43,6 +43,6 @@ object JavaDriver {
  */
 trait JavaDriverProvider extends DriverProvider {
 
-    override def mongoDriver : JavaDriver =
+    override def mongoDriver: JavaDriver =
         JavaDriver.instance
 }

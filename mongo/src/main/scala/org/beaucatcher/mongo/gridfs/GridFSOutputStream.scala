@@ -10,7 +10,7 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.ArrayBlockingQueue
 
-private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) extends OutputStream {
+private[gridfs] class GridFSOutputStream(fs: SyncGridFS, file: GridFSFile) extends OutputStream {
     // in theory, re-opening an existing file could do something useful, but not implemented
     // and perhaps dangerous for anyone to use, anyhow (how do you keep people from using
     // the file as it's being modified?)
@@ -44,7 +44,7 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
             try {
                 fs.chunksCollection.save(chunk).throwIfNotOk
             } catch {
-                case ex : MongoException =>
+                case ex: MongoException =>
                     failed = true
                     close()
                     throw new IOException("Error writing gridfs chunk to mongo", ex)
@@ -66,13 +66,13 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
             flushChunk()
     }
 
-    override def write(b : Int) {
+    override def write(b: Int) {
         precheck()
         buf.write(b)
         postcheck()
     }
 
-    override def write(bytes : Array[Byte], offset : Int, len : Int) {
+    override def write(bytes: Array[Byte], offset: Int, len: Int) {
         require(bytes != null)
 
         var start = offset
@@ -115,7 +115,7 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
                     try {
                         fs.filesCollection.save(newFile).throwIfNotOk
                     } catch {
-                        case ex : MongoException =>
+                        case ex: MongoException =>
                             throw new IOException("Failed to write file md5 and length, file " + newFile, ex)
                     }
                 }
@@ -128,11 +128,11 @@ private[gridfs] class GridFSOutputStream(fs : SyncGridFS, file : GridFSFile) ext
 }
 
 object GridFSOutputStream {
-    private abstract class Cache[T](maxToCache : Int = java.lang.Runtime.getRuntime().availableProcessors) {
+    private abstract class Cache[T](maxToCache: Int = java.lang.Runtime.getRuntime().availableProcessors) {
         private val queue = new ArrayBlockingQueue[T](maxToCache)
-        def create : T
+        def create: T
 
-        def acquire : T = {
+        def acquire: T = {
             val t = queue.poll()
             if (t == null)
                 create
@@ -140,7 +140,7 @@ object GridFSOutputStream {
                 t
         }
 
-        def release(t : T) {
+        def release(t: T) {
             queue.offer(t) // no-op if the capacity is exceeded
         }
     }

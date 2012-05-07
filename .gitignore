@@ -11,6 +11,7 @@
 /project/plugins/src_managed/
 /project/plugins/lib_managed/
 /project/plugins/target/
+/project/project/target/
 /target/
 /lib_managed/
 /project/boot/

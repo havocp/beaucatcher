@@ -5,7 +5,7 @@ package org.beaucatcher.mongo
  * you mix it into.
  */
 trait MongoConfigProvider {
-    val mongoConfig : MongoConfig
+    val mongoConfig: MongoConfig
 }
 
 /**
@@ -13,20 +13,20 @@ trait MongoConfigProvider {
  * The configuration expected in most of Beaucatcher should not specify a collection, but must specify a database.
  */
 trait MongoConfig {
-    val url : String
+    val url: String
 
-    override def equals(other : Any) : Boolean =
+    override def equals(other: Any): Boolean =
         other match {
-            case that : MongoConfig =>
+            case that: MongoConfig =>
                 (that canEqual this) &&
                     url == that.url
             case _ => false
         }
 
-    def canEqual(other : Any) : Boolean =
+    def canEqual(other: Any): Boolean =
         other.isInstanceOf[MongoConfig]
 
-    override def hashCode : Int =
+    override def hashCode: Int =
         url.hashCode
 
     override def toString =
@@ -34,9 +34,9 @@ trait MongoConfig {
 }
 
 /** A simple configuration with just db, a single host, and port */
-case class SimpleMongoConfig(val databaseName : String,
-    val host : String,
-    val port : Int) extends MongoConfig {
+case class SimpleMongoConfig(val databaseName: String,
+    val host: String,
+    val port: Int) extends MongoConfig {
     override val url = "mongodb://%s:%d/%s".format(host, port, databaseName)
 }
 
@@ -44,6 +44,6 @@ case class SimpleMongoConfig(val databaseName : String,
  * The most general config can express anything found in the Mongo URL
  * http://www.mongodb.org/display/DOCS/Connections
  */
-case class UrlMongoConfig(override val url : String)
+case class UrlMongoConfig(override val url: String)
     extends MongoConfig {
 }

@@ -2,9 +2,18 @@ import sbt._
 import Keys._
 
 object BuildSettings {
+    import com.typesafe.sbtscalariform.ScalariformPlugin
+    import com.typesafe.sbtscalariform.ScalariformPlugin.ScalariformKeys
+
     val buildOrganization = "org.beaucatcher"
     val buildVersion = "0.3.1-SNAPSHOT"
     val buildScalaVersion = "2.9.1"
+
+    def formatPrefs = {
+        import scalariform.formatter.preferences._
+        FormattingPreferences()
+           .setPreference(IndentSpaces, 4)
+    }
 
     val globalSettings = Seq(
         organization := buildOrganization,
@@ -17,9 +26,13 @@ object BuildSettings {
             val baseDir = new File(ref.build)
             Some(Resolver.file("gh-pages", new File(baseDir, "../beaucatcher-web/repository")))
         },
-        resolvers := Seq(Resolvers.scalaToolsSnapshotsRepo, Resolvers.typesafeRepo, Resolvers.twttrRepo))
+        resolvers := Seq(Resolvers.scalaToolsSnapshotsRepo, Resolvers.typesafeRepo, Resolvers.twttrRepo)
+    )
 
-    val projectSettings = Defaults.defaultSettings ++ globalSettings
+    val projectSettings = Defaults.defaultSettings ++ globalSettings ++ ScalariformPlugin.scalariformSettings ++ Seq(
+        ScalariformKeys.preferences in Compile := formatPrefs,
+        ScalariformKeys.preferences in Test    := formatPrefs
+    )
 }
 
 object ShellPrompt {

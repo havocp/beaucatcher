@@ -8,19 +8,19 @@ import java.io.SequenceInputStream
 import java.io.IOException
 import java.io.ByteArrayInputStream
 
-private[gridfs] class GridFSInputStream(fs : SyncGridFS, file : GridFSFile)
+private[gridfs] class GridFSInputStream(fs: SyncGridFS, file: GridFSFile)
     extends SequenceInputStream(GridFSInputStream.chunkStreams(fs, file)) {
 }
 
 object GridFSInputStream {
 
-    private def chunkStreams(fs : SyncGridFS, file : GridFSFile) : java.util.Enumeration[InputStream] = {
+    private def chunkStreams(fs: SyncGridFS, file: GridFSFile): java.util.Enumeration[InputStream] = {
         // a quirk of this implementation is that it "succeeds" if GridFSFile is not even
         // in mongodb, if the file is zero-length. But throwing an error in that non-real-world case does
         // not seem worth an extra round trip to mongodb in every real world case.
 
         // the weird cast is because BDouble and Double are both in scope with intValue methods
-        val numChunks = (math.ceil((file.length : Double) / file.chunkSize) : java.lang.Double).intValue
+        val numChunks = (math.ceil((file.length: Double) / file.chunkSize): java.lang.Double).intValue
 
         // this all needs to be lazy, which I _think_ it should be...
         // the ".iterator" allows us to later use .asJavaEnumeration which isn't allowed on a sequence.
@@ -29,7 +29,7 @@ object GridFSInputStream {
         val streams = chunks map { chunk =>
             chunk.get("data") match {
                 case Some(BBinary(bin)) =>
-                    new ByteArrayInputStream(bin.data) : InputStream
+                    new ByteArrayInputStream(bin.data): InputStream
                 case _ =>
                     throw new IOException("Chunk " + chunk + " of file " + file + " has bad data")
             }

@@ -6,8 +6,8 @@ import org.beaucatcher.bson.Implicits._
 
 import java.util.Date
 
-case class CreateOptions(filename : Option[String] = None, contentType : Option[String] = None,
-    chunkSize : Option[Long] = None, aliases : Seq[String] = Nil, metadata : Map[String, Any] = Map.empty) {
+case class CreateOptions(filename: Option[String] = None, contentType: Option[String] = None,
+    chunkSize: Option[Long] = None, aliases: Seq[String] = Nil, metadata: Map[String, Any] = Map.empty) {
 
     private[gridfs] def asMapWithNewId = {
         val b = Map.newBuilder[String, Any]
@@ -40,8 +40,8 @@ object CreateOptions {
  * Represents a file "handle" to the gridfs; does not represent the
  * file data, the data is manipulated as a stream.
  */
-class GridFSFile private[gridfs] (private[gridfs] val underlying : Map[String, Any]) {
-    private def getAs[A : Manifest](key : String) : A = {
+class GridFSFile private[gridfs] (private[gridfs] val underlying: Map[String, Any]) {
+    private def getAs[A: Manifest](key: String): A = {
         // FIXME the BValue.wrap.unwrappedAs hack is a way to use the
         // cast method from BValue, which does numeric conversions.
         // Export it properly.
@@ -61,10 +61,10 @@ class GridFSFile private[gridfs] (private[gridfs] val underlying : Map[String, A
     /** get the file's uploadDate or throw NoSuchElementException */
     def uploadDate = getAs[Date]("uploadDate")
     /** get the file's aliases or throw NoSuchElementException */
-    def aliases : Seq[String] = getAs[List[String]]("aliases")
+    def aliases: Seq[String] = getAs[List[String]]("aliases")
     /** get the file's metadata object or an empty object (throw NoSuchElementException only if there's a broken non-object under "metadata") */
-    def metadata : Map[String, Any] = underlying.get("metadata") match {
-        case Some(obj : Map[_, _]) =>
+    def metadata: Map[String, Any] = underlying.get("metadata") match {
+        case Some(obj: Map[_, _]) =>
             obj.asInstanceOf[Map[String, Any]]
         case Some(x) =>
             throw new NoSuchElementException("")
@@ -84,7 +84,7 @@ object GridFSFile {
      * from openForWriting(). So to create an empty file,
      * fs.openForWriting(GridFSFile()).close()
      */
-    def apply(options : CreateOptions = CreateOptions.empty) = {
+    def apply(options: CreateOptions = CreateOptions.empty) = {
         new GridFSFile(options.asMapWithNewId)
     }
 }

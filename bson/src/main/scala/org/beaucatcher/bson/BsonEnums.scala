@@ -40,11 +40,11 @@ object BsonSubtype extends Enumeration {
 
     private val toBytes = fromBytes map { _.swap }
 
-    def fromByte(b : Byte) : Option[BsonSubtype] = {
+    def fromByte(b: Byte): Option[BsonSubtype] = {
         fromBytes.get(b)
     }
 
-    def toByte(v : Value) : Byte = {
+    def toByte(v: Value): Byte = {
         toBytes.getOrElse(v, throw new IllegalArgumentException("bad BsonSubtype value"))
     }
 }
@@ -86,7 +86,7 @@ object BsonType extends Enumeration {
      * @param b the byte
      * @return a [[org.beaucatcher.bson.BsonType]] or `None`
      */
-    def fromByte(b : Byte) : Option[BsonType] = {
+    def fromByte(b: Byte): Option[BsonType] = {
         fromBytes.get(b)
     }
 
@@ -95,7 +95,7 @@ object BsonType extends Enumeration {
      * @param v the [[org.beaucatcher.bson.BsonType]] enumeration value
      * @return a wire protocol byte
      */
-    def toByte(v : Value) : Byte = {
+    def toByte(v: Value): Byte = {
         toBytes.getOrElse(v, throw new IllegalArgumentException("bad BsonType value"))
     }
 }

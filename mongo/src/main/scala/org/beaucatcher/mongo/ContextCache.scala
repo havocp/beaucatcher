@@ -5,9 +5,9 @@ package org.beaucatcher.mongo
 // If this is ever an issue in practice we could have some
 // sort of destroy listeners on Context, but doesn't seem
 // at all worth it for now.
-private[mongo] class ContextCache[T](val creator : (Context) => T) {
-    @volatile private var cache : Option[(Context, T)] = None
-    def get(implicit context : Context) : T = {
+private[mongo] class ContextCache[T](val creator: (Context) => T) {
+    @volatile private var cache: Option[(Context, T)] = None
+    def get(implicit context: Context): T = {
         cache match {
             case Some((cachedContext, t)) if (cachedContext eq context) =>
                 t
@@ -25,5 +25,5 @@ private[mongo] class ContextCache[T](val creator : (Context) => T) {
 }
 
 private[mongo] object ContextCache {
-    def apply[T](creator : (Context) => T) = new ContextCache(creator)
+    def apply[T](creator: (Context) => T) = new ContextCache(creator)
 }

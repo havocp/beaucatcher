@@ -34,11 +34,11 @@ import org.beaucatcher.bson.ClassAnalysis
  */
 trait JsonMethods[SchemaType <: Product] {
     /** Point this to a Collection to use to store BObject */
-    protected def jsonSync(implicit context : Context) : SyncCollection[BObject, BObject, _, _]
+    protected def jsonSync(implicit context: Context): SyncCollection[BObject, BObject, _, _]
     /** Since we're a trait, we don't have a manifest and you have to provide this */
-    protected def jsonAnalysis : ClassAnalysis[SchemaType]
+    protected def jsonAnalysis: ClassAnalysis[SchemaType]
     /** If you want to override the JSON flavor, do so here */
-    protected val jsonFlavor : JsonFlavor.Value = JsonFlavor.CLEAN
+    protected val jsonFlavor: JsonFlavor.Value = JsonFlavor.CLEAN
 
     /**
      * This method creates the query that will be used to
@@ -52,7 +52,7 @@ trait JsonMethods[SchemaType <: Product] {
      *
      * To change that, override here.
      */
-    protected def createQueryForObject(path : String) : BObject = {
+    protected def createQueryForObject(path: String): BObject = {
         BObject("_id" -> BObjectId(ObjectId(path)))
     }
 
@@ -65,7 +65,7 @@ trait JsonMethods[SchemaType <: Product] {
      * you can do by overriding this. This is abstract to be sure
      * you consider the issues.
      */
-    protected def createQueryForAllObjects() : BObject
+    protected def createQueryForAllObjects(): BObject
 
     /**
      * This function should convert a trailing path component to the JValue representation
@@ -77,7 +77,7 @@ trait JsonMethods[SchemaType <: Product] {
      * may be smart and look at the type of the _id field
      * in the schema case class.)
      */
-    protected def parseJValueIdFromPath(path : String) : JValue = {
+    protected def parseJValueIdFromPath(path: String): JValue = {
         try {
             ObjectId(path)
         } catch {
@@ -91,7 +91,7 @@ trait JsonMethods[SchemaType <: Product] {
      * it creates a new ObjectId as a BString. Override this if your ID type is
      * not ObjectId.
      */
-    protected def generateJValueId() : JValue = {
+    protected def generateJValueId(): JValue = {
         BString(ObjectId().toString)
     }
 
@@ -113,18 +113,18 @@ trait JsonMethods[SchemaType <: Product] {
      *
      * This method is called for creating and for updating.
      */
-    protected def modifyIncomingJson(path : Option[String], jvalue : JValue) : JObject = {
+    protected def modifyIncomingJson(path: Option[String], jvalue: JValue): JObject = {
         jvalue match {
-            case jobject : JObject => {
+            case jobject: JObject => {
                 if (jobject.contains("_id")) {
                     if (path.isDefined) {
-                        val idInObject : JValue = jobject.get("_id").get
+                        val idInObject: JValue = jobject.get("_id").get
                         if (parseJValueIdFromPath(path.get) != idInObject)
                             throw new JsonValidationException("Posted JSON containing _id %s to path %s".format(idInObject, path.get))
                     }
                     jobject
                 } else {
-                    val id : JValue = {
+                    val id: JValue = {
                         if (path.isDefined)
                             parseJValueIdFromPath(path.get)
                         else
@@ -146,7 +146,7 @@ trait JsonMethods[SchemaType <: Product] {
      * or rename fields before storing in the database. This is called for
      * creating and for updating.
      */
-    protected def modifyIncomingBson(bobject : BObject) : BObject = {
+    protected def modifyIncomingBson(bobject: BObject): BObject = {
         bobject
     }
 
@@ -154,7 +154,7 @@ trait JsonMethods[SchemaType <: Product] {
      * Override this to modify BSON on its way out. Called when reading
      * and when returning an object from create and update.
      */
-    protected def modifyOutgoingBson(bobject : BObject) : BObject = {
+    protected def modifyOutgoingBson(bobject: BObject): BObject = {
         bobject
     }
 
@@ -162,14 +162,14 @@ trait JsonMethods[SchemaType <: Product] {
      * Override this to modify JSON on its way out. Called when reading
      * and when returning an object from create and update.
      */
-    protected def modifyOutgoingJson(jobject : JObject) : JObject = {
+    protected def modifyOutgoingJson(jobject: JObject): JObject = {
         jobject
     }
 
     // FIXME we want some way to return only changed fields, at least
     // to the extent we can do that without doing another query and being
     // slow.
-    private def outgoingString(bobject : BObject) : String = {
+    private def outgoingString(bobject: BObject): String = {
         modifyOutgoingJson(modifyOutgoingBson(bobject).toJValue(jsonFlavor)).toJson()
     }
 
@@ -180,7 +180,7 @@ trait JsonMethods[SchemaType <: Product] {
      * newly-created ID for the object.
      * See updateJson for most other details.
      */
-    def createJson(json : String)(implicit context : Context) : String = {
+    def createJson(json: String)(implicit context: Context): String = {
         val bobject = parseJson(None, json)
         jsonSync.save(bobject)
         // FIXME here in theory we only have to return the new ID
@@ -202,7 +202,7 @@ trait JsonMethods[SchemaType <: Product] {
      * The returned-back new object is modified by
      * the same methods that affect getJson()'s returned object.
      */
-    def updateJson(path : String, json : String)(implicit context : Context) : String = {
+    def updateJson(path: String, json: String)(implicit context: Context): String = {
         val bobject = parseJson(Some(path), json)
         jsonSync.update(createQueryForObject(path), bobject)
         // FIXME here in theory we only have to return the changed fields
@@ -220,7 +220,7 @@ trait JsonMethods[SchemaType <: Product] {
      *
      * If no path is provided, then this reads all objects as defined by createQueryForAllObjects().
      */
-    def readJson(path : Option[String])(implicit context : Context) : Option[String] = {
+    def readJson(path: Option[String])(implicit context: Context): Option[String] = {
         if (path.isDefined) {
             // GET a single ID
             jsonSync.findOne(createQueryForObject(path.get)) match {
@@ -243,21 +243,21 @@ trait JsonMethods[SchemaType <: Product] {
     /**
      * Intended to implement HTTP DELETE, deletes the object identified by the path.
      */
-    def deleteJson(path : String)(implicit context : Context) : Unit = {
+    def deleteJson(path: String)(implicit context: Context): Unit = {
         jsonSync.remove(createQueryForObject(path))
     }
 
-    private def fromJValue(path : Option[String], jvalue : JValue) : BObject = {
-        val jobject : JObject = modifyIncomingJson(path, jvalue)
+    private def fromJValue(path: Option[String], jvalue: JValue): BObject = {
+        val jobject: JObject = modifyIncomingJson(path, jvalue)
         BValue.fromJValue(jobject, jsonAnalysis, jsonFlavor) match {
-            case bobject : BObject =>
+            case bobject: BObject =>
                 modifyIncomingBson(bobject)
             case wtf =>
                 throw new JsonValidationException("JSON must be an object \"{...}\" not " + wtf.getClass.getName)
         }
     }
 
-    private def parseJson(path : Option[String], json : String) : BObject = {
+    private def parseJson(path: Option[String], json: String): BObject = {
         fromJValue(path, JValue.parseJson(json))
     }
 
@@ -265,7 +265,7 @@ trait JsonMethods[SchemaType <: Product] {
      * Parses JSON against the schema, calling modify hooks in the same way as createJson(), i.e.
      * the parsed JSON ends up as it would normally be stored in MongoDB.
      */
-    def parseJson(json : String) : BObject = {
+    def parseJson(json: String): BObject = {
         parseJson(None, json)
     }
 
@@ -274,10 +274,10 @@ trait JsonMethods[SchemaType <: Product] {
      * schema. The parsed objects end up as they would normally be stored in MongoDB
      * by createJson() or updateJson()
      */
-    def parseJsonArray(json : String) : BArray = {
+    def parseJsonArray(json: String): BArray = {
         val jvalue = JValue.parseJson(json)
         jvalue match {
-            case jarray : JArray =>
+            case jarray: JArray =>
                 val b = BArray.newBuilder
                 for (o <- jarray) {
                     b += fromJValue(None, o)
