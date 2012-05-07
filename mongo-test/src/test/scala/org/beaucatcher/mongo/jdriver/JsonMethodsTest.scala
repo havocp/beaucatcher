@@ -16,7 +16,6 @@ package restdemo {
 
     object Foo
         extends CollectionAccessWithCaseClass[Foo, ObjectId]
-        with JavaDriverProvider
         with JsonMethods[Foo] {
         // the default collection name would conflict with the Foo
         // in CollectionTest since tests are run concurrently;
@@ -35,7 +34,6 @@ package restdemo {
     case class FooWithIntId(_id: Int, aString: String, anInt: Int)
     object FooWithIntId
         extends CollectionAccessWithCaseClass[FooWithIntId, Int]
-        with JavaDriverProvider
         with JsonMethods[FooWithIntId] {
         // the default collection name would conflict with the FooWithIntId
         // in CollectionTest since tests are run concurrently;

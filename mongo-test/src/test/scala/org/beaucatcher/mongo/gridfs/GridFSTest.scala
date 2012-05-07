@@ -11,8 +11,7 @@ import org.apache.commons.io._
 import java.io.OutputStream
 
 object TestFS
-    extends GridFSAccess
-    with JavaDriverProvider {
+    extends GridFSAccess {
     override def bucket = "testbucket"
 }
 
@@ -152,7 +151,7 @@ class GridFSTest
         import com.mongodb.util._
         import com.mongodb.gridfs._
 
-        val uri = new MongoURI(context.config.url)
+        val uri = new MongoURI(context.settings.uri)
         val mongo = new Mongo(uri)
         // without SAFE here the tests are racy
         mongo.setWriteConcern(WriteConcern.SAFE)

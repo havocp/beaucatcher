@@ -4,6 +4,8 @@ import org.beaucatcher.bson._
 import org.beaucatcher.driver._
 import akka.actor.ActorSystem
 import scala.annotation.implicitNotFound
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 
 /**
  * A [[org.beaucatcher.mongo.Context]] represents an underlying Mongo protocol implementation, a connection
@@ -17,22 +19,40 @@ import scala.annotation.implicitNotFound
  */
 @implicitNotFound(msg = "No mongo.Context found")
 trait Context {
-    type DriverType <: Driver
-    type UnderlyingConnectionType
-    type UnderlyingDatabaseType
-    type UnderlyingCollectionType
+    def underlyingConnection: Any
+    def underlyingDatabase: Any
+    def underlyingCollection(name: String): Any
 
-    def underlyingConnection: UnderlyingConnectionType
-    def underlyingDatabase: UnderlyingDatabaseType
-    def underlyingCollection(name: String): UnderlyingCollectionType
+    private lazy val _driver = {
+        val klass = try {
+            classLoader.loadClass(settings.driverClassName)
+        } catch {
+            case e: ClassNotFoundException =>
+                throw new MongoException("Configured driver '" + settings.driverClassName + "' not found", e)
+        }
+        try {
+            klass.getDeclaredConstructor(classOf[Config], classOf[ClassLoader]).newInstance(config, classLoader).asInstanceOf[Driver]
+        } catch {
+            case e: Exception =>
+                throw new MongoException("Failed to instantiate '" + settings.driverClassName + "': " + e.getMessage, e)
+        }
+    }
 
-    private[beaucatcher] def driverContext: DriverContext
+    final def driver: Driver = _driver
 
-    def driver: DriverType
+    private lazy val _driverContext = driver.newContext(settings.uri, actorSystem)
+
+    private[beaucatcher] def driverContext: DriverContext =
+        _driverContext
 
     def database: Database
 
-    def config: MongoConfig
+    def config: Config
+
+    private lazy val _settings = new ContextSettings(config)
+
+    private[beaucatcher] def settings: ContextSettings =
+        _settings
 
     def actorSystem: ActorSystem
 
@@ -41,34 +61,64 @@ trait Context {
      * or any collection or database objects that point to this context.
      */
     def close: Unit
+
+    def classLoader: ClassLoader
 }
 
-trait ContextProvider extends DriverProvider {
+trait ContextProvider {
     def mongoContext: Context
-    override final def mongoDriver = mongoContext.driver
 }
 
 object Context {
-    def apply[D <: Driver](driver: D, config: MongoConfig, system: ActorSystem): Context = {
-        val outerDriver = driver
+    def apply(config: Config, system: ActorSystem, loader: ClassLoader): Context = {
         val outerConfig = config
         new Context() {
-            override val driver = outerDriver
-            override lazy val driverContext = driver.newContext(config.url, system)
             override lazy val database = Database(this)
             override val config = outerConfig
             override val actorSystem = system
             override def close(): Unit = driverContext.close()
-
-            override type DriverType = D
-            override type UnderlyingConnectionType = driverContext.UnderlyingConnectionType
-            override type UnderlyingDatabaseType = driverContext.UnderlyingDatabaseType
-            override type UnderlyingCollectionType = driverContext.UnderlyingCollectionType
+            override def classLoader = loader
 
             override def underlyingConnection = driverContext.underlyingConnection
             override def underlyingDatabase = driverContext.underlyingDatabase
             override def underlyingCollection(name: String) = driverContext.underlyingCollection(name)
-
         }
+    }
+
+    private def defaultLoader = Thread.currentThread().getContextClassLoader()
+
+    def apply(config: Config, system: ActorSystem): Context = {
+        Context(config, system, defaultLoader)
+    }
+
+    def apply(system: ActorSystem): Context = {
+        // ideally we'd use the actor system's class loader here but
+        // it doesn't look possible to get at it?
+        Context(system.settings.config, system)
+    }
+
+    def apply(system: ActorSystem, loader: ClassLoader): Context = {
+        Context(system.settings.config, system, loader)
+    }
+
+    private lazy val systemCount = new java.util.concurrent.atomic.AtomicInteger(1)
+
+    private def newSystem(config: Config, loader: ClassLoader) = ActorSystem("beaucatcher_" + systemCount.getAndIncrement,
+        config, loader)
+
+    def apply(config: Config): Context = {
+        Context(config, newSystem(config, defaultLoader), defaultLoader)
+    }
+
+    def apply(config: Config, loader: ClassLoader): Context = {
+        Context(config, newSystem(config, loader), loader)
+    }
+
+    def apply(): Context = {
+        Context(ConfigFactory.load())
+    }
+
+    def apply(loader: ClassLoader): Context = {
+        Context(ConfigFactory.load(), loader)
     }
 }

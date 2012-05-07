@@ -5,9 +5,27 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.driver._
 import org.beaucatcher.channel._
 import akka.actor.ActorSystem
+import com.typesafe.config.Config
 
-final class ChannelDriver private[cdriver] (private[cdriver] val backend: ChannelBackend)
+final class ChannelDriver private[mongo] (val config: Config, val loader: ClassLoader)
     extends Driver {
+
+    private val backendName = config.getString("beaucatcher.mongo.channel-driver.backend")
+
+    private[cdriver] val backend: ChannelBackend = {
+        val klass = try {
+            loader.loadClass(backendName)
+        } catch {
+            case e: ClassNotFoundException =>
+                throw new MongoException("Configured channel driver backend '" + backendName + "' not found", e)
+        }
+        try {
+            klass.getDeclaredConstructor(classOf[Config]).newInstance(config).asInstanceOf[ChannelBackend]
+        } catch {
+            case e: Exception =>
+                throw new MongoException("Failed to instantiate '" + backendName + "': " + e.getMessage, e)
+        }
+    }
 
     private[beaucatcher] override def newSyncCollection(name: String)(implicit context: DriverContext): SyncDriverCollection = {
         SyncDriverCollection.fromAsync(newAsyncCollection(name))
@@ -20,21 +38,4 @@ final class ChannelDriver private[cdriver] (private[cdriver] val backend: Channe
     private[beaucatcher] override def newContext(url: String, system: ActorSystem): DriverContext = {
         new ChannelDriverContext(this, url, system)
     }
-}
-
-object ChannelDriver {
-
-    // FIXME channel backend would come from a config file if we had multiple options
-    // TODO we can break this build dependency using reflection; might be nice.
-    lazy val instance = new ChannelDriver(org.beaucatcher.channel.netty.NettyChannelBackend)
-}
-
-/**
- * Mix this trait into a subclass of [[org.beaucatcher.mongo.CollectionAccess]] to backend
- * the collection operations using ChannelDriver
- */
-trait ChannelDriverProvider extends DriverProvider {
-
-    override def mongoDriver: ChannelDriver =
-        ChannelDriver.instance
 }

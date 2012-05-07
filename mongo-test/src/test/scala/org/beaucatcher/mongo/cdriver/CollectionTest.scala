@@ -11,10 +11,12 @@ import foo._
 package foo {
     import BObjectCodecs._
 
+    // FIXME this stuff can move up to AbstractCollectionTest since it no
+    // longer depends on the driver
+
     case class Foo(_id: ObjectId, intField: Int, stringField: String) extends abstractfoo.AbstractFoo
 
-    object Foo extends CollectionAccessWithCaseClass[Foo, ObjectId]
-        with ChannelDriverProvider {
+    object Foo extends CollectionAccessWithCaseClass[Foo, ObjectId] {
         def customQuery[E](implicit context: Context, chooser: SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
         }
@@ -28,8 +30,7 @@ package foo {
 
     case class FooWithIntId(_id: Int, intField: Int, stringField: String) extends abstractfoo.AbstractFooWithIntId
 
-    object FooWithIntId extends CollectionAccessWithCaseClass[FooWithIntId, Int]
-        with ChannelDriverProvider {
+    object FooWithIntId extends CollectionAccessWithCaseClass[FooWithIntId, Int] {
         def customQuery[E](implicit context: Context, chooser: SyncCollectionChooser[E, _]) = {
             sync[E].find(BObject("intField" -> 23))
         }
@@ -37,12 +38,10 @@ package foo {
 
     case class FooWithOptionalField(_id: ObjectId, intField: Int, stringField: Option[String]) extends abstractfoo.AbstractFooWithOptionalField
 
-    object FooWithOptionalField extends CollectionAccessWithCaseClass[FooWithOptionalField, ObjectId]
-        with ChannelDriverProvider {
+    object FooWithOptionalField extends CollectionAccessWithCaseClass[FooWithOptionalField, ObjectId] {
     }
 
-    object Bar extends CollectionAccessWithoutEntity[ObjectId]
-        with ChannelDriverProvider {
+    object Bar extends CollectionAccessWithoutEntity[ObjectId] {
 
     }
 }

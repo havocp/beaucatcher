@@ -1,7 +1,6 @@
 package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
-import org.beaucatcher.driver._
 import scala.annotation.implicitNotFound
 
 /**
@@ -12,8 +11,6 @@ import scala.annotation.implicitNotFound
  * be automatically converted from BSON).
  */
 trait CollectionAccessBaseTrait[IdType] {
-    self: DriverProvider =>
-
     /**
      * The name of the collection. Defaults to the unqualified (no package) name of the object,
      * with the first character made lowercase. So "object FooBar" gets collection name "fooBar" for
@@ -68,8 +65,6 @@ trait CollectionAccessBaseTrait[IdType] {
  * a concrete connection to a specific MongoDB implementation.
  */
 trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTrait[IdType] {
-    self: DriverProvider =>
-
     protected implicit def idEncoder: IdEncoder[IdType]
 
     private lazy val bobjectCodecSet = BObjectCodecs.newCodecSet[IdType]()
@@ -119,8 +114,6 @@ trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTra
  * initialization has a lot of trouble (due to circular dependencies, or order of initialization anyway).
  */
 trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAccessBaseTrait[IdType] {
-    self: DriverProvider =>
-
     import CollectionAccessTrait._
 
     protected implicit def idEncoder: IdEncoder[IdType]
@@ -309,7 +302,6 @@ object CollectionAccessTrait {
  */
 trait CollectionAccessWithCaseClassTrait[EntityType <: Product, IdType]
     extends CollectionAccessTrait[EntityType, IdType] {
-    self: DriverProvider =>
 
 }
 
@@ -322,7 +314,6 @@ trait CollectionAccessWithCaseClassTrait[EntityType <: Product, IdType]
  */
 abstract class CollectionAccessWithoutEntity[IdType: IdEncoder]
     extends CollectionAccessWithoutEntityTrait[IdType] {
-    self: DriverProvider =>
     override final val idEncoder = implicitly[IdEncoder[IdType]]
 }
 
@@ -335,7 +326,6 @@ abstract class CollectionAccessWithoutEntity[IdType: IdEncoder]
  */
 abstract class CollectionAccess[EntityType <: AnyRef, IdType: IdEncoder]
     extends CollectionAccessTrait[EntityType, IdType] {
-    self: DriverProvider =>
     override final val idEncoder = implicitly[IdEncoder[IdType]]
 }
 
@@ -349,7 +339,6 @@ abstract class CollectionAccess[EntityType <: AnyRef, IdType: IdEncoder]
 abstract class CollectionAccessWithCaseClass[EntityType <: Product: Manifest, IdType: IdEncoder]
     extends CollectionAccess[EntityType, IdType]
     with CollectionAccessWithCaseClassTrait[EntityType, IdType] {
-    self: DriverProvider =>
 
     private lazy val caseClassCodecs = CaseClassCodecs[EntityType]()
 

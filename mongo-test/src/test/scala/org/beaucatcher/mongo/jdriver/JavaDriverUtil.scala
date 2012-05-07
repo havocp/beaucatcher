@@ -5,6 +5,7 @@ import org.beaucatcher.bson._
 import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.mongo._
 import akka.actor.ActorSystem
+import com.typesafe.config._
 
 trait JavaDriverTestContextProvider
     extends ContextProvider {
@@ -16,12 +17,14 @@ trait JavaDriverTestDatabaseContextProvider
     def mongoContext = JavaTestContexts.testDatabaseContext
 }
 
-object JavaTestContexts
-    extends JavaDriverProvider {
-    private val actorSystem = ActorSystem("beaucatcherjdrivertest")
+object JavaTestContexts {
+    import scala.collection.JavaConverters._
 
-    lazy val testContext = Context(mongoDriver, new SimpleMongoConfig("beaucatcherjdriver", "localhost", 27017),
-        actorSystem)
-    lazy val testDatabaseContext = Context(mongoDriver, new SimpleMongoConfig("beaucatcherjdriverdb", "localhost", 27017),
-        actorSystem)
+    private def config(dbname: String): Config = {
+        ConfigFactory.parseMap(Map("beaucatcher.mongo.uri" -> ("mongodb://localhost:27017/" + dbname)).asJava)
+            .withFallback(ConfigFactory.defaultReference())
+    }
+
+    lazy val testContext = Context(config("beaucatcherjdriver"))
+    lazy val testDatabaseContext = Context(config("beaucatcherjdriverdb"))
 }

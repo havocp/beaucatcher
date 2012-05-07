@@ -5,14 +5,6 @@ import org.beaucatcher.mongo._
 import akka.actor.ActorSystem
 
 /**
- * A mixin trait that provides a [[org.beaucatcher.driver.Driver]] to the class
- * you mix it into.
- */
-trait DriverProvider {
-    def mongoDriver: Driver
-}
-
-/**
  * An opaque object representing the implementation backend for Mongo requests.
  */
 trait Driver {
