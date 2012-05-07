@@ -1,4 +1,4 @@
-package org.beaucatcher.jdriver
+package org.beaucatcher.mongo.jdriver
 
 import org.bson.{ types => j }
 import org.beaucatcher.bson._

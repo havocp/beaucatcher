@@ -1,4 +1,4 @@
-package org.beaucatcher
+package org.beaucatcher.mongo
 
 import org.bson.{ types => j }
 import org.bson.BSONObject

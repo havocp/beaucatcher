@@ -1,4 +1,4 @@
-package org.beaucatcher.jdriver
+package org.beaucatcher.mongo.jdriver
 
 import com.mongodb._
 import org.beaucatcher.mongo._
