@@ -13,22 +13,22 @@ class JavaConversionsTest extends TestUtils {
     }
 
     @Test
-    def convertObjectId() : Unit = {
+    def convertObjectId(): Unit = {
         val jId = new j.ObjectId()
         val sId = ObjectId()
-        val fromS : j.ObjectId = sId
-        val fromJ : ObjectId = jId
+        val fromS: j.ObjectId = sId
+        val fromJ: ObjectId = jId
 
         assertEquals(jId.toString, fromJ.toString)
         assertEquals(sId.toString, fromS.toString)
     }
 
     @Test
-    def convertTimestamp() : Unit = {
+    def convertTimestamp(): Unit = {
         val jT = new j.BSONTimestamp(12345, 6)
         val sT = Timestamp(54321, 7)
-        val fromS : j.BSONTimestamp = sT
-        val fromJ : Timestamp = jT
+        val fromS: j.BSONTimestamp = sT
+        val fromJ: Timestamp = jT
 
         assertEquals(sT.time, fromS.getTime())
         assertEquals(sT.inc, fromS.getInc())
@@ -38,7 +38,7 @@ class JavaConversionsTest extends TestUtils {
     }
 
     @Test
-    def convertBinary() : Unit = {
+    def convertBinary(): Unit = {
         val bytes1 = new Array[Byte](10)
         for (i <- 0 to 9)
             bytes1.update(i, i.toByte)
@@ -48,8 +48,8 @@ class JavaConversionsTest extends TestUtils {
 
         val jB = new j.Binary(org.bson.BSON.B_GENERAL, bytes1)
         val sB = Binary(bytes2, BsonSubtype.GENERAL)
-        val fromS : j.Binary = sB
-        val fromJ : Binary = jB
+        val fromS: j.Binary = sB
+        val fromJ: Binary = jB
 
         assertTrue(sB.data sameElements fromS.getData())
         assertEquals(BsonSubtype.toByte(sB.subtype), fromS.getType())
@@ -67,7 +67,7 @@ class JavaConversionsTest extends TestUtils {
         assertEquals(jB.getData(), fromJ.data)
     }
 
-    private def assertJavaValue(j : AnyRef) : Unit = {
+    private def assertJavaValue(j: AnyRef): Unit = {
         if (j != null) {
             val klassName = j.getClass.getName
             //System.out.println(k + "=" + klassName)
@@ -82,7 +82,7 @@ class JavaConversionsTest extends TestUtils {
 
             // recurse
             j match {
-                case c : java.util.Collection[_] =>
+                case c: java.util.Collection[_] =>
                     val i = c.iterator()
                     while (i.hasNext())
                         assertJavaValue(i.next().asInstanceOf[AnyRef])
@@ -91,7 +91,7 @@ class JavaConversionsTest extends TestUtils {
         }
     }
 
-    private def testJavaRoundTrip(v : Any) : Unit = {
+    private def testJavaRoundTrip(v: Any): Unit = {
         try {
             val j = toJava(anyToIterators(v))
             assertJavaValue(j)

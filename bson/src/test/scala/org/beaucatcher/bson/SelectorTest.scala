@@ -6,7 +6,7 @@ import Implicits._
 
 class SelectorTest extends TestUtils {
     @Test
-    def headAndTail() : Unit = {
+    def headAndTail(): Unit = {
         assertEquals(("", ""), Selector.headAndTail(""))
         assertEquals(("foo", ""), Selector.headAndTail("foo"))
         assertEquals(("/", "foo"), Selector.headAndTail("/foo"))
@@ -22,7 +22,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def splitSelector() : Unit = {
+    def splitSelector(): Unit = {
         val answers = Map(
             "" -> Nil,
             "foo" -> List("foo"),
@@ -39,19 +39,19 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def selectChild() : Unit = {
+    def selectChild(): Unit = {
         val obj = BObject("foo" -> BInt32(42))
         assertEquals(List(BInt32(42)), obj.select("foo"))
     }
 
     @Test
-    def selectSelf() : Unit = {
+    def selectSelf(): Unit = {
         val obj = BObject("foo" -> BInt32(42))
         assertEquals(List(obj), obj.select("."))
     }
 
     @Test
-    def selectOne() : Unit = {
+    def selectOne(): Unit = {
         val obj1 = BObject("foo" -> BInt32(42))
         assertEquals(Some(BInt32(42)), obj1.selectOne("foo"))
         assertEquals(None, obj1.selectOne("bar"))
@@ -61,7 +61,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def badSelectorsThrow() : Unit = {
+    def badSelectorsThrow(): Unit = {
         val obj = BObject("foo" -> BInt32(42))
         val badSelectors = Seq(
             "",
@@ -84,7 +84,7 @@ class SelectorTest extends TestUtils {
                     obj.select(bad)
                 }
             } catch {
-                case e : Throwable =>
+                case e: Throwable =>
                     println("Failure on selector: '" + bad + "'")
                     throw e
             }
@@ -92,7 +92,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def selectGrandchild() : Unit = {
+    def selectGrandchild(): Unit = {
         val grandchild = BInt32(42)
         val child = BObject("bar" -> grandchild)
         val obj = BObject("foo" -> child)
@@ -101,7 +101,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def selectDescendant() : Unit = {
+    def selectDescendant(): Unit = {
         val grandchild = BInt32(42)
         val child = BObject("bar" -> grandchild)
         val obj = BObject("foo" -> child)
@@ -110,7 +110,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def selectDescendants() : Unit = {
+    def selectDescendants(): Unit = {
         val grandchild = BInt32(42)
         val child = BObject("bar" -> grandchild)
         val obj = BObject("foo" -> child, "boo" -> child, "woo" -> child)
@@ -118,7 +118,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def selectNested() : Unit = {
+    def selectNested(): Unit = {
         val greatgrandchild = BInt32(42)
         val grandchild = BObject("foo" -> greatgrandchild)
         val child = BObject("foo" -> grandchild)
@@ -127,7 +127,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def selectNestedWithIntermediate() : Unit = {
+    def selectNestedWithIntermediate(): Unit = {
         val greatgreatgreatgrandchild = BInt32(42)
         val greatgreatgrandchild = BObject("foo" -> greatgreatgreatgrandchild)
         val greatgrandchild = BObject("bar" -> greatgreatgrandchild)
@@ -138,7 +138,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def selectAsFiltersWrongTypes() : Unit = {
+    def selectAsFiltersWrongTypes(): Unit = {
         val greatgrandchild = BInt32(42)
         val grandchild = BObject("foo" -> greatgrandchild)
         val child = BObject("foo" -> grandchild)
@@ -149,7 +149,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def wildcardChildren() : Unit = {
+    def wildcardChildren(): Unit = {
         val obj = BObject("a" -> 1, "b" -> 2, "c" -> 3)
         assertEquals(List(BInt32(1), BInt32(2), BInt32(3)), obj.select("*"))
         assertEquals(List(BInt32(1), BInt32(2), BInt32(3)), obj.select("./*"))
@@ -157,7 +157,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def wildcardDescendants() : Unit = {
+    def wildcardDescendants(): Unit = {
         val obj = BObject("a" -> 1, "b" -> 2, "c" -> 3, "d" -> BObject("e" -> 5, "f" -> 6, "g" -> BObject("h" -> 8)))
         val childA = BInt32(1)
         val childB = BInt32(2)
@@ -174,7 +174,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def arrayIndexing() : Unit = {
+    def arrayIndexing(): Unit = {
         val arr = BArray(0, 1, 2, 3, 4, 5)
         assertEquals(List(BInt32(0)), arr.select("0"))
         assertEquals(List(BInt32(1)), arr.select("1"))
@@ -184,7 +184,7 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def allArrayChildren() : Unit = {
+    def allArrayChildren(): Unit = {
         val arr = BArray(0, 1, 2)
         assertEquals(List(BInt32(0), BInt32(1), BInt32(2)), arr.select("*"))
         assertEquals(List(BInt32(0), BInt32(1), BInt32(2)), arr.select("./*"))
@@ -192,13 +192,13 @@ class SelectorTest extends TestUtils {
     }
 
     @Test
-    def allArrayGrandchildren() : Unit = {
+    def allArrayGrandchildren(): Unit = {
         val arr = BArray(BArray(0, 1, 2), BArray(0, 1, 2))
         assertEquals(List(BInt32(0), BInt32(1), BInt32(2), BInt32(0), BInt32(1), BInt32(2)), arr.select("./*/*"))
     }
 
     @Test
-    def allArrayElementsAt2() : Unit = {
+    def allArrayElementsAt2(): Unit = {
         val arr = BArray(BArray(0, 1, 2), BArray(0, 1, 2))
         assertEquals(List(BInt32(2), BInt32(2)), arr.select("./*/2"))
         assertEquals(List(BInt32(2), BInt32(2)), arr.select(".//2"))

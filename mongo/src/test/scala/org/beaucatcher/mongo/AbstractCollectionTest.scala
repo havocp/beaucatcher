@@ -8,38 +8,38 @@ import org.junit._
 
 package abstractfoo {
     trait AbstractFoo extends Product {
-        val _id : ObjectId
-        val intField : Int
-        val stringField : String
+        val _id: ObjectId
+        val intField: Int
+        val stringField: String
     }
 
     trait AbstractFooWithIntId extends Product {
-        val _id : Int
-        val intField : Int
-        val stringField : String
+        val _id: Int
+        val intField: Int
+        val stringField: String
     }
 
     trait AbstractFooWithOptionalField extends Product {
-        val _id : ObjectId
-        val intField : Int
-        val stringField : Option[String]
+        val _id: ObjectId
+        val intField: Int
+        val stringField: Option[String]
     }
 }
 
 import abstractfoo._
 
-abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo : CollectionAccessTrait[Foo, ObjectId],
-    FooWithIntId : CollectionAccessTrait[FooWithIntId, Int],
-    FooWithOptionalField : CollectionAccessTrait[FooWithOptionalField, ObjectId],
-    Bar : CollectionAccessWithoutEntityTrait[ObjectId])
+abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo: CollectionAccessTrait[Foo, ObjectId],
+    FooWithIntId: CollectionAccessTrait[FooWithIntId, Int],
+    FooWithOptionalField: CollectionAccessTrait[FooWithOptionalField, ObjectId],
+    Bar: CollectionAccessWithoutEntityTrait[ObjectId])
     extends TestUtils {
 
-    self : ContextProvider =>
+    self: ContextProvider =>
 
-    protected implicit def context : Context = mongoContext
-    protected def newFoo(id : ObjectId, i : Int, s : String) : Foo
-    protected def newFooWithIntId(id : Int, i : Int, s : String) : FooWithIntId
-    protected def newFooWithOptionalField(id : ObjectId, i : Int, s : Option[String]) : FooWithOptionalField
+    protected implicit def context: Context = mongoContext
+    protected def newFoo(id: ObjectId, i: Int, s: String): Foo
+    protected def newFooWithIntId(id: Int, i: Int, s: String): FooWithIntId
+    protected def newFooWithOptionalField(id: ObjectId, i: Int, s: Option[String]): FooWithOptionalField
 
     @org.junit.Before
     def setup() {
@@ -984,13 +984,13 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
     private val objectManyTypes = BsonTest.makeObjectManyTypes()
     private val arrayManyTypes = BsonTest.makeArrayManyTypes()
 
-    private def roundTrip[A <% BValue](value : A) {
-        val bvalue : BValue = value
+    private def roundTrip[A <% BValue](value: A) {
+        val bvalue: BValue = value
 
         // be sure wrapping in BValue is round-trippable or the
         // step involving MongoDB will never work!
         value match {
-            case _ : BValue =>
+            case _: BValue =>
                 assertEquals(value, bvalue)
             case _ =>
                 assertEquals(value, bvalue.unwrapped)
@@ -1008,7 +1008,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         // check that the round trip went all the way back to the
         // non-BValue that was passed in
         value match {
-            case _ : BValue =>
+            case _: BValue =>
                 assertEquals(value, foundOption.get.get("value").get)
             case _ =>
                 assertEquals(value, foundOption.get.get("value").get.unwrapped)

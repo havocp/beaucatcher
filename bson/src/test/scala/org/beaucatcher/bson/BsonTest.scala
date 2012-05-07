@@ -16,7 +16,7 @@ class BsonTest extends TestUtils {
     import BsonTest._
 
     @Test
-    def numericValuesBasicallyBehave() : Unit = {
+    def numericValuesBasicallyBehave(): Unit = {
         assertTrue(BInt32(1).isWhole)
         assertTrue(BInt64(1).isWhole)
         assertTrue(BDouble(1.0).isWhole)
@@ -61,26 +61,26 @@ class BsonTest extends TestUtils {
     }
 
     @Test
-    def numericValuesEqualPrimitives() : Unit = {
-        assertEquals(BInt32(1), 1 : Char)
-        assertEquals(BInt32(1), 1 : Byte)
-        assertEquals(BInt32(1), 1 : Short)
-        assertEquals(BInt32(1), 1 : Int)
-        assertEquals(BInt32(1), 1 : Long)
-        assertEquals(BInt32(1), 1 : Float)
-        assertEquals(BInt32(1), 1 : Double)
+    def numericValuesEqualPrimitives(): Unit = {
+        assertEquals(BInt32(1), 1: Char)
+        assertEquals(BInt32(1), 1: Byte)
+        assertEquals(BInt32(1), 1: Short)
+        assertEquals(BInt32(1), 1: Int)
+        assertEquals(BInt32(1), 1: Long)
+        assertEquals(BInt32(1), 1: Float)
+        assertEquals(BInt32(1), 1: Double)
 
-        assertEquals(BDouble(1), 1 : Char)
-        assertEquals(BDouble(1), 1 : Byte)
-        assertEquals(BDouble(1), 1 : Short)
-        assertEquals(BDouble(1), 1 : Int)
-        assertEquals(BDouble(1), 1 : Long)
-        assertEquals(BDouble(1), 1 : Float)
-        assertEquals(BDouble(1), 1 : Double)
+        assertEquals(BDouble(1), 1: Char)
+        assertEquals(BDouble(1), 1: Byte)
+        assertEquals(BDouble(1), 1: Short)
+        assertEquals(BDouble(1), 1: Int)
+        assertEquals(BDouble(1), 1: Long)
+        assertEquals(BDouble(1), 1: Float)
+        assertEquals(BDouble(1), 1: Double)
     }
 
     @Test
-    def numericValueConversions() : Unit = {
+    def numericValueConversions(): Unit = {
         for (n <- List(BInt32(5), BInt64(5), BDouble(5))) {
             assertEquals(5, n.intValue)
             assertEquals(5, n.longValue)
@@ -93,7 +93,7 @@ class BsonTest extends TestUtils {
     // here we be sure they're all going to compile with and without implicit
     // conversion
     @Test
-    def objectAppliesWork() : Unit = {
+    def objectAppliesWork(): Unit = {
         // 0
         assertEquals(0, BObject().size)
         assertEquals(0, BObject.empty.size)
@@ -166,7 +166,7 @@ class BsonTest extends TestUtils {
     }
 
     @Test
-    def listAppliesWork() : Unit = {
+    def listAppliesWork(): Unit = {
         // 0
         assertEquals(0, BArray().size)
         assertEquals(0, BArray.empty.size)
@@ -191,7 +191,7 @@ class BsonTest extends TestUtils {
         assertEquals(3, BArray(List(BInt32(1), BInt32(2), BInt32(3))).size)
 
         // array of arrays
-        assertEquals(1, BArray(BArray(1, 2, 3) : BValue).size)
+        assertEquals(1, BArray(BArray(1, 2, 3): BValue).size)
 
         // 0
         assertEquals(0, JArray().size)
@@ -217,14 +217,14 @@ class BsonTest extends TestUtils {
         assertEquals(3, JArray(List(BInt32(1), BInt32(2), BInt32(3))).size)
 
         // array of arrays
-        assertEquals(1, JArray(JArray(1, 2, 3) : JValue).size)
+        assertEquals(1, JArray(JArray(1, 2, 3): JValue).size)
 
         // with nulls (the various constructors special-case null)
-        assertEquals(BArray(BNull), BArray(null : BValue))
+        assertEquals(BArray(BNull), BArray(null: BValue))
         assertEquals(BArray(BNull, BNull), BArray(null, null))
         assertEquals(BArray(BNull, BNull, BNull), BArray(null, null, null))
         assertEquals(BArray(BNull, BNull, BNull), BArray(Seq(null, null, null)))
-        assertEquals(JArray(BNull), JArray(null : JValue))
+        assertEquals(JArray(BNull), JArray(null: JValue))
         assertEquals(JArray(BNull, BNull), JArray(null, null))
         assertEquals(JArray(BNull, BNull, BNull), JArray(null, null, null))
         assertEquals(JArray(BNull, BNull, BNull), JArray(Seq(null, null, null)))
@@ -275,7 +275,7 @@ class BsonTest extends TestUtils {
     }
 
     @Test
-    def bobjectGetUnwrappedAs() : Unit = {
+    def bobjectGetUnwrappedAs(): Unit = {
         val bobj = makeObjectManyTypes()
         val i = bobj.getUnwrappedAs[Int]("int")
         assertEquals(42, i)
@@ -291,7 +291,7 @@ class BsonTest extends TestUtils {
     }
 
     @Test
-    def bobjectParseJson() : Unit = {
+    def bobjectParseJson(): Unit = {
         val bobj = makeObjectManyTypes()
         val jobj = bobj.toJValue()
         val jsonString = bobj.toJson()
@@ -413,13 +413,13 @@ class BsonTest extends TestUtils {
 
     @Test
     def unwrapWorks() = {
-        def recursivelyCheckNotABValue(o : Any) : Unit = {
+        def recursivelyCheckNotABValue(o: Any): Unit = {
             o match {
-                case b : BValue =>
+                case b: BValue =>
                     throw new Exception("Found a BValue! " + b)
-                case t : Traversable[_] =>
+                case t: Traversable[_] =>
                     t.foreach(recursivelyCheckNotABValue)
-                case p : Product =>
+                case p: Product =>
                     p.productIterator.foreach(recursivelyCheckNotABValue)
                 case _ =>
             }
@@ -437,12 +437,12 @@ class BsonTest extends TestUtils {
         assertEquals(obj, rewrapped)
     }
 
-    private def assertIsScalaMap(m : AnyRef) = {
+    private def assertIsScalaMap(m: AnyRef) = {
         assertTrue("is a scala immutable map type: " + m.getClass.getName,
             m.getClass.getName.startsWith("scala.collection.immutable."))
     }
 
-    private def assertIsScalaSeq(m : AnyRef) = {
+    private def assertIsScalaSeq(m: AnyRef) = {
         assertTrue("is a scala immutable seq type: " + m.getClass.getName,
             m.getClass.getName.startsWith("scala.collection.immutable."))
     }
@@ -450,7 +450,7 @@ class BsonTest extends TestUtils {
     @Test
     def bobjectInteroperatesWithMap() = {
         // a type that can't be stored in a BValue and thus can't go in a BObject
-        case class UnwrappableThing(foo : Int)
+        case class UnwrappableThing(foo: Int)
 
         val obj1 = makeObjectManyTypes()
         val obj2 = makeObjectManyTypes()
@@ -459,21 +459,21 @@ class BsonTest extends TestUtils {
         assertEquals(classOf[BObject].getName, anotherBObject.getClass.getName)
 
         // with Map[Any,Any] in both directions
-        val supertypeMap : Map[Any, Any] = Map(42 -> "foo", "bar" -> UnwrappableThing(10))
+        val supertypeMap: Map[Any, Any] = Map(42 -> "foo", "bar" -> UnwrappableThing(10))
         val anotherMap = obj1 ++ supertypeMap
         assertIsScalaMap(anotherMap)
         val anotherMap2 = supertypeMap ++ obj1
         assertIsScalaMap(anotherMap2)
 
         // with Map[String,BValue] in both directions (order changes the type we get)
-        val compatibleMap : Map[String, BValue] = Map("foo" -> 42, "bar" -> "baz")
+        val compatibleMap: Map[String, BValue] = Map("foo" -> 42, "bar" -> "baz")
         val withCompat = obj1 ++ compatibleMap
         assertEquals(classOf[BObject].getName, withCompat.getClass.getName)
         val withCompat2 = compatibleMap ++ obj1
         assertIsScalaMap(withCompat2)
 
         // with Map[String,BInt32] in both directions (order changes the type we get)
-        val subtypeMap : Map[String, BInt32] = Map("foo" -> 42, "bar" -> 37)
+        val subtypeMap: Map[String, BInt32] = Map("foo" -> 42, "bar" -> 37)
         val withSub = obj1 ++ subtypeMap
         assertEquals(classOf[BObject].getName, withSub.getClass.getName)
         val withSub2 = subtypeMap ++ obj1
@@ -497,7 +497,7 @@ class BsonTest extends TestUtils {
         assertIsScalaMap(mappedToUnwrappable)
 
         // add a tuple with non-BValue, get back a plain map
-        val withNonBValue = (obj1 : Map[String, BValue]) + Pair("bar", UnwrappableThing(2))
+        val withNonBValue = (obj1: Map[String, BValue]) + Pair("bar", UnwrappableThing(2))
         assertIsScalaMap(withNonBValue)
 
         // add a tuple with a BValue-convertible value will not implicitly convert
@@ -512,20 +512,20 @@ class BsonTest extends TestUtils {
     @Test
     def barrayInteroperatesWithSeq() = {
         // a type that can't be stored in a BValue and thus can't go in a BObject
-        case class UnwrappableThing(foo : Int)
+        case class UnwrappableThing(foo: Int)
 
         val arr1 = makeArrayManyTypes()
         val arr2 = makeArrayManyTypes()
 
         // with Seq[Any] in both directions
-        val supertypeList : Seq[Any] = List("foo", UnwrappableThing(10))
+        val supertypeList: Seq[Any] = List("foo", UnwrappableThing(10))
         val anotherList = arr1 ++ supertypeList
         assertIsScalaSeq(anotherList)
         val anotherList2 = supertypeList ++ arr1
         assertIsScalaSeq(anotherList2)
 
         // with Seq[BValue] in both directions (order changes the type we get)
-        val compatibleSeq : Seq[BValue] = List(42, "baz")
+        val compatibleSeq: Seq[BValue] = List(42, "baz")
         val withCompat = arr1 ++ compatibleSeq
         assertEquals(classOf[BArray].getName, withCompat.getClass.getName)
         val withCompat2 = compatibleSeq ++ arr1
@@ -535,7 +535,7 @@ class BsonTest extends TestUtils {
         assertEquals(classOf[BArray].getName, anotherBArray.getClass.getName)
 
         // with Seq[BInt32] in both directions (order changes the type we get)
-        val subtypeSeq : Seq[BInt32] = List(42, 37)
+        val subtypeSeq: Seq[BInt32] = List(42, 37)
         val withSub = arr1 ++ subtypeSeq
         assertEquals(classOf[BArray].getName, withSub.getClass.getName)
         val withSub2 = subtypeSeq ++ arr1
@@ -568,7 +568,7 @@ class BsonTest extends TestUtils {
     }
 
     @Test
-    def binDataEqualsWorks() : Unit = {
+    def binDataEqualsWorks(): Unit = {
         val a1 = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
         val a2 = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
         val subDiffers = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.UUID)
@@ -582,7 +582,7 @@ class BsonTest extends TestUtils {
     }
 
     @Test
-    def binaryToStringWorks() : Unit = {
+    def binaryToStringWorks(): Unit = {
         val short = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1), BsonSubtype.GENERAL)
         val longer = BBinary(Array[Byte](0, 1, 2, 3, 4, 127, -127, -1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15), BsonSubtype.GENERAL)
         assertEquals("BBinary(Binary(00010203047f81ff@8,GENERAL))", short.toString)
@@ -590,16 +590,16 @@ class BsonTest extends TestUtils {
     }
 
     @Test
-    def getAsWorks() : Unit = {
+    def getAsWorks(): Unit = {
         val obj = makeObjectManyTypes()
 
-        def wrongType[T : Manifest](key : String) : Unit = {
+        def wrongType[T: Manifest](key: String): Unit = {
             val e = intercept[ClassCastException] {
                 val t = obj.getUnwrappedAs[T](key)
                 println("Should have failed to unwrap value: " + t)
                 println("Target type to get as was: " + manifest[T])
                 t match {
-                    case r : AnyRef =>
+                    case r: AnyRef =>
                         println("Type of value we should not have unwrapped is " + r.getClass.getName)
                     case _ =>
                         println("Value we should not have unwrapped is not an AnyRef")
@@ -607,7 +607,7 @@ class BsonTest extends TestUtils {
             }
         }
 
-        def rightType[T : Manifest](key : String, expected : T) : T = {
+        def rightType[T: Manifest](key: String, expected: T): T = {
             val t = obj.getUnwrappedAs[T](key)
             assertEquals(expected, t)
             t
@@ -641,7 +641,7 @@ class BsonTest extends TestUtils {
         // a field created with BigInt is stored as an Int or Long,
         // not a BigInt. BValue canonicalizes the representation.
         rightType[Int]("bigint", 42)
-        rightType[AnyRef]("bigint", 42 : java.lang.Integer)
+        rightType[AnyRef]("bigint", 42: java.lang.Integer)
         rightType[Any]("bigint", 42)
         wrongType[BigDecimal]("bigint")
         wrongType[BigInt]("bigint")
@@ -663,7 +663,7 @@ class BsonTest extends TestUtils {
         // a field created with BigDecimal is stored as a double,
         // BValue canonicalizes the representation.
         rightType[Double]("bigdecimal", BigDecimal(23.49).toDouble)
-        rightType[AnyRef]("bigdecimal", BigDecimal(23.49).toDouble : java.lang.Double)
+        rightType[AnyRef]("bigdecimal", BigDecimal(23.49).toDouble: java.lang.Double)
         wrongType[BigDecimal]("bigdecimal")
 
         rightType[Boolean]("boolean", true)
@@ -695,11 +695,11 @@ class BsonTest extends TestUtils {
     }
 
     @Test
-    def unwrappedAsWorks() : Unit = {
+    def unwrappedAsWorks(): Unit = {
         // This test isn't very thorough because getAsWorks() above should
         // be exercising the same code
         val i = BInt32(42)
-        val v : BValue = i
+        val v: BValue = i
         assertEquals(42, i.unwrappedAs[Int])
         assertEquals(42, v.unwrappedAs[Int])
         intercept[ClassCastException] {

@@ -7,7 +7,7 @@ import org.junit._
 
 class CommandResultTest extends TestUtils {
     @Test
-    def justOk : Unit = {
+    def justOk: Unit = {
         val r = CommandResult(Map("ok" -> true))
         assertTrue(r.ok)
 
@@ -18,7 +18,7 @@ class CommandResultTest extends TestUtils {
     }
 
     @Test
-    def intAsBoolean : Unit = {
+    def intAsBoolean: Unit = {
         val r = CommandResult(Map("ok" -> 1))
         assertTrue(r.ok)
         val r2 = CommandResult(Map("ok" -> 0, "err" -> "Did not work"))
@@ -26,7 +26,7 @@ class CommandResultTest extends TestUtils {
     }
 
     @Test
-    def throwOnMissingOk : Unit = {
+    def throwOnMissingOk: Unit = {
         val e = intercept[BugInSomethingMongoException] {
             CommandResult(Map()).ok
         }
@@ -34,7 +34,7 @@ class CommandResultTest extends TestUtils {
     }
 
     @Test
-    def writeResultFields : Unit = {
+    def writeResultFields: Unit = {
         val r = WriteResult(ok = false,
             err = Some("this is an error message"),
             n = 10,

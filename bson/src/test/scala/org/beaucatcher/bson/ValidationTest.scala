@@ -7,24 +7,24 @@ import org.junit._
 import java.util.Date
 
 package bar {
-    case class LotsOfTypes(anInt : Int,
-        aLong : Long,
-        aDouble : Double,
-        aBoolean : Boolean,
-        aString : String,
-        aDate : Date,
-        aTimestamp : Timestamp,
-        anObjectId : ObjectId,
-        aBinary : Binary,
-        aMap : Map[String, Int],
-        aSeq : List[Int]);
+    case class LotsOfTypes(anInt: Int,
+        aLong: Long,
+        aDouble: Double,
+        aBoolean: Boolean,
+        aString: String,
+        aDate: Date,
+        aTimestamp: Timestamp,
+        anObjectId: ObjectId,
+        aBinary: Binary,
+        aMap: Map[String, Int],
+        aSeq: List[Int]);
 
-    case class RecursiveCollections(aMapWithLists : Map[String, List[Int]],
-        aListWithMaps : List[Map[String, Int]],
-        aListOfListOfList : List[List[List[Int]]])
+    case class RecursiveCollections(aMapWithLists: Map[String, List[Int]],
+        aListWithMaps: List[Map[String, Int]],
+        aListOfListOfList: List[List[List[Int]]])
 
-    case class OptionalFields(anOptionalInt : Option[Int],
-        anOptionalMap : Option[Map[String, Int]])
+    case class OptionalFields(anOptionalInt: Option[Int],
+        anOptionalMap: Option[Map[String, Int]])
 }
 
 class ValidationTest {
@@ -51,7 +51,7 @@ class ValidationTest {
     }
 
     @Test
-    def validateSuccessfullyLotsOfTypes() : Unit = {
+    def validateSuccessfullyLotsOfTypes(): Unit = {
         val bobj = lotsOfTypesAsBObject()
         val asJsonString = """
 {
@@ -84,7 +84,7 @@ class ValidationTest {
     }
 
     @Test
-    def validateRecursiveCollections() : Unit = {
+    def validateRecursiveCollections(): Unit = {
         val analysis = new ClassAnalysis(classOf[RecursiveCollections])
         val validObj = BObject("aMapWithLists" -> BObject("a" -> BArray(List(1, 2)), "b" -> BArray(List(3, 4))),
             "aListWithMaps" -> BArray(BObject("a" -> 1, "b" -> 2), BObject("c" -> 3, "d" -> 4)),
@@ -96,15 +96,15 @@ class ValidationTest {
     }
 
     @Test
-    def failToValidateWithMissingField() : Unit = {
+    def failToValidateWithMissingField(): Unit = {
         val bobj = lotsOfTypesAsBObject()
         val analysis = new ClassAnalysis(classOf[LotsOfTypes])
-        var failure : JsonValidationException = null
+        var failure: JsonValidationException = null
         try {
             val withMissingField = bobj.toJValue() - "anInt"
             val result = BValue.fromJValue(withMissingField, analysis)
         } catch {
-            case e : JsonValidationException =>
+            case e: JsonValidationException =>
                 failure = e
         }
         assertNotNull("got validation exception", failure)
@@ -113,15 +113,15 @@ class ValidationTest {
     }
 
     @Test
-    def failToValidateWithBadFieldType() : Unit = {
+    def failToValidateWithBadFieldType(): Unit = {
         val bobj = lotsOfTypesAsBObject()
         val analysis = new ClassAnalysis(classOf[LotsOfTypes])
-        var failure : JsonValidationException = null
+        var failure: JsonValidationException = null
         try {
             val withBadField = bobj.toJValue() + ("anInt" -> BString("foo"))
             val result = BValue.fromJValue(withBadField, analysis)
         } catch {
-            case e : JsonValidationException =>
+            case e: JsonValidationException =>
                 failure = e
         }
         assertNotNull("got validation exception", failure)
@@ -130,15 +130,15 @@ class ValidationTest {
     }
 
     @Test
-    def failToValidateWithNullField() : Unit = {
+    def failToValidateWithNullField(): Unit = {
         val bobj = lotsOfTypesAsBObject()
         val analysis = new ClassAnalysis(classOf[LotsOfTypes])
-        var failure : JsonValidationException = null
+        var failure: JsonValidationException = null
         try {
             val withNullField = bobj.toJValue() + ("anInt" -> BNull)
             val result = BValue.fromJValue(withNullField, analysis)
         } catch {
-            case e : JsonValidationException =>
+            case e: JsonValidationException =>
                 failure = e
         }
         assertNotNull("got validation exception", failure)
@@ -147,7 +147,7 @@ class ValidationTest {
     }
 
     @Test
-    def validateWithOptionalFields() : Unit = {
+    def validateWithOptionalFields(): Unit = {
         val analysis = new ClassAnalysis(classOf[OptionalFields])
 
         // all fields are optional so these should work

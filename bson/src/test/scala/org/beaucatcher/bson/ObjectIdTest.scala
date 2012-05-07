@@ -12,14 +12,14 @@ class ObjectIdTest extends TestUtils {
     }
 
     @Test
-    def constructFromString() : Unit = {
+    def constructFromString(): Unit = {
         val oId = ObjectId("4dbf8ea93364e3bd9745723c")
 
         assertEquals("4dbf8ea93364e3bd9745723c", oId.toString)
     }
 
     @Test
-    def constructFromParts() : Unit = {
+    def constructFromParts(): Unit = {
         val oId = ObjectId(123456, 876543, 400701)
         assertEquals(123456, oId.time)
         assertEquals(876543, oId.machine)
@@ -27,13 +27,13 @@ class ObjectIdTest extends TestUtils {
     }
 
     @Test
-    def timeMillis() : Unit = {
+    def timeMillis(): Unit = {
         val oId = ObjectId("4dbf8ea93364e3bd9745723c")
         assertEquals(oId.time * 1000L, oId.timeMillis)
     }
 
     @Test
-    def roundTripThroughParts() : Unit = {
+    def roundTripThroughParts(): Unit = {
         // one fixed case
         val oId = ObjectId("4dbf8ea93364e3bd9745723c")
         val fromParts = ObjectId(oId.time, oId.machine, oId.inc)
@@ -58,7 +58,7 @@ class ObjectIdTest extends TestUtils {
     }
 
     @Test
-    def notCaseSensitive() : Unit = {
+    def notCaseSensitive(): Unit = {
         val lower = "4dbf8ea93364e3bd9745723c"
         val upper = lower.toUpperCase()
         assertTrue(lower != upper)
@@ -79,7 +79,7 @@ class ObjectIdTest extends TestUtils {
     }
 
     @Test
-    def equalsAndHashCode() : Unit = {
+    def equalsAndHashCode(): Unit = {
         val oId = ObjectId("4dbf8ea93364e3bd9745723c")
         val sameId = ObjectId("4dbf8ea93364e3bd9745723c")
         val differentId = ObjectId("9ebf8ea63366e3bd9743723f")
@@ -97,7 +97,7 @@ class ObjectIdTest extends TestUtils {
     }
 
     @Test
-    def generatingObjectId : Unit = {
+    def generatingObjectId: Unit = {
         val one = ObjectId()
         val two = ObjectId()
         val three = ObjectId()
@@ -112,15 +112,15 @@ class ObjectIdTest extends TestUtils {
         //assertEquals(one.inc + 2, three.inc)
     }
 
-    private def invalidObjectId(s : String) : Unit = {
+    private def invalidObjectId(s: String): Unit = {
         val e = try {
             intercept[IllegalArgumentException] {
                 ObjectId(s)
             }
         } catch {
-            case iae : IllegalArgumentException =>
+            case iae: IllegalArgumentException =>
                 throw new Exception("This should never happen, didn't intercept IllegalArgumentException")
-            case e : Throwable =>
+            case e: Throwable =>
                 // rewrite exception to show which string was the problem
                 throw new Exception("Object ID string was not detected as invalid: '" + s + "'", e)
         }
@@ -129,7 +129,7 @@ class ObjectIdTest extends TestUtils {
     }
 
     @Test
-    def rejectsInvalidStrings : Unit = {
+    def rejectsInvalidStrings: Unit = {
         invalidObjectId("")
         invalidObjectId("ff")
         invalidObjectId("foo")

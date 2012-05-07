@@ -4,17 +4,17 @@ import scala.tools.scalap.scalax.rules.scalasig.TypeRefType
 import org.junit.Assert._
 import org.junit._
 
-case class IntAndString(foo : Int, bar : String)
+case class IntAndString(foo: Int, bar: String)
 
 object IntAndString {
-    def apply(foo : Int = 103) : IntAndString = {
+    def apply(foo: Int = 103): IntAndString = {
         IntAndString(foo, "Hi")
     }
 }
 
-case class IntAndOptionalString(foo : Int, bar : Option[String])
+case class IntAndOptionalString(foo: Int, bar: Option[String])
 
-case class IntAndListString(foo : Int, bar : List[String])
+case class IntAndListString(foo: Int, bar: List[String])
 
 class ClassAnalysisTest {
 
@@ -98,11 +98,11 @@ class ClassAnalysisTest {
     @Test
     def createCaseClassWithMissingFieldsShouldThrow() = {
         val analysis = new ClassAnalysis(classOf[IntAndString])
-        var failure : Option[Throwable] = None
+        var failure: Option[Throwable] = None
         try {
             analysis.fromMap(Map("bar" -> "Boo"))
         } catch {
-            case e : Exception =>
+            case e: Exception =>
                 failure = Some(e)
             case _ =>
         }

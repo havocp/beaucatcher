@@ -15,7 +15,7 @@ class JsonTest extends TestUtils {
     }
 
     @Test
-    def tokenizeAllBasicTypes() : Unit = {
+    def tokenizeAllBasicTypes(): Unit = {
         import JsonToken._
 
         // empty string
@@ -38,11 +38,11 @@ class JsonTest extends TestUtils {
     }
 
     @Test
-    def tokenizerUnescapeStrings() : Unit = {
+    def tokenizerUnescapeStrings(): Unit = {
         import JsonToken._
 
-        case class UnescapeTest(escaped : String, result : StringValue)
-        implicit def pair2unescapetest(pair : (String, StringValue)) : UnescapeTest = UnescapeTest(pair._1, pair._2)
+        case class UnescapeTest(escaped: String, result: StringValue)
+        implicit def pair2unescapetest(pair: (String, StringValue)): UnescapeTest = UnescapeTest(pair._1, pair._2)
 
         // getting the actual 6 chars we want in a string is a little pesky.
         // \u005C is backslash. Just prove we're doing it right here.
@@ -61,7 +61,7 @@ class JsonTest extends TestUtils {
                 tokenize(t.escaped.iterator).toList)
         }
 
-        def renderString(s : String) = {
+        def renderString(s: String) = {
             BString(s).toJson()
         }
 
@@ -77,7 +77,7 @@ class JsonTest extends TestUtils {
     }
 
     @Test
-    def tokenizerThrowsOnInvalidStrings() : Unit = {
+    def tokenizerThrowsOnInvalidStrings(): Unit = {
         import JsonToken._
 
         val invalidTests = List(""" "\" """, // nothing after a backslash
@@ -101,15 +101,15 @@ class JsonTest extends TestUtils {
     }
 
     @Test
-    def tokenizerParseNumbers() : Unit = {
+    def tokenizerParseNumbers(): Unit = {
         import JsonToken._
 
-        abstract class NumberTest[+A](val s : String, val result : A)
-        case class LongTest(override val s : String, override val result : LongValue) extends NumberTest[LongValue](s, result)
-        case class DoubleTest(override val s : String, override val result : DoubleValue) extends NumberTest[DoubleValue](s, result)
-        implicit def pair2inttest(pair : (String, Int)) = LongTest(pair._1, LongValue(pair._2))
-        implicit def pair2longtest(pair : (String, Long)) = LongTest(pair._1, LongValue(pair._2))
-        implicit def pair2doubletest(pair : (String, Double)) = DoubleTest(pair._1, DoubleValue(pair._2))
+        abstract class NumberTest[+A](val s: String, val result: A)
+        case class LongTest(override val s: String, override val result: LongValue) extends NumberTest[LongValue](s, result)
+        case class DoubleTest(override val s: String, override val result: DoubleValue) extends NumberTest[DoubleValue](s, result)
+        implicit def pair2inttest(pair: (String, Int)) = LongTest(pair._1, LongValue(pair._2))
+        implicit def pair2longtest(pair: (String, Long)) = LongTest(pair._1, LongValue(pair._2))
+        implicit def pair2doubletest(pair: (String, Double)) = DoubleTest(pair._1, DoubleValue(pair._2))
 
         val tests = List[NumberTest[Value]](("1", 1),
             ("1.2", 1.2),
@@ -124,28 +124,28 @@ class JsonTest extends TestUtils {
         }
     }
 
-    private[this] def toLift(value : JValue) : lift.JValue = {
+    private[this] def toLift(value: JValue): lift.JValue = {
         value match {
-            case v : JObject =>
+            case v: JObject =>
                 lift.JObject(v.map({ kv => lift.JField(kv._1, toLift(kv._2)) }).toList)
-            case v : JArray =>
+            case v: JArray =>
                 lift.JArray(v.value.map({ elem => toLift(elem) }))
-            case v : BBoolean =>
+            case v: BBoolean =>
                 lift.JBool(v.value)
-            case v : BInt32 =>
+            case v: BInt32 =>
                 lift.JInt(v.value)
-            case v : BInt64 =>
+            case v: BInt64 =>
                 lift.JInt(v.value)
-            case v : BDouble =>
+            case v: BDouble =>
                 lift.JDouble(v.value)
-            case v : BString =>
+            case v: BString =>
                 lift.JString(v.value)
             case BNull =>
                 lift.JNull
         }
     }
 
-    private[this] def fromLift(liftValue : lift.JValue) : JValue = {
+    private[this] def fromLift(liftValue: lift.JValue): JValue = {
         liftValue match {
             case lift.JObject(fields) =>
                 JObject(fields.map({ field => (field.name, fromLift(field.value)) }))
@@ -168,11 +168,11 @@ class JsonTest extends TestUtils {
         }
     }
 
-    private def withLiftExceptionsConverted[T](block : => T) : T = {
+    private def withLiftExceptionsConverted[T](block: => T): T = {
         try {
             block
         } catch {
-            case e : lift.JsonParser.ParseException =>
+            case e: lift.JsonParser.ParseException =>
                 throw new JsonParseException(e.getMessage(), e)
         }
     }
@@ -180,16 +180,16 @@ class JsonTest extends TestUtils {
     // parse a string using Lift's AST which we then mechanically convert
     // to our AST. We then test by ensuring we have the same results as
     // lift for a variety of JSON strings.
-    private def fromJsonWithLiftParser(json : String) : JValue = {
+    private def fromJsonWithLiftParser(json: String): JValue = {
         withLiftExceptionsConverted(fromLift(lift.JsonParser.parse(json)))
     }
 
-    private def fromJsonWithLiftParser(json : Reader) : JValue = {
+    private def fromJsonWithLiftParser(json: Reader): JValue = {
         withLiftExceptionsConverted(fromLift(lift.JsonParser.parse(json)))
     }
 
-    case class JsonTest(liftBehaviorUnexpected : Boolean, test : String)
-    implicit def string2jsontest(test : String) : JsonTest = JsonTest(false, test)
+    case class JsonTest(liftBehaviorUnexpected: Boolean, test: String)
+    implicit def string2jsontest(test: String): JsonTest = JsonTest(false, test)
 
     private val invalidJson = List[JsonTest]("", // empty document
         "{",
@@ -251,14 +251,14 @@ class JsonTest extends TestUtils {
     // For string quoting, check behavior of escaping a random character instead of one on the list;
     // lift-json seems to oddly treat that as a \ literal
 
-    private def whitespaceVariations(tests : Seq[JsonTest]) : Seq[JsonTest] = {
-        val variations = List({ s : String => s }, // identity
-            { s : String => " " + s },
-            { s : String => s + " " },
-            { s : String => " " + s + " " },
-            { s : String => s.replace(" ", "") }, // this would break with whitespace in a key or value
-            { s : String => s.replace(":", " : ") }, // could break with : in a key or value
-            { s : String => s.replace(",", " , ") } // could break with , in a key or value
+    private def whitespaceVariations(tests: Seq[JsonTest]): Seq[JsonTest] = {
+        val variations = List({ s: String => s }, // identity
+            { s: String => " " + s },
+            { s: String => s + " " },
+            { s: String => " " + s + " " },
+            { s: String => s.replace(" ", "") }, // this would break with whitespace in a key or value
+            { s: String => s.replace(":", " : ") }, // could break with : in a key or value
+            { s: String => s.replace(",", " , ") } // could break with , in a key or value
             )
         for {
             t <- tests
@@ -266,17 +266,17 @@ class JsonTest extends TestUtils {
         } yield JsonTest(t.liftBehaviorUnexpected, v(t.test))
     }
 
-    private def addOffendingJsonToException[R](parserName : String, s : String)(body : => R) = {
+    private def addOffendingJsonToException[R](parserName: String, s: String)(body: => R) = {
         try {
             body
         } catch {
-            case t : Throwable =>
+            case t: Throwable =>
                 throw new AssertionError(parserName + " failed on '" + s + "'", t)
         }
     }
 
     @Test
-    def invalidJsonThrows() : Unit = {
+    def invalidJsonThrows(): Unit = {
         // be sure Lift throws on the string
         for (invalid <- whitespaceVariations(invalidJson)) {
             if (invalid.liftBehaviorUnexpected) {
@@ -308,7 +308,7 @@ class JsonTest extends TestUtils {
     }
 
     @Test
-    def validJsonWorks() : Unit = {
+    def validJsonWorks(): Unit = {
         // be sure we do the same thing as Lift when we build our own
         // AST directly (the point is to avoid intermediate Lift AST objects)
         for (valid <- whitespaceVariations(validJson)) {
