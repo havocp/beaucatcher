@@ -47,39 +47,40 @@ private[mongo] case class CommandResultImpl(ok: Boolean,
 }
 
 object CommandResult {
-    private[mongo] def getBoolean(raw: BObject, key: String): Option[Boolean] = {
+    private[mongo] def getBoolean(raw: Map[String, Any], key: String): Option[Boolean] = {
         raw.get(key) match {
-            case Some(BNull) => None
-            case Some(BBoolean(v)) => Some(v)
-            case Some(v: BNumericValue[_]) => Some(v == 1)
+            case Some(null) => None
+            case Some(v: Boolean) => Some(v)
+            case Some(v: Number) => Some(v == 1)
             case _ => None
         }
     }
 
-    private[mongo] def getString(raw: BObject, key: String): Option[String] = {
+    private[mongo] def getString(raw: Map[String, Any], key: String): Option[String] = {
         raw.get(key) match {
-            case Some(BNull) => None
-            case Some(BString(v)) => Some(v)
+            case Some(null) => None
+            case Some(v: String) => Some(v)
             case _ => None
         }
     }
 
-    private[mongo] def getInt(raw: BObject, key: String): Option[Int] = {
+    private[mongo] def getInt(raw: Map[String, Any], key: String): Option[Int] = {
         raw.get(key) match {
-            case Some(BNull) => None
-            case Some(v: BNumericValue[_]) => Some(v.intValue)
+            case Some(null) => None
+            case Some(v: Number) => Some(v.intValue)
             case _ => None
         }
     }
 
-    def apply(raw: BObject): CommandResult = {
+    def apply(raw: TraversableOnce[(String, Any)]): CommandResult = {
+        val m = raw.toMap
         CommandResultImpl(
-            ok = getBoolean(raw, "ok").getOrElse(throw new BugInSomethingMongoException("Missing or invalid 'ok' field in command result: " + raw)),
+            ok = getBoolean(m, "ok").getOrElse(throw new BugInSomethingMongoException("Missing or invalid 'ok' field in command result: " + raw)),
 
-            errmsg = getString(raw, "errmsg"),
+            errmsg = getString(m, "errmsg"),
 
-            err = getString(raw, "err"),
-            code = getInt(raw, "code"))
+            err = getString(m, "err"),
+            code = getInt(m, "code"))
     }
 
     def apply(ok: Boolean, errmsg: Option[String] = None, err: Option[String] = None, code: Option[Int] = None): CommandResult = {

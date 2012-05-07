@@ -659,17 +659,20 @@ object BTimestamp {
  * @tparam ValueType either [[org.beaucatcher.bson.BValue]] or [[org.beaucatcher.bson.JValue]]
  * @tparam Repr subtype's type, used to implement the [[scala.collection.generic.CanBuildFrom]] mechanism
  */
-abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
+abstract trait ObjectBase[+ValueType <: BValue, +Repr <: Map[String, ValueType]]
     extends BValue
     with immutable.Map[String, ValueType] {
     override type WrappedType = Map[String, Any]
 
-    val value : List[Field[ValueType]]
+    // this uses BValue not ValueType so we can be covariant
+    def value : List[Field[BValue]] = realValue[BValue]
+
+    protected[this] def realValue[V >: ValueType] : List[(String, V)]
 
     // it would be nice to use an ordered map like LinkedHashMap here,
     // but the only ordered map in standard collections is mutable, so
     // it isn't 100% no-brainer to use that.
-    override lazy val unwrapped = Map() ++ value.map(field => (field._1, field._2.unwrapped : Any))
+    override lazy val unwrapped = Map() ++ value.map({ field => (field._1, field._2.unwrapped : Any) })
 
     override val bsonType = BsonType.OBJECT
 
@@ -679,7 +682,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
         // the basic assumption here is that the list will be short
         // so the O(n) is acceptable in exchange for a small simple
         // data structure. we'll see I guess.
-        val withoutOld = value.filter(_._1 != field._1)
+        val withoutOld = realValue.filter(_._1 != field._1)
         // we accept O(n) again to keep the fields in order
         construct(withoutOld :+ field)
     }
@@ -690,7 +693,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
 
     // Map: Removes a key from this map, returning a new map.
     override def -(key : String) : Repr = {
-        construct(value.filter(_._1 != key))
+        construct(realValue.filter(_._1 != key))
     }
 
     private lazy val index : Option[Map[String, ValueType]] = {
@@ -698,7 +701,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
         // otherwise we assume the cost of the index exceeds the
         // cost of O(n) searches.
         if (value.isDefinedAt(7))
-            Some(immutable.HashMap[String, ValueType](value : _*))
+            Some(immutable.HashMap[String, ValueType](realValue : _*))
         else
             None
     }
@@ -708,7 +711,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
         if (index.isDefined) {
             index.get.get(key)
         } else {
-            value.find(_._1 == key) match {
+            realValue.find(_._1 == key) match {
                 case Some(field) => Some(field._2)
                 case None => None
             }
@@ -717,7 +720,7 @@ abstract trait ObjectBase[ValueType <: BValue, Repr <: Map[String, ValueType]]
 
     // Map: Creates a new iterator over all key/value pairs of this map
     override def iterator : Iterator[(String, ValueType)] = {
-        value.map(field => (field._1, field._2)).iterator
+        realValue[ValueType].map(field => (field._1, field._2)).iterator
     }
 
     /**
@@ -815,6 +818,8 @@ sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueTy
 case class BObject(override val value : List[BField]) extends ObjectBase[BValue, BObject]
     with immutable.MapLike[String, BValue, BObject] {
 
+    protected[this] override def realValue[V >: BValue] : List[(String, V)] = value
+
     override def toJValue(flavor : JsonFlavor.Value) = JObject(value.map(field => (field._1, field._2.toJValue(flavor))))
 
     // lift-json fixes JObject equals() to ignore ordering; which makes
@@ -869,6 +874,8 @@ object BObject extends ObjectBaseCompanion[BValue, BObject] {
 case class JObject(override val value : List[JField]) extends ObjectBase[JValue, JObject]
     with immutable.MapLike[String, JValue, JObject]
     with JValue {
+
+    protected[this] override def realValue[V >: JValue] : List[(String, V)] = value
 
     // Maybe equals() on JObject should ignore order, while on BObject
     // it should consider order? probably not a good idea.

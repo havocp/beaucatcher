@@ -72,7 +72,7 @@ trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTra
 
     protected implicit def idEncoder : IdEncoder[IdType]
 
-    private lazy val bobjectCodecSet = mongoDriver.newBObjectCodecSet[IdType]()
+    private lazy val bobjectCodecSet = BObjectCodecs.newCodecSet[IdType]()
 
     private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
@@ -125,7 +125,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     protected implicit def idEncoder : IdEncoder[IdType]
 
-    private lazy val bobjectCodecSet = mongoDriver.newBObjectCodecSet()
+    private lazy val bobjectCodecSet = BObjectCodecs.newCodecSet()
 
     private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
@@ -351,5 +351,7 @@ abstract class CollectionAccessWithCaseClass[EntityType <: Product : Manifest, I
     with CollectionAccessWithCaseClassTrait[EntityType, IdType] {
     self : DriverProvider =>
 
-    override final lazy val entityCodecSet = mongoDriver.newCaseClassCodecSet[EntityType, IdType]()
+    private lazy val caseClassCodecs = CaseClassCodecs[EntityType]()
+
+    override final lazy val entityCodecSet = caseClassCodecs.newCodecSet[EntityType, IdType]()
 }

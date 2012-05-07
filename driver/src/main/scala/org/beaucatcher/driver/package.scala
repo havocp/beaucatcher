@@ -5,17 +5,19 @@ import org.beaucatcher.mongo._
 
 package object driver {
 
-    private[beaucatcher] def defaultIndexName(keys: BObject): String = {
+    private[beaucatcher] def defaultIndexName[Q](keys: Q)(implicit encoder: QueryEncoder[Q]): String = {
         val sb = new StringBuilder()
-        for (kv <- keys.iterator) {
+        for (kv <- encoder.encodeIterator(keys)) {
             if (sb.length > 0)
                 sb.append("_")
             sb.append(kv._1)
             sb.append("_")
             kv._2 match {
-                case n: BNumericValue[_] =>
+                case null =>
+                    throw new BugInSomethingMongoException("Index object had a null value for " + kv._1)
+                case n: Number =>
                     sb.append(n.intValue.toString)
-                case BString(s) =>
+                case s: String =>
                     sb.append(s.replace(' ', '_'))
                 case _ =>
                     throw new BugInSomethingMongoException("Index object had %s:%s but only numbers and strings were expected as values".format(kv._1, kv._2))

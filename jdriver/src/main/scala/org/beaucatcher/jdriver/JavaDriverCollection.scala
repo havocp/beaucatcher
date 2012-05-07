@@ -5,7 +5,6 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.driver._
 import org.bson.BSONObject
 import com.mongodb.{ WriteResult => JavaWriteResult, CommandResult => JavaCommandResult, MongoException => JavaMongoException, _ }
-import JavaConversions._
 import org.bson.BSONException
 
 private[jdriver] final class JavaDriverSyncCollection(val collection : DBCollection, override val context : JavaDriverContext) extends SyncDriverCollection {
@@ -14,9 +13,9 @@ private[jdriver] final class JavaDriverSyncCollection(val collection : DBCollect
         try {
             body
         } catch {
-            case ex : JavaMongoException.DuplicateKey => throw new DuplicateKeyMongoException(ex.getMessage, ex)
-            case ex : JavaMongoException => throw new MongoException(ex.getMessage, ex)
-            case ex : BSONException => throw new MongoException(ex.getMessage, ex)
+            case ex : JavaMongoException.DuplicateKey => throw new DuplicateKeyMongoException("Java driver: " + ex.getMessage, ex)
+            case ex : JavaMongoException => throw new MongoException("Java driver: " + ex.getMessage, ex)
+            case ex : BSONException => throw new MongoException("Java driver: " + ex.getMessage, ex)
         }
     }
 
@@ -175,43 +174,35 @@ private[jdriver] final class JavaDriverSyncCollection(val collection : DBCollect
     }
 
     override def insert[E](o : E)(implicit upsertEncoder : UpsertEncoder[E]) : WriteResult = withExceptionsMapped {
-        import Implicits._
         collection.insert(convertUpsertToJava(o))
     }
 
     override def save[Q](query : Q, options : UpdateOptions)(implicit queryEncoder : UpdateQueryEncoder[Q], upsertEncoder : UpsertEncoder[Q]) : WriteResult = withExceptionsMapped {
-        import Implicits._
         collection.update(convertUpdateQueryToJava(query), convertUpsertToJava(query),
             options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
     }
 
     override def update[Q, M](query : Q, modifier : M, options : UpdateOptions)(implicit queryEncoder : QueryEncoder[Q], modifierEncoder : ModifierEncoder[M]) : WriteResult = withExceptionsMapped {
-        import Implicits._
         collection.update(q(query), convertModifierToJava(modifier),
             options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
     }
 
     override def updateUpsert[Q, U](query : Q, update : U, options : UpdateOptions)(implicit queryEncoder : QueryEncoder[Q], upsertEncoder : UpsertEncoder[U]) : WriteResult = withExceptionsMapped {
-        import Implicits._
         collection.update(q(query), convertUpsertToJava(update),
             options.flags.contains(UpdateUpsert), options.flags.contains(UpdateMulti))
     }
 
     override def remove[Q](query : Q)(implicit queryEncoder : QueryEncoder[Q]) : WriteResult = withExceptionsMapped {
-        import Implicits._
         collection.remove(q(query))
     }
 
     override def removeById[I](id : I)(implicit idEncoder : IdEncoder[I]) : WriteResult = withExceptionsMapped {
-        import Implicits._
         val query = new BasicDBObject()
         putIdToJava(query, "_id", id)
         collection.remove(query)
     }
 
     override def ensureIndex[Q](keys : Q, options : IndexOptions)(implicit queryEncoder : QueryEncoder[Q]) : WriteResult = withExceptionsMapped {
-        import Implicits._
-
         val dbOptions = new BasicDBObject()
         options.name.foreach({ name =>
             dbOptions.put("name", name)
@@ -235,7 +226,6 @@ private[jdriver] final class JavaDriverSyncCollection(val collection : DBCollect
     }
 
     override def dropIndex(indexName : String) : CommandResult = withExceptionsMapped {
-        import Implicits._
         collection.dropIndex(indexName)
 
         // Java driver returns void from dropIndex (it throws on failure)

@@ -36,41 +36,32 @@ object IteratorCodecs extends IdEncoders with ValueDecoders {
         IteratorUnmodifiedEncoder
 
     private[beaucatcher] object IteratorUnmodifiedEncoder
-        extends QueryEncoder[Iterator[(String, Any)]]
+        extends IteratorBasedDocumentEncoder[Iterator[(String, Any)]]
+        with QueryEncoder[Iterator[(String, Any)]]
         with UpsertEncoder[Iterator[(String, Any)]] {
-
-        private val fieldWriter: FieldWriter = {
-            case (buf, name, doc: Iterator[_]) =>
-                writeFieldDocument(buf, name, doc.asInstanceOf[Iterator[(String, Any)]])(IteratorUnmodifiedEncoder)
-        }
-
-        override def encode(buf: EncodeBuffer, t: Iterator[(String, Any)]): Unit = {
-            val start = writeOpenDocument(buf)
-
-            for (field <- t) {
-                writeValueAny(buf, field._1, field._2, fieldWriter)
-            }
-
-            writeCloseDocument(buf, start)
+        override def encodeIterator(t: Iterator[(String, Any)]): Iterator[(String, Any)] = {
+            t
         }
     }
 
     private[beaucatcher] object IteratorWithoutIdEncoder
-        extends ModifierEncoder[Iterator[(String, Any)]] {
-        override def encode(buf: EncodeBuffer, o: Iterator[(String, Any)]): Unit = {
-            IteratorUnmodifiedEncoder.encode(buf, o.filter(_._1 != "_id"))
+        extends IteratorBasedDocumentEncoder[Iterator[(String, Any)]]
+        with ModifierEncoder[Iterator[(String, Any)]] {
+        override def encodeIterator(t: Iterator[(String, Any)]): Iterator[(String, Any)] = {
+            t.filter(_._1 != "_id")
         }
     }
 
     // this is an object encoder that only encodes the ID,
     // not an IdEncoder
     private[beaucatcher] object IteratorOnlyIdEncoder
-        extends UpdateQueryEncoder[Iterator[(String, Any)]] {
-        override def encode(buf: EncodeBuffer, o: Iterator[(String, Any)]): Unit = {
-            val idQuery = o.filter(_._1 == "_id")
+        extends IteratorBasedDocumentEncoder[Iterator[(String, Any)]]
+        with UpdateQueryEncoder[Iterator[(String, Any)]] {
+        override def encodeIterator(t: Iterator[(String, Any)]): Iterator[(String, Any)] = {
+            val idQuery = t.filter(_._1 == "_id")
             if (!idQuery.hasNext)
                 throw new BugInSomethingMongoException("only objects with an _id field work here (you need an _id to save() for example)")
-            IteratorUnmodifiedEncoder.encode(buf, idQuery)
+            idQuery
         }
     }
 
@@ -80,6 +71,9 @@ object IteratorCodecs extends IdEncoders with ValueDecoders {
             decodeDocumentIterator(buf, { (what, name, buf) =>
                 readAny[Iterator[(String, Any)]](what, buf)
             })
+        }
+        override def decodeIterator(iterator: Iterator[(String, Any)]): Iterator[(String, Any)] = {
+            iterator
         }
     }
 }

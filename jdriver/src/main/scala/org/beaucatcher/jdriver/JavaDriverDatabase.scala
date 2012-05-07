@@ -7,12 +7,12 @@ import com.mongodb.{ CommandResult => _, _ }
 import akka.dispatch.Future
 
 private[jdriver] class JavaDriverSyncDatabase(override protected val database : JavaDriverDatabase) extends SyncDriverDatabase {
-    override def command(cmd : BObject, options : CommandOptions) : CommandResult =
+    override def command[Q](cmd : Q, options : CommandOptions)(implicit encoder : QueryEncoder[Q]) : CommandResult =
         database.command(cmd, options)
 }
 
 private[jdriver] class JavaDriverAsyncDatabase(override protected val database : JavaDriverDatabase) extends AsyncDriverDatabase {
-    override def command(cmd : BObject, options : CommandOptions) : Future[CommandResult] =
+    override def command[Q](cmd : Q, options : CommandOptions)(implicit encoder : QueryEncoder[Q]) : Future[CommandResult] =
         Future({ database.command(cmd, options) } : CommandResult)(database.context.actorSystem.dispatcher)
 }
 
@@ -26,13 +26,10 @@ private[jdriver] class JavaDriverDatabase(override val context : JavaDriverConte
 
     override def name = context.underlyingDatabase.getName()
 
-    private[jdriver] def command(cmd : BObject, options : CommandOptions) : CommandResult = {
-        import Implicits._
-        import JavaConversions._
-
+    private[jdriver] def command[Q](cmd : Q, options : CommandOptions)(implicit encoder : QueryEncoder[Q]) : CommandResult = {
         val jdriverDB = context.underlyingDatabase
         val flags : Int = JavaDriverDatabase.commandFlags(options)
-        jdriverDB.command(new BObjectDBObject(cmd), flags)
+        jdriverDB.command(convertQueryToJava(cmd), flags)
     }
 }
 

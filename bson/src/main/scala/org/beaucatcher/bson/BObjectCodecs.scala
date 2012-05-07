@@ -6,6 +6,11 @@ import org.beaucatcher.wire._
 object BObjectCodecs extends IdEncoders with ValueDecoders {
     import CodecUtils._
 
+    // ObjectBase is unfortunately invariant in its type params
+    // so really this basically breaks
+    private type BOrJObject = ObjectBase[BValue, Map[String, BValue]]
+    private type BOrJArray = ArrayBase[BValue]
+
     // can't be implicit since it would always apply
     // we also offer "bvalueValueDecoder" that
     // will decode docs as BObject, so here we
@@ -31,16 +36,52 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
     implicit def bobjectUpsertEncoder : UpsertEncoder[BObject] =
         BObjectUnmodifiedEncoder
 
-    def newBObjectCodecSet[IdType : IdEncoder]() : CollectionCodecSet[BObject, BObject, IdType, BValue] =
+    def newCodecSet[IdType : IdEncoder]() : CollectionCodecSet[BObject, BObject, IdType, BValue] =
         CodecSets.newBObjectCodecSet()
 
-    def newCaseClassCodecSet[EntityType <: Product : Manifest, IdType : IdEncoder]() : CollectionCodecSet[BObject, EntityType, IdType, Any] =
-        CodecSets.newCaseClassCodecSet()
+    private def unwrapIterator(bobj : BOrJObject) : Iterator[(String, Any)] = {
+        // note: avoid bobj.unwrapped here because it creates an unordered map
+        // while BObject is ordered
+        bobj.value.map(field => (field._1, unwrap(field._2))).iterator
+    }
+
+    // convert to Seq for arrays and Iterator for objects
+    // as expected by encodeIterator etc.
+    private def unwrap(bvalue : BValue) : Any = {
+        bvalue match {
+            case v : ArrayBase[_] =>
+                v.value.map({ e => unwrap(e) }).toSeq : Seq[Any]
+            case v : ObjectBase[_, _] =>
+                unwrapIterator(v.asInstanceOf[BOrJObject])
+            case v : BValue =>
+                // handles strings and ints and stuff
+                v.unwrapped.asInstanceOf[AnyRef]
+        }
+    }
+
+    private def wrapIterator(value : Iterator[(String, Any)]) : BObject = {
+        BObject(value.map(kv => (kv._1, wrap(kv._2))).toList)
+    }
+
+    private def wrap(value : Any) : BValue = {
+        value match {
+            // null would otherwise match Seq and Iterator
+            case null =>
+                BValue.wrap(null)
+            case s : Seq[_] =>
+                BArray(s.map(wrap(_)))
+            case i : Iterator[_] =>
+                wrapIterator(i.asInstanceOf[Iterator[(String, Any)]])
+            case v =>
+                // handles strings and ints and stuff
+                BValue.wrap(v)
+        }
+    }
 
     private[beaucatcher] object BObjectUnmodifiedEncoder
-        extends QueryEncoder[BObject]
-        with UpsertEncoder[BObject] {
-        override def encode(buf : EncodeBuffer, t : BObject) : Unit = {
+        extends QueryEncoder[BOrJObject]
+        with UpsertEncoder[BOrJObject] {
+        override def encode(buf : EncodeBuffer, t : BOrJObject) : Unit = {
             val start = writeOpenDocument(buf)
 
             for (field <- t.value) {
@@ -49,6 +90,10 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
 
             writeCloseDocument(buf, start)
         }
+
+        override def encodeIterator(t : BOrJObject) : Iterator[(String, Any)] = {
+            unwrapIterator(t)
+        }
     }
 
     private[beaucatcher] object BObjectWithoutIdEncoder
@@ -56,15 +101,20 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
         override def encode(buf : EncodeBuffer, o : BObject) : Unit = {
             BObjectUnmodifiedEncoder.encode(buf, o - "_id")
         }
+
+        override def encodeIterator(t : BObject) : Iterator[(String, Any)] = {
+            unwrapIterator(t - "_id")
+        }
     }
 
     // this is an object encoder that only encodes the ID,
     // not an IdEncoder
     private[beaucatcher] object BObjectOnlyIdEncoder
-        extends UpdateQueryEncoder[BObject] {
-        override def encode(buf : EncodeBuffer, o : BObject) : Unit = {
-            val idQuery = BObject("_id" -> o.getOrElse("_id", throw new BugInSomethingMongoException("only objects with an _id field work here (you need an _id to save() for example)")))
-            BObjectUnmodifiedEncoder.encode(buf, idQuery)
+        extends IteratorBasedDocumentEncoder[BObject]
+        with UpdateQueryEncoder[BObject] {
+        override def encodeIterator(o : BObject) : Iterator[(String, Any)] = {
+            val id = o.getOrElse("_id", throw new BugInSomethingMongoException("only objects with an _id field work here (you need an _id to save() for example)"))
+            Iterator("_id" -> unwrap(id))
         }
     }
 
@@ -72,6 +122,10 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
         extends ValueDecoder[BValue] {
         override def decode(code : Byte, buf : DecodeBuffer) : BValue = {
             readBValue(code, buf)
+        }
+
+        override def decodeAny(value : Any) : BValue = {
+            wrap(value)
         }
     }
 
@@ -85,7 +139,7 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
             Integer.toString(i)
     }
 
-    private def writeBArray(buf : EncodeBuffer, array : BArray) : Unit = {
+    private def writeBArray(buf : EncodeBuffer, array : BOrJArray) : Unit = {
         val start = buf.writerIndex
         buf.ensureWritableBytes(32) // some prealloc for efficiency
         buf.writeInt(0) // will write this later
@@ -114,12 +168,12 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
                 writeFieldObjectId(buf, name, v.value)
             case v : BString =>
                 writeFieldString(buf, name, v.value)
-            case v : BObject =>
-                writeFieldQuery(buf, name, v)
-            case v : BArray =>
+            case v : ObjectBase[_, _] =>
+                writeFieldQuery(buf, name, v.asInstanceOf[BOrJObject])(BObjectUnmodifiedEncoder)
+            case v : ArrayBase[_] =>
                 buf.writeByte(Bson.ARRAY)
                 writeNulString(buf, name)
-                writeBArray(buf, v)
+                writeBArray(buf, v.asInstanceOf[BOrJArray])
             case v : BTimestamp =>
                 buf.writeByte(Bson.TIMESTAMP)
                 writeNulString(buf, name)
@@ -143,10 +197,6 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
                 buf.writeByte(Bson.NULL)
                 writeNulString(buf, name)
             // no data on the wire for null
-            case v : JObject =>
-                throw new MongoException("Can't use JObject in queries: " + v)
-            case v : JArray =>
-                throw new MongoException("Can't use JArray in queries: " + v)
         }
     }
 
@@ -159,6 +209,10 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
             })
 
             b.result()
+        }
+
+        override def decodeIterator(iterator : Iterator[(String, Any)]) : BObject = {
+            wrapIterator(iterator)
         }
     }
 

@@ -1,9 +1,10 @@
-package org.beaucatcher.bson
+package org.beaucatcher.jdriver
 
-import org.junit.Assert._
-import org.junit._
 import org.bson.{ types => j }
-import org.beaucatcher.bson.JavaConversions._
+import org.beaucatcher.bson._
+import org.junit.Assert._
+import org.junit.Before
+import org.junit.Test
 
 class JavaConversionsTest extends TestUtils {
 
@@ -70,11 +71,11 @@ class JavaConversionsTest extends TestUtils {
         if (j != null) {
             val klassName = j.getClass.getName
             //System.out.println(k + "=" + klassName)
-            assertFalse("found a scala type in unwrappedAsJava " + klassName,
+            assertFalse("found a scala type in supposed Java value " + klassName,
                 (klassName.startsWith("scala.") && !klassName.endsWith("Wrapper")))
-            assertTrue("found unexpected type in unwrappedAsJava " + klassName,
+            assertTrue("found unexpected type in supposed Java value " + klassName,
                 klassName.contains("java") ||
-                    klassName == "org.joda.time.DateTime" ||
+                    klassName.startsWith("com.mongodb.") ||
                     (klassName.startsWith("scala.collection.JavaConversions") &&
                         klassName.endsWith("Wrapper")) ||
                         klassName.startsWith("org.bson.types."))
@@ -90,21 +91,29 @@ class JavaConversionsTest extends TestUtils {
         }
     }
 
+    private def testJavaRoundTrip(v : Any) : Unit = {
+        try {
+            val j = toJava(anyToIterators(v))
+            assertJavaValue(j)
+            val back = anyToMaps(fromJava(j))
+            assertEquals(v, back)
+        } catch {
+            case e =>
+                System.err.println("Failure on: " + v)
+                throw e
+        }
+    }
+
     // check that wrap/unwrap from/to Java behaves sensibly
     @Test
     def javaUnwrapWorks() = {
-        val obj = BsonTest.makeObjectManyTypes()
-        for {
-            (k, v) <- obj
-        } {
-            val j = v.unwrappedAsJava
-            assertJavaValue(j)
-            assertEquals(v, wrapJavaAsBValue(j))
+        val obj = makeMapManyTypes()
+        for ((k, v) <- obj) {
+            testJavaRoundTrip(v)
         }
+        testJavaRoundTrip(obj)
 
-        val a = BsonTest.makeArrayManyTypes()
-        val ja = a.unwrappedAsJava
-        assertJavaValue(ja)
-        assertEquals(a, wrapJavaAsBValue(ja))
+        val a = makeSeqManyTypes()
+        testJavaRoundTrip(a)
     }
 }

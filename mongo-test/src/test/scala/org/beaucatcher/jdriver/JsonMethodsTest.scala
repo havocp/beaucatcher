@@ -11,7 +11,7 @@ import org.junit._
 import scala.util.Random
 
 package restdemo {
-    import JavaCodecs._
+    import BObjectCodecs._
 
     case class Foo(_id: ObjectId, aString: String, anInt: Int)
 

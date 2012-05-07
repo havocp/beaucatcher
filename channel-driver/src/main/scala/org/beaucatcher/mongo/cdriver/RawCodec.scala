@@ -6,11 +6,26 @@ import org.beaucatcher.channel._
 import org.beaucatcher.wire._
 import java.nio.ByteOrder
 
+private[cdriver] trait NoIteratorDecoder[+T] extends DocumentDecoder[T] {
+    override def decodeIterator(i: Iterator[(String, Any)]) =
+        throw new BugInSomethingMongoException("Shouldn't be using decodeIterator for " + getClass.getSimpleName)
+}
+
+private[cdriver] trait NoAnyDecoder[+T] extends ValueDecoder[T] {
+    override def decodeAny(v: Any) =
+        throw new BugInSomethingMongoException("Shouldn't be using decodeAny for " + getClass.getSimpleName)
+}
+
+private[cdriver] trait NoIteratorEncoder[-T] extends DocumentEncoder[T] {
+    override def encodeIterator(t: T) =
+        throw new BugInSomethingMongoException("Shouldn't be using encodeIterator for " + getClass.getSimpleName)
+}
+
 private[cdriver] trait BugIfDecoded
 
 private[cdriver] object BugIfDecoded {
 
-    implicit lazy val bugIfDecodedDecoder = new QueryResultDecoder[BugIfDecoded] {
+    implicit lazy val bugIfDecodedDecoder = new QueryResultDecoder[BugIfDecoded] with NoIteratorDecoder[BugIfDecoded] {
         override def decode(buf: DecodeBuffer): BugIfDecoded = {
             throw new BugInSomethingMongoException("Wasn't expecting to try to decode an object value here")
         }
@@ -22,7 +37,7 @@ private[cdriver] case class RawBufferDecoded(buf: DecodeBuffer)
 
 private[cdriver] object RawBufferDecoded {
 
-    implicit lazy val rawBufferDecoder = new QueryResultDecoder[RawBufferDecoded] {
+    implicit lazy val rawBufferDecoder = new QueryResultDecoder[RawBufferDecoded] with NoIteratorDecoder[RawBufferDecoded] {
         override def decode(buf: DecodeBuffer): RawBufferDecoded = {
             val len = buf.readInt()
             val slice = buf.slice(buf.readerIndex - 4, len)
@@ -31,7 +46,7 @@ private[cdriver] object RawBufferDecoded {
         }
     }
 
-    lazy val rawBufferValueDecoder = new ValueDecoder[RawBufferDecoded] {
+    lazy val rawBufferValueDecoder = new ValueDecoder[RawBufferDecoded] with NoAnyDecoder[RawBufferDecoded] {
         override def decode(what: Byte, buf: DecodeBuffer): RawBufferDecoded = {
             what match {
                 case Bson.OBJECT | Bson.ARRAY =>
@@ -163,7 +178,8 @@ private[cdriver] class RawEncoded(val backend: ChannelBackend) {
 object RawEncoded {
     private object RawEncodeSupport
         extends QueryEncoder[RawEncoded]
-        with UpsertEncoder[RawEncoded] {
+        with UpsertEncoder[RawEncoded]
+        with NoIteratorEncoder[RawEncoded] {
         override final def encode(buf: EncodeBuffer, t: RawEncoded): Unit = {
             t.writeTo(buf)
         }
@@ -175,7 +191,8 @@ object RawEncoded {
     def apply(backend: ChannelBackend): RawEncoded = new RawEncoded(backend)
 
     private class FieldsEncodeSupport(backend: ChannelBackend)
-        extends QueryEncoder[Fields] {
+        extends QueryEncoder[Fields]
+        with NoIteratorEncoder[Fields] {
         override final def encode(buf: EncodeBuffer, t: Fields): Unit = {
             val raw = RawEncoded(backend)
             raw.writeFields(t)
@@ -196,7 +213,8 @@ private[cdriver] object RawDecoded {
     import CodecUtils._
 
     private class RawDecodeSupport[NestedEntityType](val needed: Map[String, Option[ValueDecoder[_]]])(implicit val nestedDecodeSupport: QueryResultDecoder[NestedEntityType])
-        extends QueryResultDecoder[RawDecoded] {
+        extends QueryResultDecoder[RawDecoded]
+        with NoIteratorDecoder[RawDecoded] {
 
         override final def decode(buf: DecodeBuffer): RawDecoded = {
             val raw = RawDecoded()

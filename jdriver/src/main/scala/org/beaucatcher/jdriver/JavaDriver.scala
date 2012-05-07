@@ -16,34 +16,13 @@ import akka.actor.ActorSystem
 final class JavaDriver private[jdriver] ()
     extends Driver {
 
-    private[beaucatcher] override def newBObjectCodecSet[IdType : IdEncoder]() : CollectionCodecSet[BObject, BObject, IdType, BValue] =
-        JavaCodecs.newBObjectCodecSet()
-
-    private[beaucatcher] override def newCaseClassCodecSet[EntityType <: Product : Manifest, IdType : IdEncoder]() : CollectionCodecSet[BObject, EntityType, IdType, Any] =
-        JavaCodecs.newCaseClassCodecSet()
-
-    private[beaucatcher] override def newStringIdEncoder() : IdEncoder[String] =
-        JavaCodecs.stringIdEncoder
-
-    private[beaucatcher] override def newObjectIdIdEncoder() : IdEncoder[ObjectId] =
-        JavaCodecs.objectIdIdEncoder
-
-    private[beaucatcher] override def newBObjectBasedCodecs[E](toBObject : (E) => BObject,
-        fromBObject : (BObject) => E) : BObjectBasedCodecs[E] = {
-        import JavaCodecs._
-        JavaBObjectBasedCodecs[E](toBObject, fromBObject)
-    }
-
     private[beaucatcher] override def newSyncCollection(name : String)(implicit context : DriverContext) : SyncDriverCollection = {
-        import Implicits._
-
         val jContext = context.asJavaContext
         val underlying = jContext.underlyingCollection(name)
         new JavaDriverSyncCollection(underlying, jContext)
     }
 
     private[beaucatcher] override def newAsyncCollection(name : String)(implicit context : DriverContext) : AsyncDriverCollection = {
-        import Implicits._
         implicit val executor = context.asJavaContext.actorSystem.dispatcher
         AsyncDriverCollection.fromSync(newSyncCollection(name))
     }
@@ -54,12 +33,6 @@ final class JavaDriver private[jdriver] ()
 }
 
 object JavaDriver {
-
-    private[jdriver] lazy val scalaToJavaObjectIdComposer = new IdComposer[ObjectId, JavaObjectId] {
-        import JavaConversions._
-        override def idIn(id : ObjectId) : JavaObjectId = id
-        override def idOut(id : JavaObjectId) : ObjectId = id
-    }
 
     lazy val instance = new JavaDriver()
 }

@@ -9,24 +9,6 @@ import akka.actor.ActorSystem
 final class ChannelDriver private[cdriver] (private[cdriver] val backend: ChannelBackend)
     extends Driver {
 
-    private[beaucatcher] override def newBObjectCodecSet[IdType: IdEncoder](): CollectionCodecSet[BObject, BObject, IdType, BValue] =
-        BObjectCodecs.newBObjectCodecSet()
-
-    private[beaucatcher] override def newCaseClassCodecSet[EntityType <: Product: Manifest, IdType: IdEncoder](): CollectionCodecSet[BObject, EntityType, IdType, Any] =
-        BObjectCodecs.newCaseClassCodecSet()
-
-    private[beaucatcher] override def newStringIdEncoder(): IdEncoder[String] =
-        BObjectCodecs.stringIdEncoder
-
-    private[beaucatcher] override def newObjectIdIdEncoder(): IdEncoder[ObjectId] =
-        BObjectCodecs.objectIdIdEncoder
-
-    private[beaucatcher] override def newBObjectBasedCodecs[E](toBObject: (E) => BObject,
-        fromBObject: (BObject) => E): BObjectBasedCodecs[E] = {
-        import BObjectCodecs._
-        BObjectBasedCodecs[E](toBObject, fromBObject)
-    }
-
     private[beaucatcher] override def newSyncCollection(name: String)(implicit context: DriverContext): SyncDriverCollection = {
         SyncDriverCollection.fromAsync(newAsyncCollection(name))
     }

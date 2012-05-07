@@ -34,39 +34,30 @@ object MapCodecs extends IdEncoders with ValueDecoders {
         MapUnmodifiedEncoder
 
     private[beaucatcher] object MapUnmodifiedEncoder
-        extends QueryEncoder[Map[String, Any]]
+        extends IteratorBasedDocumentEncoder[Map[String, Any]]
+        with QueryEncoder[Map[String, Any]]
         with UpsertEncoder[Map[String, Any]] {
-
-        private val fieldWriter: FieldWriter = {
-            case (buf, name, doc: Map[_, _]) =>
-                writeFieldDocument(buf, name, doc.asInstanceOf[Map[String, Any]])(MapUnmodifiedEncoder)
-        }
-
-        override def encode(buf: EncodeBuffer, t: Map[String, Any]): Unit = {
-            val start = writeOpenDocument(buf)
-
-            for (field <- t) {
-                writeValueAny(buf, field._1, field._2, fieldWriter)
-            }
-
-            writeCloseDocument(buf, start)
+        override def encodeIterator(t: Map[String, Any]): Iterator[(String, Any)] = {
+            mapToIterator(t)
         }
     }
 
     private[beaucatcher] object MapWithoutIdEncoder
-        extends ModifierEncoder[Map[String, Any]] {
-        override def encode(buf: EncodeBuffer, o: Map[String, Any]): Unit = {
-            MapUnmodifiedEncoder.encode(buf, o - "_id")
+        extends IteratorBasedDocumentEncoder[Map[String, Any]]
+        with ModifierEncoder[Map[String, Any]] {
+        override def encodeIterator(t: Map[String, Any]): Iterator[(String, Any)] = {
+            mapToIterator(t.filterKeys(_ != "_id"))
         }
     }
 
     // this is an object encoder that only encodes the ID,
     // not an IdEncoder
     private[beaucatcher] object MapOnlyIdEncoder
-        extends UpdateQueryEncoder[Map[String, Any]] {
-        override def encode(buf: EncodeBuffer, o: Map[String, Any]): Unit = {
-            val idQuery = Map("_id" -> o.getOrElse("_id", throw new BugInSomethingMongoException("only objects with an _id field work here (you need an _id to save() for example)")))
-            MapUnmodifiedEncoder.encode(buf, idQuery)
+        extends IteratorBasedDocumentEncoder[Map[String, Any]]
+        with UpdateQueryEncoder[Map[String, Any]] {
+        override def encodeIterator(t: Map[String, Any]): Iterator[(String, Any)] = {
+            val id = t.getOrElse("_id", throw new BugInSomethingMongoException("only objects with an _id field work here (you need an _id to save() for example)"))
+            Iterator("_id" -> id)
         }
     }
 
@@ -79,5 +70,39 @@ object MapCodecs extends IdEncoders with ValueDecoders {
             })
             b.result()
         }
+
+        override def decodeIterator(iterator: Iterator[(String, Any)]): Map[String, Any] = {
+            iteratorToMap(iterator)
+        }
+    }
+
+    private def decodeAny(value: Any): Any = {
+        value match {
+            case i: Iterator[_] =>
+                iteratorToMap(i.asInstanceOf[Iterator[(String, Any)]])
+            case x =>
+                x
+        }
+    }
+
+    private[beaucatcher] def iteratorToMap(iterator: Iterator[(String, Any)]): Map[String, Any] = {
+        val b = Map.newBuilder[String, Any]
+        for (pair <- iterator) {
+            b += (pair._1 -> decodeAny(pair._2))
+        }
+        b.result()
+    }
+
+    private[beaucatcher] def mapToIterator(m: Map[String, Any]): Iterator[(String, Any)] = {
+        m.mapValues({ v =>
+            v match {
+                case null =>
+                    null
+                case child: Map[_, _] =>
+                    mapToIterator(child.asInstanceOf[Map[String, Any]])
+                case x =>
+                    x
+            }
+        }).iterator
     }
 }

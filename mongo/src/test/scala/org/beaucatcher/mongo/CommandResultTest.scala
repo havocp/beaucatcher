@@ -1,6 +1,5 @@
 package org.beaucatcher.mongo
 
-import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.junit.Assert._
@@ -9,7 +8,7 @@ import org.junit._
 class CommandResultTest extends TestUtils {
     @Test
     def justOk : Unit = {
-        val r = CommandResult(BObject("ok" -> true))
+        val r = CommandResult(Map("ok" -> true))
         assertTrue(r.ok)
 
         val r2 = CommandResult(true)
@@ -20,16 +19,16 @@ class CommandResultTest extends TestUtils {
 
     @Test
     def intAsBoolean : Unit = {
-        val r = CommandResult(BObject("ok" -> 1))
+        val r = CommandResult(Map("ok" -> 1))
         assertTrue(r.ok)
-        val r2 = CommandResult(BObject("ok" -> 0, "err" -> "Did not work"))
+        val r2 = CommandResult(Map("ok" -> 0, "err" -> "Did not work"))
         assertFalse(r2.ok)
     }
 
     @Test
     def throwOnMissingOk : Unit = {
         val e = intercept[BugInSomethingMongoException] {
-            CommandResult(BObject()).ok
+            CommandResult(Map()).ok
         }
         assertTrue(e.getMessage.contains("ok"))
     }

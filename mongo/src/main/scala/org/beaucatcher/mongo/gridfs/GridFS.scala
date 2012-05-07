@@ -7,15 +7,19 @@ import org.beaucatcher.bson.Implicits._
 import java.io._
 
 // access to implementation collections, can be shared among GridFS objects for same bucket
-private[gridfs] class GridFSCollections(driver : Driver, val bucket : String)(implicit bobjectQueryEncoder : QueryEncoder[BObject],
-    bobjectQueryResultDecoder : QueryResultDecoder[BObject],
-    bobjectUpdateQueryEncoder : UpdateQueryEncoder[BObject],
-    bobjectUpsertEncoder : UpsertEncoder[BObject],
-    bobjectModifierEncoder : ModifierEncoder[BObject],
-    objectIdIdEncoder : IdEncoder[ObjectId],
-    anyValueDecoder : ValueDecoder[Any]) {
+private[gridfs] class GridFSCollections(driver : Driver, val bucket : String) {
+    private lazy val fileCodecs = new IteratorBasedCodecs[GridFSFile]() {
+        override def toIterator(o : GridFSFile) : Iterator[(String, Any)] = {
+            MapCodecs.mapToIterator(o.underlying)
+        }
+
+        override def fromIterator(i : Iterator[(String, Any)]) : GridFSFile = {
+            new GridFSFile(MapCodecs.iteratorToMap(i))
+        }
+    }
+
     private lazy val fileCodecSet = {
-        val fileCodecs = driver.newBObjectBasedCodecs[GridFSFile](f => f.underlying, obj => new GridFSFile(obj))
+        import BObjectCodecs._
         import fileCodecs._
 
         CollectionCodecSet[BObject, GridFSFile, ObjectId, Any]()
@@ -153,8 +157,8 @@ sealed trait SyncGridFS extends GridFS {
 
 object SyncGridFS {
     private[gridfs] def newGridFSCollections(driver : Driver, bucket : String) : GridFSCollections = {
-        implicit val idEncoder = driver.newObjectIdIdEncoder
-        val codecs = driver.newBObjectCodecSet[ObjectId]()
+        import BObjectCodecs._
+        val codecs = BObjectCodecs.newCodecSet[ObjectId]()
         import codecs.{ collectionModifierEncoderEntity => _, collectionIdEncoder => _, _ }
         new GridFSCollections(driver, bucket)
     }

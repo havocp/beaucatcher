@@ -127,6 +127,12 @@ private[beaucatcher] object CodecUtils {
         buf.writeLong(value)
     }
 
+    def writeFieldDouble(buf: EncodeBuffer, name: String, value: Double): Unit = {
+        buf.writeByte(Bson.NUMBER)
+        writeNulString(buf, name)
+        buf.writeDouble(value)
+    }
+
     def writeFieldString(buf: EncodeBuffer, name: String, value: String): Unit = {
         buf.writeByte(Bson.STRING)
         writeNulString(buf, name)
@@ -175,9 +181,7 @@ private[beaucatcher] object CodecUtils {
             case v: Long =>
                 writeFieldLong(buf, name, v)
             case v: Double =>
-                buf.writeByte(Bson.NUMBER)
-                writeNulString(buf, name)
-                buf.writeDouble(v)
+                writeFieldDouble(buf, name, v)
             case v: ObjectId =>
                 writeFieldObjectId(buf, name, v)
             case v: String =>
@@ -211,6 +215,9 @@ private[beaucatcher] object CodecUtils {
                 buf.writeByte(Bson.ARRAY)
                 writeNulString(buf, name)
                 writeArrayAny(buf, v, documentFieldWriter)
+            case unknown =>
+                throw new BugInSomethingMongoException("Value is not a supported type for encoding: " +
+                    unknown.getClass.getSimpleName + ": " + unknown)
         }
     }
 
@@ -234,8 +241,12 @@ private[beaucatcher] object CodecUtils {
         idEncoder.encodeField(buf, name, id)
     }
 
-    def readEntity[E](buf: DecodeBuffer)(implicit entitySupport: QueryResultDecoder[E]): E = {
+    def readDocument[E](buf: DecodeBuffer)(implicit entitySupport: DocumentDecoder[E]): E = {
         entitySupport.decode(buf)
+    }
+
+    def readEntity[E](buf: DecodeBuffer)(implicit entitySupport: QueryResultDecoder[E]): E = {
+        readDocument(buf)
     }
 
     def readValue[V](what: Byte, buf: DecodeBuffer)(implicit valueDecoder: ValueDecoder[V]): V = {
@@ -290,7 +301,7 @@ private[beaucatcher] object CodecUtils {
         b.result()
     }
 
-    def readAny[E](what: Byte, buf: DecodeBuffer)(implicit nestedDecoder: QueryResultDecoder[E]): Any = {
+    def readAny[E](what: Byte, buf: DecodeBuffer)(implicit nestedDecoder: DocumentDecoder[E]): Any = {
         what match {
             case Bson.NUMBER =>
                 buf.readDouble()
@@ -324,7 +335,7 @@ private[beaucatcher] object CodecUtils {
             case Bson.ARRAY =>
                 readArrayAny[E](buf)
             case Bson.OBJECT =>
-                readEntity[E](buf)
+                readDocument[E](buf)
             case Bson.BINARY =>
                 val len = buf.readInt()
                 val subtype = BsonSubtype.fromByte(buf.readByte()).getOrElse(BsonSubtype.GENERAL)
@@ -338,13 +349,14 @@ private[beaucatcher] object CodecUtils {
                 Bson.SYMBOL |
                 Bson.CODE_W_SCOPE |
                 Bson.MINKEY |
-                Bson.MAXKEY =>
+                Bson.MAXKEY |
+                _ =>
                 // TODO
                 throw new MongoException("Encountered value of type " + Integer.toHexString(what) + " which is currently unsupported")
         }
     }
 
-    private def readArrayAny[E](buf: DecodeBuffer)(implicit nestedDecoder: QueryResultDecoder[E]): Seq[Any] = {
+    private def readArrayAny[E](buf: DecodeBuffer)(implicit nestedDecoder: DocumentDecoder[E]): Seq[Any] = {
         val b = Seq.newBuilder[Any]
         decodeArrayForeach(buf, { (what, buf) =>
             b += readAny(what, buf)
@@ -369,12 +381,17 @@ private[beaucatcher] object CodecUtils {
         }
     }
 
-    def decodeDocumentIterator[T](buf: DecodeBuffer, func: (Byte, String, DecodeBuffer) => T): Iterator[(String, T)] = {
-        val len = buf.readInt()
+    def decodeDocumentIterator[T](orig: DecodeBuffer, func: (Byte, String, DecodeBuffer) => T): Iterator[(String, T)] = {
+        val len = orig.readInt()
         if (len == Bson.EMPTY_DOCUMENT_LENGTH) {
-            buf.skipBytes(len - 4)
+            orig.skipBytes(len - 4)
             Iterator.empty
         } else {
+            // In order to allow the iterator to be lazy, we have to take a slice
+            // so we can synchronously skip bytes in the original DecodeBuffer
+            val buf = orig.slice(orig.readerIndex, len - 4)
+            orig.skipBytes(len - 4)
+
             new Iterator[(String, T)]() {
                 private var nextWhat = buf.readByte()
 

@@ -74,7 +74,7 @@ class GridFSTest
     // This is a prime to better test buffer-copying code
     private val SMALL_CHUNK_SIZE = 7L
 
-    private def writeCharVaryingBufferLengths(stream : OutputStream, c : Char, count : Int) {
+    private def writeCharVaryingBufferLengths(stream: OutputStream, c: Char, count: Int) {
         var remaining = count
         var bufferLength = 5
         while (remaining > 0) {
@@ -137,7 +137,7 @@ class GridFSTest
 
     @Test
     def storeMetadata() {
-        val metadata = BObject("a" -> 1, "b" -> "hi")
+        val metadata = Map("a" -> 1, "b" -> "hi")
         val f = GridFSFile(CreateOptions(metadata = metadata))
         assertEquals(metadata, f.metadata)
         TestFS.sync.openForWriting(f).close()
@@ -229,7 +229,7 @@ class GridFSTest
         readAndRemoveSmallChunkFiles()
     }
 
-    private def createOneByteFile(filename : String, contentType : String, aliases : Seq[String]) = {
+    private def createOneByteFile(filename: String, contentType: String, aliases: Seq[String]) = {
         val f = GridFSFile(CreateOptions(filename = Some(filename), contentType = Some(contentType), aliases = aliases))
         val stream = TestFS.sync.openForWriting(f)
         stream.write('a')
@@ -237,7 +237,7 @@ class GridFSTest
         f._id
     }
 
-    private def javaCreateOneByteFile(filename : String, contentType : String, aliases : Seq[String]) = {
+    private def javaCreateOneByteFile(filename: String, contentType: String, aliases: Seq[String]) = {
         import scala.collection.JavaConverters._
 
         val jfs = new JavaFS()

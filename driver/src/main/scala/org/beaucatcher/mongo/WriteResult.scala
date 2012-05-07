@@ -25,11 +25,12 @@ private[mongo] case class WriteResultImpl(command: CommandResult, n: Int, upsert
 }
 
 object WriteResult {
-    def apply(raw: BObject): WriteResult = {
-        WriteResultImpl(CommandResult(raw),
-            n = CommandResult.getInt(raw, "n").getOrElse(0),
-            updatedExisting = CommandResult.getBoolean(raw, "updatedExisting"),
-            upserted = raw.get("upserted") map { _.unwrapped })
+    def apply(raw: TraversableOnce[(String, Any)]): WriteResult = {
+        val m = raw.toMap
+        WriteResultImpl(CommandResult(m.iterator),
+            n = CommandResult.getInt(m, "n").getOrElse(0),
+            updatedExisting = CommandResult.getBoolean(m, "updatedExisting"),
+            upserted = m.get("upserted"))
     }
 
     def apply(ok: Boolean, err: Option[String] = None, n: Int = 0,

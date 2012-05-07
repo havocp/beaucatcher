@@ -11,7 +11,7 @@ import akka.dispatch.Future
  * you can't construct a [[org.beaucatcher.mongo.SystemCollections]] directly.
  */
 final class SystemCollections private[mongo] (driver : Driver) {
-    private implicit val stringIdEncoder = driver.newStringIdEncoder()
+    import IdEncoders._
 
     private def createCollectionAccess[EntityType <: Product : Manifest, IdType : IdEncoder](name : String) = {
         val d = driver
@@ -74,8 +74,10 @@ trait SyncDatabase {
 
     final def command(cmd : BObject) : CommandResult = command(cmd, CommandOptions.empty)
 
-    def command(cmd : BObject, options : CommandOptions) : CommandResult =
+    def command(cmd : BObject, options : CommandOptions) : CommandResult = {
+        import BObjectCodecs._
         underlying.command(cmd, options)
+    }
 
     final def createCollection(name : String) : CommandResult = {
         createCollection(name, CreateCollectionOptions.empty)
@@ -111,8 +113,10 @@ trait AsyncDatabase {
 
     final def command(cmd : BObject) : Future[CommandResult] = command(cmd, CommandOptions.empty)
 
-    def command(cmd : BObject, options : CommandOptions) : Future[CommandResult] =
-        context.driverContext.database.async.command(cmd, options)
+    def command(cmd : BObject, options : CommandOptions) : Future[CommandResult] = {
+        import BObjectCodecs._
+        underlying.command(cmd, options)
+    }
 
     final def createCollection(name : String) : Future[CommandResult] = {
         createCollection(name, CreateCollectionOptions.empty)

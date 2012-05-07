@@ -43,6 +43,7 @@ object IdEncoders extends IdEncoders {
         override def encodeField(buf: EncodeBuffer, name: String, value: String): Unit = {
             writeFieldString(buf, name, value)
         }
+        override def encodeFieldAny(value: String): Any = value
     }
 
     private object ObjectIdIdEncoder
@@ -50,6 +51,7 @@ object IdEncoders extends IdEncoders {
         override def encodeField(buf: EncodeBuffer, name: String, value: ObjectId): Unit = {
             writeFieldObjectId(buf, name, value)
         }
+        override def encodeFieldAny(value: ObjectId): Any = value
     }
 
     private object IntIdEncoder
@@ -57,6 +59,7 @@ object IdEncoders extends IdEncoders {
         override def encodeField(buf: EncodeBuffer, name: String, value: Int): Unit = {
             writeFieldInt(buf, name, value)
         }
+        override def encodeFieldAny(value: Int): Any = value
     }
 
     private object LongIdEncoder
@@ -64,6 +67,7 @@ object IdEncoders extends IdEncoders {
         override def encodeField(buf: EncodeBuffer, name: String, value: Long): Unit = {
             writeFieldLong(buf, name, value)
         }
+        override def encodeFieldAny(value: Long): Any = value
     }
 
 }

@@ -17,19 +17,6 @@ trait DriverProvider {
  */
 trait Driver {
 
-    // TODO These codec set methods are a temporary hack; we don't really want the drivers
-    // to know about BObject or case classes.
-    private[beaucatcher] def newBObjectCodecSet[IdType: IdEncoder](): CollectionCodecSet[BObject, BObject, IdType, BValue]
-
-    private[beaucatcher] def newCaseClassCodecSet[EntityType <: Product: Manifest, IdType: IdEncoder](): CollectionCodecSet[BObject, EntityType, IdType, Any]
-
-    private[beaucatcher] def newStringIdEncoder(): IdEncoder[String]
-
-    private[beaucatcher] def newObjectIdIdEncoder(): IdEncoder[ObjectId]
-
-    private[beaucatcher] def newBObjectBasedCodecs[E](toBObject: (E) => BObject,
-        fromBObject: (BObject) => E): BObjectBasedCodecs[E]
-
     private[beaucatcher] def newSyncCollection(name: String)(implicit context: DriverContext): SyncDriverCollection
 
     private[beaucatcher] def newAsyncCollection(name: String)(implicit context: DriverContext): AsyncDriverCollection

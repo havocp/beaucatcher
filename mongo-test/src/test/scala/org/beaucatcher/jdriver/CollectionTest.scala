@@ -7,10 +7,9 @@ import org.beaucatcher.mongo._
 import org.junit.Assert._
 import org.junit._
 import foo._
-import com.mongodb.DBObject
 
 package foo {
-    import JavaCodecs._
+    import BObjectCodecs._
 
     case class Foo(_id: ObjectId, intField: Int, stringField: String) extends abstractfoo.AbstractFoo
 
@@ -54,24 +53,6 @@ class CollectionTest
     override def newFoo(_id: ObjectId, intField: Int, stringField: String) = Foo(_id, intField, stringField)
     override def newFooWithIntId(_id: Int, intField: Int, stringField: String) = FooWithIntId(_id, intField, stringField)
     override def newFooWithOptionalField(_id: ObjectId, intField: Int, stringField: Option[String]) = FooWithOptionalField(_id, intField, stringField)
-
-    override def roundTripThroughJava(bvalue: BValue) {
-        // be sure we can round-trip through Java
-        import JavaConversions._
-        val jvalue = bvalue.unwrappedAsJava
-        val wrapped = wrapJavaAsBValue(jvalue)
-        assertEquals(bvalue, wrapped)
-
-        // and be sure the wrap/unwrap of BObject works
-        import org.beaucatcher.jdriver.Implicits._
-        bvalue match {
-            case o: BObject =>
-                val dbval: DBObject = new BObjectDBObject(o)
-                val asBObject: BObject = dbval
-                assertEquals(bvalue, asBObject)
-            case _ =>
-        }
-    }
 
     // factoring this up into AbstractCollectionTest is just too annoying
     @Test

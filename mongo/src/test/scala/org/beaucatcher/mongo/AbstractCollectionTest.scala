@@ -984,8 +984,6 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
     private val objectManyTypes = BsonTest.makeObjectManyTypes()
     private val arrayManyTypes = BsonTest.makeArrayManyTypes()
 
-    protected def roundTripThroughJava(bvalue : BValue) : Unit
-
     private def roundTrip[A <% BValue](value : A) {
         val bvalue : BValue = value
 
@@ -997,8 +995,6 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
             case _ =>
                 assertEquals(value, bvalue.unwrapped)
         }
-
-        roundTripThroughJava(bvalue)
 
         val orig = BObject("_id" -> ObjectId(),
             "value" -> bvalue)

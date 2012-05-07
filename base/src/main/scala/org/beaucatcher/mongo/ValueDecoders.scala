@@ -21,5 +21,13 @@ object ValueDecoders {
         override def decode(code: Byte, buf: DecodeBuffer): Any = {
             readAny[E](code, buf)
         }
+        override def decodeAny(value: Any): Any = {
+            value match {
+                case i: Iterator[(String, Any)] =>
+                    documentDecoder.decodeIterator(i)
+                case x =>
+                    x
+            }
+        }
     }
 }

@@ -54,11 +54,6 @@ class CollectionTest
     override def newFooWithIntId(_id: Int, intField: Int, stringField: String) = FooWithIntId(_id, intField, stringField)
     override def newFooWithOptionalField(_id: ObjectId, intField: Int, stringField: Option[String]) = FooWithOptionalField(_id, intField, stringField)
 
-    override def roundTripThroughJava(bvalue: BValue) {
-        // FIXME this test is pointless except with Java driver
-        // or other drivers with their own value types
-    }
-
     // factoring this up into AbstractCollectionTest is just too annoying
     @Test
     def testCustomQueryReturnsVariousEntityTypes() {

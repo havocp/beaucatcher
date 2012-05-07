@@ -12,34 +12,7 @@ import java.util.Random
 
 class SerializerTest extends TestUtils {
 
-    private def testRoundTrip[O](obj: O)(implicit encoder: QueryEncoder[O], decoder: QueryResultDecoder[O]): Unit = {
-        import CodecUtils._
-
-        val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 128)
-
-        writeQuery(Buffer(buf), obj, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
-
-        /*
-        System.err.println("Wrote " + bobj + " to buffer: " + buf)
-
-        buf.resetReaderIndex()
-        var i = 0
-        while (i < buf.writerIndex()) {
-            if (i % 4 == 0)
-                System.err.println("  " + buf.getInt(i))
-            val b = buf.getByte(i)
-            System.err.println("" + i + ": 0x" + Integer.toHexString(b))
-            if (Character.isLetter(b))
-                System.err.println("    " + Character.toString(b.toChar))
-            i += 1
-        }
-        */
-
-        buf.resetReaderIndex()
-        val decoded = readEntity[O](Buffer(buf))
-
-        assertEquals(obj, decoded)
-    }
+    import SerializerTest._
 
     @Test
     def roundTripBObject(): Unit = {
@@ -56,24 +29,13 @@ class SerializerTest extends TestUtils {
     @Test
     def roundTripMap(): Unit = {
         import MapCodecs._
-        val many: Map[String, Any] = BsonTest.makeObjectManyTypes().unwrapped
+        val many: Map[String, Any] = makeMapManyTypes()
         // first test each field separately
         for (field <- many) {
             testRoundTrip(Map(field._1 -> field._2))
         }
         // then test the whole giant object
         testRoundTrip(many)
-    }
-
-    private def mapValuesToIterators(m: Map[String, Any]): Map[String, Any] = {
-        m.mapValues({ v =>
-            v match {
-                case m: Map[_, _] =>
-                    m.iterator
-                case v =>
-                    v
-            }
-        })
     }
 
     private def growBufferWhenNeeded[O](obj: O)(implicit encoder: QueryEncoder[O]): Unit = {
@@ -126,4 +88,37 @@ class SerializerTest extends TestUtils {
         }
         growBufferWhenNeeded(mapValuesToIterators(many).iterator)
     }
+}
+
+object SerializerTest {
+
+    def testRoundTrip[O](obj: O)(implicit encoder: QueryEncoder[O], decoder: QueryResultDecoder[O]): Unit = {
+        import CodecUtils._
+
+        val buf = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 128)
+
+        writeQuery(Buffer(buf), obj, Mongo.DEFAULT_MAX_DOCUMENT_SIZE)
+
+        /*
+        System.err.println("Wrote " + obj + " to buffer: " + buf)
+
+        buf.resetReaderIndex()
+        var i = 0
+        while (i < buf.writerIndex()) {
+            if (i % 4 == 0)
+                System.err.println("  " + buf.getInt(i))
+            val b = buf.getByte(i)
+            System.err.println("" + i + ": 0x" + Integer.toHexString(b))
+            if (Character.isLetter(b))
+                System.err.println("    " + Character.toString(b.toChar))
+            i += 1
+        }
+        */
+
+        buf.resetReaderIndex()
+        val decoded = readEntity[O](Buffer(buf))
+
+        assertEquals(obj, decoded)
+    }
+
 }
