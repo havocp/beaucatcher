@@ -1,9 +1,7 @@
 package org.beaucatcher.mongo.cdriver
 
 import org.beaucatcher.bson._
-import org.beaucatcher.driver._
 import org.beaucatcher.mongo._
-import org.beaucatcher.mongo.cdriver._
 import akka.actor.ActorSystem
 import com.typesafe.config._
 

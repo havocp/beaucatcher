@@ -208,19 +208,8 @@ private[cdriver] final class ChannelDriverAsyncCollection(override val name: Str
         remove[RawEncoded](Mongo.DELETE_FLAG_SINGLE_REMOVE, raw)
     }
 
-    // TODO don't do it this way?
-    private def indexNameHack[Q](keys: Q)(implicit querySupport: QueryEncoder[Q]): String = {
-        import BObjectCodecs._
-        // convert to BObject via serializing
-        val buf = context.driver.backend.newDynamicEncodeBuffer(64)
-        querySupport.encode(buf, keys)
-        val bobj = implicitly[QueryResultDecoder[BObject]].decode(buf.toDecodeBuffer())
-        // then compute the index name
-        defaultIndexName(bobj)
-    }
-
     override def ensureIndex[Q](keys: Q, options: IndexOptions)(implicit queryEncoder: QueryEncoder[Q]): Future[WriteResult] = {
-        val indexName = options.name.getOrElse(indexNameHack(keys))
+        val indexName = options.name.getOrElse(defaultIndexName(keys))
         val raw = newRaw()
         raw.writeField("name", indexName)
         raw.writeField("ns", fullName)

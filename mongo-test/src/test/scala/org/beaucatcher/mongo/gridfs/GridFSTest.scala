@@ -4,7 +4,7 @@ import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.beaucatcher.mongo.gridfs._
-import org.beaucatcher.mongo.jdriver._
+import org.beaucatcher.mongo.jdriver.JavaDriverTestContextProvider
 import org.junit.Assert._
 import org.junit._
 import org.apache.commons.io._

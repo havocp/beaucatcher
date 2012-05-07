@@ -9,6 +9,7 @@ import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import org.beaucatcher.driver._
 import org.beaucatcher.channel._
+import org.beaucatcher.wire._
 import java.net.SocketAddress
 
 private[cdriver] case class GetLastError(database: String, w: Int)
@@ -173,16 +174,23 @@ private[cdriver] class ConnectionActor(val backend: ChannelBackend, val addr: So
 
     private def newSocket(): Future[MongoSocket] = {
         socketFactory.connect(addr) flatMap { socket =>
-            import Implicits._ // TODO use RawEncoder rather than BObject
-            import BObjectCodecs._
-            socket.sendCommand(0 /* flags */ , "admin", BObject("ismaster" -> 1)) map { reply =>
-                val doc = reply.iterator[BObject]().next()
-                if (doc.getUnwrappedAs[Boolean]("ismaster")) {
-                    val maxSize = doc.getUnwrappedAs[Int]("maxBsonObjectSize")
-                    socket.maxDocumentSize = maxSize
-                    socket
-                } else {
-                    throw new MongoException("Connected to non-master node " + addr)
+            import MapCodecs._
+            import RawEncoded._
+            val request = RawEncoded(backend)
+            request.writeField("ismaster", 1)
+            socket.sendCommand(0 /* flags */ , "admin", request) map { reply =>
+                val doc = reply.iterator[Map[String, Any]]().next()
+                doc.get("ismaster") match {
+                    case Some(true) =>
+                        val maxSize = doc.get("maxBsonObjectSize") match {
+                            case n: Number => n.intValue
+                            case _ =>
+                                Mongo.DEFAULT_MAX_DOCUMENT_SIZE
+                        }
+                        socket.maxDocumentSize = maxSize
+                        socket
+                    case _ =>
+                        throw new MongoException("Connected to non-master node " + addr)
                 }
             }
         }

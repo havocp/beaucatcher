@@ -128,15 +128,13 @@ object BeaucatcherBuild extends Build {
     lazy val driver = Project("beaucatcher-driver",
         file("driver"),
         settings = projectSettings ++
-              Seq(libraryDependencies ++= Seq())) dependsOn (base % "compile->compile;test->test",
-                                // FIXME don't depend on bson
-                                bson % "compile->compile;test->test")
+              Seq(libraryDependencies ++= Seq())) dependsOn (base % "compile->compile;test->test")
 
     // mongo API
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
         settings = projectSettings ++
-              Seq()) dependsOn (bson % "compile->compile;test->test", driver % "compile->compile;test->test")
+              Seq(libraryDependencies := Seq())) dependsOn (bson % "compile->compile;test->test", driver % "compile->compile;test->test")
 
     // backend for beaucatcher-mongo based on mongo-java-driver
     lazy val jdriver = Project("beaucatcher-java-driver",
@@ -148,11 +146,14 @@ object BeaucatcherBuild extends Build {
     lazy val channelDriver = Project("beaucatcher-channel-driver",
         file("channel-driver"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq())) dependsOn(channelNetty % "compile->compile;test->test", driver % "compile->compile;test->test")
+            Seq(libraryDependencies := Seq())) dependsOn(channel % "compile->compile;test->test", driver % "compile->compile;test->test")
 
     // mongo tests at top of dependency chain
     lazy val mongoTest = Project("beaucatcher-mongo-test",
         file("mongo-test"),
         settings = projectSettings ++
-              Seq()) dependsOn (mongo % "compile->compile;test->test", jdriver % "compile->compile;test->test", channelDriver % "compile->compile;test->test", bson % "compile->compile;test->test")
+              Seq(libraryDependencies := Seq(Test.mongoJavaDriver, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test",
+                                                                                                bson % "compile->compile;test->test",
+                                                                                                jdriver % "runtime->runtime",
+                                                                                                channelDriver % "runtime->runtime")
 }
