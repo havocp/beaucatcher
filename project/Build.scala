@@ -90,7 +90,7 @@ object BeaucatcherBuild extends Build {
     lazy val base = Project("beaucatcher-base",
         file("base"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(Test.junitInterface, Test.slf4j)))
+            Seq(libraryDependencies := Seq(Test.junitInterface, Test.slf4j, akkaActor)))
 
     // abstract API for a mongo channel
     lazy val channel = Project("beaucatcher-channel",
@@ -115,7 +115,7 @@ object BeaucatcherBuild extends Build {
     lazy val driver = Project("beaucatcher-driver",
         file("driver"),
         settings = projectSettings ++
-              Seq(libraryDependencies ++= Seq(akkaActor))) dependsOn (base % "compile->compile;test->test",
+              Seq(libraryDependencies ++= Seq())) dependsOn (base % "compile->compile;test->test",
                                 // FIXME don't depend on bson
                                 bson % "compile->compile;test->test")
 

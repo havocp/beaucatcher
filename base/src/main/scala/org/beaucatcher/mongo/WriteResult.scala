@@ -1,7 +1,5 @@
 package org.beaucatcher.mongo
 
-import org.beaucatcher.bson._
-
 trait WriteResult extends CommandResult {
     def n: Int
 

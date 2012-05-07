@@ -1,7 +1,5 @@
 package org.beaucatcher.mongo
 
-import org.beaucatcher.bson._
-
 /**
  * Entity representing an object in the system.indexes collection.
  */

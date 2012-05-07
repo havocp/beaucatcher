@@ -1,13 +1,13 @@
 package org.beaucatcher.mongo
 
-import akka.dispatch._
-import akka.util._
-import akka.pattern._
-import scala.collection.Iterator
+import akka.dispatch.Await
+import akka.dispatch.ExecutionContext
+import akka.dispatch.Future
+import akka.dispatch.Promise
+import akka.util.Duration
 import java.io.Closeable
-import scala.annotation.tailrec
 import scala.collection.GenTraversableOnce
-import java.util.concurrent.ConcurrentLinkedQueue
+import scala.collection.Iterator
 
 trait Cursor[+A] extends Iterator[A] with Closeable {
     def close(): Unit

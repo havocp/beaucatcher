@@ -1,7 +1,5 @@
 package org.beaucatcher.mongo
 
-import org.beaucatcher.bson._
-
 trait CommandResult {
     def ok: Boolean
     def errmsg: Option[String]
