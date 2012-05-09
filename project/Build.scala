@@ -67,7 +67,8 @@ object Dependencies {
     val commonsCodec = "commons-codec" % "commons-codec" % "1.4"
     val mongoJavaDriver  = "org.mongodb" % "mongo-java-driver" % "2.7.3"
     val akkaActor = "com.typesafe.akka" % "akka-actor" % "2.0"
-    val netty = "io.netty" % "netty" % "3.3.1.Final"
+    val netty33 = "io.netty" % "netty" % "3.3.1.Final"
+    val netty34 = "io.netty" % "netty" % "3.4.4.Final"
 
     // Dependencies in "test" configuration
     object Test {
@@ -89,7 +90,7 @@ object BeaucatcherBuild extends Build {
     // this is a weird syntax because the usual apply()
     // is limited to 9 items in sbt 0.11
     lazy val rootMembers: Seq[ProjectReference] =
-        Seq(base, channel, channelNetty, bson,
+        Seq(base, channel, channelNetty33, channelNetty34, bson,
             mongo, driver, jdriver,
             channelDriver, mongoTest).map({ p: Project => LocalProject(p.id) })
 
@@ -112,10 +113,78 @@ object BeaucatcherBuild extends Build {
             Seq(libraryDependencies := Seq(akkaActor))) dependsOn(base)
 
     // netty implementation of a mongo channel
-    lazy val channelNetty = Project("beaucatcher-channel-netty",
-        file("channel-netty"),
+    val generateNettySources = TaskKey[Seq[File]]("generate-netty-sources", "Generate copy of netty sources for versioned drivers")
+    val nettyABI = SettingKey[String]("netty-abi", "Netty ABI identifier, like '33' for 3.3.x or '34' for 3.4.x")
+
+    def generateNettySourcesTask(streams: TaskStreams, baseDir: File, managedTargetDir: File, nettyABI: String) = {
+        // there is probably a better way to do this
+        val genericNettySourcesDir = (baseDir /  "../channel-netty/src/main/scala").getCanonicalFile
+        val genericNettySources = PathFinder(genericNettySourcesDir) ** new SimpleFileFilter({ f =>
+            f.getName.endsWith(".scala") || f.getName.endsWith(".conf")
+        })
+
+        val generatedBuilder = Seq.newBuilder[File]
+        val targetDir = managedTargetDir / "scala"
+
+        val commonPrefix = (baseDir.getParentFile.getCanonicalPath zip targetDir.getPath)
+            .takeWhile(pair => pair._1 == pair._2)
+            .map(_._1)
+            .mkString("") + "/"
+
+        streams.log.info("Copying netty code from " + genericNettySourcesDir.getPath.substring(commonPrefix.length) + " to " + targetDir.getPath.substring(commonPrefix.length))
+
+        IO.createDirectory(targetDir)
+
+        for (src <- genericNettySources.get) {
+            val srcAbsolute = src.getCanonicalPath
+            val splitString = "/src/main/scala/"
+            val relativePath = srcAbsolute.substring(srcAbsolute.indexOf(splitString) + splitString.length)
+            val origData = IO.read(src asFile)
+            val target = targetDir / relativePath
+            //streams.log.info(srcAbsolute + " -> " + target)
+            IO.createDirectory(target.getParentFile)
+            val newContent = origData
+                         .replace("class NettyXX", "class Netty" + nettyABI)
+                         .replace("extends NettyXX", "extends Netty" + nettyABI)
+            val changed = !target.exists() || {
+                val oldContent = IO.read(target asFile)
+                newContent != oldContent
+            }
+            if (changed) {
+                streams.log.info("Generating " + target.getPath.substring(commonPrefix.length))
+                IO.write(target asFile, newContent)
+            }
+            generatedBuilder += target
+        }
+
+        generatedBuilder.result
+    }
+
+    def makeGenerateNettySettings(abi: String) = {
+        Seq(
+            nettyABI := abi,
+            generateNettySources <<= (streams, baseDirectory, sourceManaged in Compile, nettyABI) map {
+                (streams, baseDir, managedTarget, abi) =>
+                    generateNettySourcesTask(streams, baseDir, managedTarget, abi)
+            },
+            sources in Compile <<= (generateNettySources, sources in Compile) map {
+                (generated, sources) =>
+                    (sources ++ generated).distinct
+            })
+    }
+
+
+    lazy val channelNetty33 = Project("beaucatcher-channel-netty33",
+        file("channel-netty33"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(netty))) dependsOn(channel % "compile->compile;test->test", bson % "test->test")
+            makeGenerateNettySettings("33") ++
+            Seq(libraryDependencies := Seq(netty33))) dependsOn(channel % "compile->compile;test->test", bson % "test->test")
+
+    lazy val channelNetty34 = Project("beaucatcher-channel-netty34",
+        file("channel-netty34"),
+        settings = projectSettings ++
+            makeGenerateNettySettings("34") ++
+            Seq(libraryDependencies := Seq(netty34))) dependsOn(channel % "compile->compile;test->test", bson % "test->test")
 
     // bson/json parsing and syntax tree
     lazy val bson = Project("beaucatcher-bson",
@@ -155,5 +224,6 @@ object BeaucatcherBuild extends Build {
               Seq(libraryDependencies := Seq(Test.mongoJavaDriver, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test",
                                                                                                 bson % "compile->compile;test->test",
                                                                                                 jdriver % "runtime->runtime",
-                                                                                                channelDriver % "runtime->runtime")
+                                                                                                channelDriver % "runtime->runtime",
+                                                                                                channelNetty34 % "runtime->runtime")
 }

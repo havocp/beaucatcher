@@ -53,6 +53,12 @@ class CollectionTest
     override def newFooWithIntId(_id: Int, intField: Int, stringField: String) = FooWithIntId(_id, intField, stringField)
     override def newFooWithOptionalField(_id: ObjectId, intField: Int, stringField: Option[String]) = FooWithOptionalField(_id, intField, stringField)
 
+    @Test
+    def usingExpectedDriver(): Unit = {
+        assertTrue("expecting to use channel driver",
+            implicitly[Context].driver.getClass.getSimpleName.contains("ChannelDriver"))
+    }
+
     // factoring this up into AbstractCollectionTest is just too annoying
     @Test
     def testCustomQueryReturnsVariousEntityTypes() {

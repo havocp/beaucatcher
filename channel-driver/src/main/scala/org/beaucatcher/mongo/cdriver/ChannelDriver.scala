@@ -6,6 +6,7 @@ import org.beaucatcher.driver._
 import org.beaucatcher.channel._
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
+import java.lang.reflect.InvocationTargetException
 
 final class ChannelDriver private[mongo] (val config: Config, val loader: ClassLoader)
     extends Driver {
@@ -20,10 +21,15 @@ final class ChannelDriver private[mongo] (val config: Config, val loader: ClassL
                 throw new MongoException("Configured channel driver backend '" + backendName + "' not found", e)
         }
         try {
-            klass.getDeclaredConstructor(classOf[Config]).newInstance(config).asInstanceOf[ChannelBackend]
+            try {
+                klass.getDeclaredConstructor(classOf[Config]).newInstance(config).asInstanceOf[ChannelBackend]
+            } catch {
+                case ite: InvocationTargetException =>
+                    throw ite.getCause()
+            }
         } catch {
             case e: Exception =>
-                throw new MongoException("Failed to instantiate '" + backendName + "': " + e.getMessage, e)
+                throw new MongoException("Failed to instantiate '" + backendName + "': " + e.getClass.getSimpleName + ": " + e.getMessage, e)
         }
     }
 

@@ -21,7 +21,9 @@ object JavaTestContexts {
     import scala.collection.JavaConverters._
 
     private def config(dbname: String): Config = {
-        ConfigFactory.parseMap(Map("beaucatcher.mongo.uri" -> ("mongodb://localhost:27017/" + dbname)).asJava)
+        ConfigFactory.parseMap(Map(
+            "beaucatcher.mongo.driver" -> "org.beaucatcher.mongo.jdriver.JavaDriver",
+            "beaucatcher.mongo.uri" -> ("mongodb://localhost:27017/" + dbname)).asJava)
             .withFallback(ConfigFactory.defaultReference())
     }
 

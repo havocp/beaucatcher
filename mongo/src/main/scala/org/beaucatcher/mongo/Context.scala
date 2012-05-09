@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import scala.annotation.implicitNotFound
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import java.lang.reflect.InvocationTargetException
 
 /**
  * A [[org.beaucatcher.mongo.Context]] represents an underlying Mongo protocol implementation, a connection
@@ -31,10 +32,15 @@ trait Context {
                 throw new MongoException("Configured driver '" + settings.driverClassName + "' not found", e)
         }
         try {
-            klass.getDeclaredConstructor(classOf[Config], classOf[ClassLoader]).newInstance(config, classLoader).asInstanceOf[Driver]
+            try {
+                klass.getDeclaredConstructor(classOf[Config], classOf[ClassLoader]).newInstance(config, classLoader).asInstanceOf[Driver]
+            } catch {
+                case ite: InvocationTargetException =>
+                    throw ite.getCause()
+            }
         } catch {
             case e: Exception =>
-                throw new MongoException("Failed to instantiate '" + settings.driverClassName + "': " + e.getMessage, e)
+                throw new MongoException("Failed to instantiate '" + settings.driverClassName + "': " + e.getClass.getSimpleName + ": " + e.getMessage, e)
         }
     }
 
