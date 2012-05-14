@@ -813,7 +813,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         assertEquals(4, old4.get.intField)
 
         // update 3
-        Foo.sync[Foo].update(BObject("intField" -> 3),
+        Foo.sync[Foo].updateWithModifier(BObject("intField" -> 3),
             BObject("$inc" -> BObject("intField" -> 87)))
         assertEquals(4, Foo.sync.count())
 
@@ -871,8 +871,9 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         // http://www.mongodb.org/display/DOCS/Updating
 
         assertEquals(0, Foo.sync.count())
-        Foo.sync[Foo].updateUpsert(BObject("intField" -> 57),
-            BObject("$set" -> BObject("stringField" -> "hello")))
+        Foo.sync[Foo].updateWithModifier(BObject("intField" -> 57),
+            BObject("$set" -> BObject("stringField" -> "hello")),
+            UpdateOptions.upsert)
         assertEquals(1, Foo.sync.count())
         val found = Foo.sync[Foo].findOne()
         assertTrue(found.isDefined)

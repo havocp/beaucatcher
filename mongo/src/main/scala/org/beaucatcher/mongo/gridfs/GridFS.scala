@@ -22,10 +22,10 @@ private[gridfs] class GridFSCollections(val bucket: String) {
         import BObjectCodecs._
         import fileCodecs._
 
-        CollectionCodecSet[BObject, GridFSFile, ObjectId, Any]()
+        CollectionCodecSet[BObject, GridFSFile, GridFSFile, ObjectId, Any]()
     }
 
-    private def createCollectionAccessWithEntity[EntityType <: AnyRef: Manifest, IdType: IdEncoder](name: String, entityCodecs: CollectionCodecSet[BObject, EntityType, IdType, Any],
+    private def createCollectionAccessWithEntity[EntityType <: AnyRef: Manifest, IdType: IdEncoder](name: String, entityCodecs: CollectionCodecSet[BObject, EntityType, EntityType, IdType, Any],
         migrateCallback: (CollectionAccess[EntityType, IdType], Context) => Unit) = {
         new CollectionAccess[EntityType, IdType] {
             override val collectionName = name
@@ -95,7 +95,7 @@ sealed trait SyncGridFS extends GridFS {
      * Obtain a read-only data access object for the bucket.files collection.
      * Use this to query for files.
      */
-    def collection: ReadOnlySyncCollection[BObject, GridFSFile, ObjectId, _] = filesCollection
+    def collection: BoundReadOnlySyncCollection[BObject, GridFSFile, ObjectId, _] = filesCollection
 
     /**
      * Delete one file by ID.

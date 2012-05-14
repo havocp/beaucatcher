@@ -36,7 +36,7 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
     implicit def bobjectUpsertEncoder: UpsertEncoder[BObject] =
         BObjectUnmodifiedEncoder
 
-    def newCodecSet[IdType: IdEncoder](): CollectionCodecSet[BObject, BObject, IdType, BValue] =
+    def newCodecSet[IdType: IdEncoder](): CollectionCodecSet[BObject, BObject, BObject, IdType, BValue] =
         CodecSets.newBObjectCodecSet()
 
     private def unwrapIterator(bobj: BOrJObject): Iterator[(String, Any)] = {

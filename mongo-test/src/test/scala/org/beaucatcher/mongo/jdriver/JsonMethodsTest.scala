@@ -23,7 +23,7 @@ package restdemo {
         override val collectionName = "restfoo"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[Foo])
-        override def jsonSync(implicit context: Context): SyncCollection[BObject, BObject, _, _] = sync[BObject]
+        override def jsonSync(implicit context: Context): BoundSyncCollection[BObject, BObject, _, _] = sync[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         // This object inherits a complete Collection for BObject and for the Foo case class,
@@ -41,7 +41,7 @@ package restdemo {
         override val collectionName = "restfooWithIntId"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[FooWithIntId])
-        override def jsonSync(implicit context: Context): SyncCollection[BObject, BObject, _, _] = sync[BObject]
+        override def jsonSync(implicit context: Context): BoundSyncCollection[BObject, BObject, _, _] = sync[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         override def parseJValueIdFromPath(path: String): BInt32 = {

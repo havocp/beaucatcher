@@ -34,7 +34,7 @@ import org.beaucatcher.bson.ClassAnalysis
  */
 trait JsonMethods[SchemaType <: Product] {
     /** Point this to a Collection to use to store BObject */
-    protected def jsonSync(implicit context: Context): SyncCollection[BObject, BObject, _, _]
+    protected def jsonSync(implicit context: Context): BoundSyncCollection[BObject, BObject, _, _]
     /** Since we're a trait, we don't have a manifest and you have to provide this */
     protected def jsonAnalysis: ClassAnalysis[SchemaType]
     /** If you want to override the JSON flavor, do so here */

@@ -3,118 +3,139 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 import org.beaucatcher.driver._
 
-trait ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]
-    extends ReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
+/**
+ * For more detail, please see [[org.beaucatcher.mongo.ReadOnlyAsyncCollection]],
+ * which is the same except it returns the results wrapped in `Future`.
+ */
+sealed trait ReadOnlySyncCollection extends ReadOnlyCollection {
 
     protected[mongo] override def underlying: ReadOnlySyncDriverCollection
 
-    import codecs._
-
     final def count(): Long =
         underlying.count(EmptyDocument, CountOptions.empty)
-    final def count[A <% QueryType](query: A): Long =
-        count(query: QueryType, CountOptions.empty)
-    final def count[A <% QueryType](query: A, fields: Fields): Long =
-        count(query: QueryType, CountOptions(fields = fields.toOption))
-
-    final def count(query: QueryType, options: CountOptions): Long =
+    final def count[Q](query: Q)(implicit queryEncoder: QueryEncoder[Q]): Long =
+        count(query, CountOptions.empty)
+    final def count[Q](query: Q, fields: Fields)(implicit queryEncoder: QueryEncoder[Q]): Long =
+        count(query, CountOptions(fields = fields.toOption))
+    final def count[Q](query: Q, options: CountOptions)(implicit queryEncoder: QueryEncoder[Q]): Long =
         underlying.count(query, options)
 
-    final def distinct(key: String): Iterator[ValueType] =
+    final def distinct[V](key: String)(implicit valueDecoder: ValueDecoder[V]): Iterator[V] = {
+        // we just need any query encoder to _not_ use to encode the None in DistinctOptions.empty
+        import EmptyDocument.queryEncoder
         distinct(key, DistinctOptions.empty)
-    final def distinct[A <% QueryType](key: String, query: A): Iterator[ValueType] =
-        distinct(key, DistinctOptions[QueryType](query = Some(query)))
-
-    final def distinct(key: String, options: DistinctOptions[QueryType]): Iterator[ValueType] =
+    }
+    final def distinct[Q, V](key: String, query: Q)(implicit queryEncoder: QueryEncoder[Q], valueDecoder: ValueDecoder[V]): Iterator[V] =
+        distinct(key, DistinctOptions[Q](query = Some(query)))
+    final def distinct[Q, V](key: String, options: DistinctOptions[Q])(implicit queryEncoder: QueryEncoder[Q], valueDecoder: ValueDecoder[V]): Iterator[V] =
         underlying.distinct(key, options)
 
-    final def find(): Cursor[EntityType] =
+    final def find[E]()(implicit resultDecoder: QueryResultDecoder[E]): Cursor[E] =
         underlying.find(EmptyDocument, FindOptions.empty)
-    final def find[A <% QueryType](query: A): Cursor[EntityType] =
-        find(query: QueryType, FindOptions.empty)
-    final def find[A <% QueryType](query: A, fields: Fields): Cursor[EntityType] =
-        find(query: QueryType, FindOptions(fields = fields.toOption))
-    final def find[A <% QueryType](query: A, fields: Fields, skip: Long, limit: Long, batchSize: Int): Cursor[EntityType] =
-        find(query: QueryType, FindOptions(fields = fields.toOption, skip = Some(skip), limit = Some(limit), batchSize = Some(batchSize)))
-
-    final def find(query: QueryType, options: FindOptions): Cursor[EntityType] =
+    final def find[Q, E](query: Q)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Cursor[E] =
+        find(query: Q, FindOptions.empty)
+    final def find[Q, E](query: Q, fields: Fields)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Cursor[E] =
+        find(query: Q, FindOptions(fields = fields.toOption))
+    final def find[Q, E](query: Q, fields: Fields, skip: Long, limit: Long, batchSize: Int)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Cursor[E] =
+        find(query: Q, FindOptions(fields = fields.toOption, skip = Some(skip), limit = Some(limit), batchSize = Some(batchSize)))
+    final def find[Q, E](query: Q, options: FindOptions)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Cursor[E] =
         underlying.find(query, options)
 
-    final def findOne(): Option[EntityType] =
+    final def findOne[E]()(implicit resultDecoder: QueryResultDecoder[E]): Option[E] =
         underlying.findOne(EmptyDocument, FindOneOptions.empty)
-    final def findOne[A <% QueryType](query: A): Option[EntityType] =
-        findOne(query: QueryType, FindOneOptions.empty)
-    final def findOne[A <% QueryType](query: A, fields: Fields): Option[EntityType] =
-        findOne(query: QueryType, FindOneOptions(fields = fields.toOption))
-
-    final def findOne(query: QueryType, options: FindOneOptions): Option[EntityType] =
+    final def findOne[Q, E](query: Q)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        findOne(query: Q, FindOneOptions.empty)
+    final def findOne[Q, E](query: Q, fields: Fields)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        findOne(query: Q, FindOneOptions(fields = fields.toOption))
+    final def findOne[Q, E](query: Q, options: FindOneOptions)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
         underlying.findOne(query, options)
 
-    final def findOneById(id: IdType): Option[EntityType] =
+    final def findOneById[I, E](id: I)(implicit idEncoder: IdEncoder[I], resultDecoder: QueryResultDecoder[E]): Option[E] =
         findOneById(id, FindOneByIdOptions.empty)
-    final def findOneById(id: IdType, fields: Fields): Option[EntityType] =
+    final def findOneById[I, E](id: I, fields: Fields)(implicit idEncoder: IdEncoder[I], resultDecoder: QueryResultDecoder[E]): Option[E] =
         findOneById(id, FindOneByIdOptions(fields = fields.toOption))
-
-    final def findOneById(id: IdType, options: FindOneByIdOptions): Option[EntityType] =
+    final def findOneById[I, E](id: I, options: FindOneByIdOptions)(implicit idEncoder: IdEncoder[I], resultDecoder: QueryResultDecoder[E]): Option[E] =
         underlying.findOneById(id, options)
 
     /**
      * Queries mongod for the indexes on this collection.
      */
-    final def findIndexes(): Iterator[CollectionIndex] = {
+    final def findIndexes(): Cursor[CollectionIndex] = {
         import Implicits._
         database.system.indexes.sync[CollectionIndex].find(BObject("ns" -> fullName))
     }
 }
 
 /**
- * Trait expressing all data-access operations on a collection in synchronous form.
- * This trait does not include setup and teardown operations such as creating or
- * removing indexes; you would use the underlying API such as Casbah or Hammersmith
- * for that, for now.
- *
- * The recommended way to obtain an instance of [[org.beaucatcher.mongo.SyncCollection]]
- * is from the `sync` property on [[org.beaucatcher.mongo.CollectionAccess]],
- * which would in turn be implemented by the companion object of a case class
- * representing an object in a collection. For example you might have `case class Foo`
- * representing objects in the `foo` collection, with a companion object `object Foo`
- * which implements [[org.beaucatcher.mongo.CollectionAccess]]. You would then
- * write code such as:
- * {{{
- *    Foo.sync[BObject].find() // obtain results as a BObject
- *    Foo.sync[Foo].find()     // obtain results as a case class instance
- *    Foo.sync.count()         // entity type not relevant
- * }}}
- * This is only a convention though, of course there's more than one way to do it.
- *
- * @define findAndModifyVsUpdate
- *
- *   findAndModify(), findAndReplace() will affect only one object and will return
- *   either the old or the new object depending on whether you specify the
- *   [[org.beaucatcher.mongo.FindAndModifyNew]] flag. update() and its variants
- *   do not return an object, and with updateMulti() you can modify multiple
- *   objects at once.
- *
- * @define findAndReplaceDocs
- *
- *   Finds the first object matching the query and updates it with the
- *   values from the provided entity. However, the ID is not updated.
- *   Returns the old object, or the new one if the
- *   [[org.beaucatcher.mongo.FindAndModifyNew]] flag was provided.
- *   If multiple objects match the query, then the `sort` parameter
- *   determines which will be replaced; only one object is ever replaced.
- *   A sort object is a map from fields to the integer "1" for ascending,
- *   "-1" for descending.
- *   If specified, the `fields` parameter determines which fields are
- *   returned in the old (or new) object returned from the method.
+ * For more detail, please see [[org.beaucatcher.mongo.BoundReadOnlyAsyncCollection]],
+ * which is the same except it returns the results wrapped in `Future`.
  */
-trait SyncCollection[QueryType, EntityType, IdType, ValueType]
-    extends ReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]
-    with Collection[QueryType, EntityType, IdType, ValueType] {
+sealed trait BoundReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]
+    extends BoundReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
+
+    protected[mongo] override def unbound: ReadOnlySyncCollection
+
+    // change the def to a val so we can import it
+    protected[mongo] override val codecs: ReadOnlyCollectionCodecSet[QueryType, EntityType, IdType, ValueType]
+
+    import codecs._
+
+    final def count(): Long =
+        unbound.count()
+    final def count(query: QueryType): Long =
+        unbound.count(query)
+    final def count(query: QueryType, fields: Fields): Long =
+        unbound.count(query, fields)
+    final def count(query: QueryType, options: CountOptions): Long =
+        unbound.count(query, options)
+    final def distinct(key: String): Iterator[ValueType] =
+        unbound.distinct(key)
+    final def distinct(key: String, query: QueryType): Iterator[ValueType] =
+        unbound.distinct(key, query)
+    final def distinct(key: String, options: DistinctOptions[QueryType]): Iterator[ValueType] =
+        unbound.distinct(key, options)
+    final def find(): Cursor[EntityType] =
+        unbound.find()
+    final def find(query: QueryType): Cursor[EntityType] =
+        unbound.find(query: QueryType)
+    final def find(query: QueryType, fields: Fields): Cursor[EntityType] =
+        unbound.find(query: QueryType, fields)
+    final def find(query: QueryType, fields: Fields, skip: Long, limit: Long, batchSize: Int): Cursor[EntityType] =
+        unbound.find(query: QueryType, fields, skip, limit, batchSize)
+    final def find(query: QueryType, options: FindOptions): Cursor[EntityType] =
+        unbound.find(query, options)
+    final def findOne(): Option[EntityType] =
+        unbound.findOne()
+    final def findOne(query: QueryType): Option[EntityType] =
+        unbound.findOne(query: QueryType)
+    final def findOne(query: QueryType, fields: Fields): Option[EntityType] =
+        unbound.findOne(query: QueryType, fields)
+    final def findOne(query: QueryType, options: FindOneOptions): Option[EntityType] =
+        unbound.findOne(query, options)
+    final def findOneById(id: IdType): Option[EntityType] =
+        unbound.findOneById(id)
+    final def findOneById(id: IdType, fields: Fields): Option[EntityType] =
+        unbound.findOneById(id, fields)
+    final def findOneById(id: IdType, options: FindOneByIdOptions): Option[EntityType] =
+        unbound.findOneById(id, options)
+    final def findIndexes(): Cursor[CollectionIndex] =
+        unbound.findIndexes()
+}
+
+/**
+ * For more detail, please see [[org.beaucatcher.mongo.AsyncCollection]],
+ * which is the same except it returns the results wrapped in `Future`.
+ */
+sealed trait SyncCollection
+    extends ReadOnlySyncCollection with Collection {
 
     protected[mongo] override def underlying: SyncDriverCollection
 
-    import codecs._
+    /**
+     * $findAndModifyVsUpdate
+     */
+    final def findAndModify[Q, E](query: Q, update: Option[Q], options: FindAndModifyOptions[Q])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        underlying.findAndModify(query, update, options)
 
     /**
      * $findAndReplaceDocs
@@ -125,194 +146,166 @@ trait SyncCollection[QueryType, EntityType, IdType, ValueType]
      * @param o object with new values
      * @return old object
      */
-    final def findAndReplace[A <% QueryType](query: A, o: EntityType): Option[EntityType] =
-        underlying.findAndModify(query: QueryType, Some(o), FindAndModifyOptions.empty)
-
+    final def findAndReplace[Q, E](query: Q, o: E)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions.empty)
     /**
      * $findAndReplaceDocs
      *
      * $findAndModifyVsUpdate
      */
-    final def findAndReplace[A <% QueryType](query: A, o: EntityType, flags: Set[FindAndModifyFlag]): Option[EntityType] =
-        underlying.findAndModify(query: QueryType, Some(o), FindAndModifyOptions[QueryType](flags = flags))
-
+    final def findAndReplace[Q, E](query: Q, o: E, flags: Set[FindAndModifyFlag])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions[Q](flags = flags))
     /**
      * $findAndReplaceDocs
      *
      * $findAndModifyVsUpdate
      */
-    final def findAndReplace[A <% QueryType, B <% QueryType](query: A, o: EntityType, sort: B): Option[EntityType] =
-        underlying.findAndModify(query: QueryType, Some(o), FindAndModifyOptions[QueryType](sort = Some(sort)))
-
+    final def findAndReplace[Q, E](query: Q, o: E, sort: Q)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions[Q](sort = Some(sort)))
     /**
      * $findAndReplaceDocs
      *
      * $findAndModifyVsUpdate
      */
-    final def findAndReplace[A <% QueryType, B <% QueryType](query: A, o: EntityType, sort: B, flags: Set[FindAndModifyFlag]): Option[EntityType] =
-        underlying.findAndModify(query: QueryType, Some(o), FindAndModifyOptions[QueryType](sort = Some(sort), flags = flags))
-
+    final def findAndReplace[Q, E](query: Q, o: E, sort: Q, flags: Set[FindAndModifyFlag])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions[Q](sort = Some(sort), flags = flags))
     /**
      * $findAndReplaceDocs
      *
      * $findAndModifyVsUpdate
-     *
-     * @param query query to find the object
-     * @param o object with new values
-     * @param sort sort object
-     * @param fields fields to include in returned object
-     * @param flags may include [[org.beaucatcher.mongo.FindAndModifyNew]] to return new rather than old object
-     * @return old or new object according to flags
      */
-    final def findAndReplace[A <% QueryType, B <% QueryType](query: A, o: EntityType, sort: B, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty): Option[EntityType] =
-        underlying.findAndModify(query: QueryType, Some(o),
-            FindAndModifyOptions[QueryType](sort = Some(sort), fields = fields.toOption, flags = flags))
-
-    /**
-     * $findAndModifyVsUpdate
-     */
-    final def findAndModify[A <% QueryType, B <% QueryType](query: A, modifier: B): Option[EntityType] =
-        findAndModify(query: QueryType, Some(modifier: QueryType),
-            FindAndModifyOptions.empty)
+    final def findAndReplace[Q, E](query: Q, o: E, sort: Q, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions[Q](sort = Some(sort), fields = fields.toOption, flags = flags))
 
     /**
      * $findAndModifyVsUpdate
      */
 
-    final def findAndModify[A <% QueryType, B <% QueryType](query: A, modifier: B, flags: Set[FindAndModifyFlag]): Option[EntityType] =
-        findAndModify(query: QueryType, Some(modifier: QueryType),
-            FindAndModifyOptions[QueryType](flags = flags))
+    final def findAndModify[Q, E](query: Q, modifier: Q)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        underlying.findAndModify(query: Q, Some(modifier), FindAndModifyOptions.empty)
 
     /**
      * $findAndModifyVsUpdate
      */
-    final def findAndModify[A <% QueryType, B <% QueryType, C <% QueryType](query: A, modifier: B, sort: C): Option[EntityType] =
-        findAndModify(query: QueryType, Some(modifier: QueryType),
-            FindAndModifyOptions[QueryType](sort = Some(sort)))
 
+    final def findAndModify[Q, E](query: Q, modifier: Q, flags: Set[FindAndModifyFlag])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        findAndModify(query, Some(modifier),
+            FindAndModifyOptions[Q](flags = flags))
     /**
      * $findAndModifyVsUpdate
      */
-    final def findAndModify[A <% QueryType, B <% QueryType, C <% QueryType](query: A, modifier: B, sort: C, flags: Set[FindAndModifyFlag]): Option[EntityType] =
-        findAndModify(query: QueryType, Some(modifier: QueryType),
-            FindAndModifyOptions[QueryType](sort = Some(sort), flags = flags))
 
+    final def findAndModify[Q, E](query: Q, modifier: Q, sort: Q)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        findAndModify(query, Some(modifier),
+            FindAndModifyOptions[Q](sort = Some(sort)))
     /**
      * $findAndModifyVsUpdate
      */
-    final def findAndModify[A <% QueryType, B <% QueryType, C <% QueryType](query: A, modifier: B, sort: C, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty): Option[EntityType] =
-        findAndModify(query: QueryType, Some(modifier: QueryType),
-            FindAndModifyOptions[QueryType](sort = Some(sort), fields = fields.toOption, flags = flags))
 
+    final def findAndModify[Q, E](query: Q, modifier: Q, sort: Q, flags: Set[FindAndModifyFlag])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        findAndModify(query, Some(modifier),
+            FindAndModifyOptions[Q](sort = Some(sort), flags = flags))
     /**
      * $findAndModifyVsUpdate
      */
-    final def findAndRemove[A <% QueryType](query: QueryType): Option[EntityType] =
-        findAndModify(query: QueryType, None, FindAndModifyOptions.remove)
 
+    final def findAndModify[Q, E](query: Q, modifier: Q, sort: Q, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] =
+        findAndModify(query, Some(modifier),
+            FindAndModifyOptions[Q](sort = Some(sort), fields = fields.toOption, flags = flags))
     /**
      * $findAndModifyVsUpdate
      */
-    final def findAndRemove[A <% QueryType, B <% QueryType](query: A, sort: B): Option[EntityType] =
-        findAndModify(query: QueryType, None, FindAndModifyOptions[QueryType](sort = Some(sort), flags = Set(FindAndModifyRemove)))
-
+    final def findAndRemove[Q, E](query: Q)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] = {
+        implicit val modifierEncoder: ModifierEncoder[Q] = AssertNotUsedEncoder
+        findAndModify(query, None, FindAndModifyOptions.remove)
+    }
     /**
      * $findAndModifyVsUpdate
      */
-    final def findAndModify(query: QueryType, update: Option[QueryType], options: FindAndModifyOptions[QueryType]): Option[EntityType] =
-        underlying.findAndModify(query, update, options)
+    final def findAndRemove[Q, E](query: Q, sort: Q)(implicit queryEncoder: QueryEncoder[Q], resultDecoder: QueryResultDecoder[E]): Option[E] = {
+        implicit val modifierEncoder: ModifierEncoder[Q] = AssertNotUsedEncoder
+        findAndModify(query, None, FindAndModifyOptions[Q](sort = Some(sort), flags = Set(FindAndModifyRemove)))
+    }
 
     /**
      * Adds a new object to the collection. It's an error if an object with the same ID already exists.
      */
-    final def insert(o: EntityType): WriteResult =
+    final def insert[E](o: E)(implicit upsertEncoder: UpsertEncoder[E]): WriteResult =
         underlying.insert(o)
 
     /**
      * Does an updateUpsert() on the object.
      *
      * Unlike save() in Casbah, does not look at mutable isNew() flag
-     * in the ObjectId if there's an ObjectId so it never does an insert().
-     * I guess this may be less efficient, but ObjectId.isNew() seems like
-     * a total hack to me. Would rather just require people to use insert()
-     * if they just finished creating the object.
+     * in the ObjectId (if there's an ObjectId) so it never does an insert().
+     * This is because our ObjectId is immutable. If you just created the
+     * object, use insert() instead of save().
      */
-    final def save(o: EntityType): WriteResult =
+    final def save[E](o: E)(implicit queryEncoder: UpdateQueryEncoder[E], upsertEncoder: UpsertEncoder[E]): WriteResult =
         underlying.save(o, UpdateOptions.upsert)
 
     /**
      * $findAndModifyVsUpdate
      */
-    final def update[A <% QueryType](query: A, o: EntityType): WriteResult =
-        underlying.update(query: QueryType, o, UpdateOptions.empty)
-    /**
-     * $findAndModifyVsUpdate
-     */
-    final def updateUpsert[A <% QueryType](query: A, o: EntityType): WriteResult =
-        underlying.updateUpsert(query: QueryType, o, UpdateOptions.upsert)
-
-    /* Note: multi updates are not allowed with a replacement object, only with
-     * "dollar sign operator" modifier objects. So there is no updateMulti overload
-     * taking an entity object.
-     */
+    final def update[Q, M](query: Q, o: M)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[M]): WriteResult =
+        underlying.update(query, o, UpdateOptions.empty)
 
     /**
      * $findAndModifyVsUpdate
      */
-    final def update[A <% QueryType, B <% QueryType](query: A, modifier: B): WriteResult =
-        update(query: QueryType, modifier, UpdateOptions.empty)
+    final def update[Q, M](query: Q, modifier: M, options: UpdateOptions)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[M]): WriteResult =
+        underlying.update(query, modifier, options)
+
     /**
      * $findAndModifyVsUpdate
      */
-    final def updateUpsert[A <% QueryType, B <% QueryType](query: A, modifier: B): WriteResult =
-        update(query: QueryType, modifier, UpdateOptions.upsert)
+    final def updateUpsert[Q, E](query: Q, o: E)(implicit queryEncoder: QueryEncoder[Q], upsertEncoder: UpsertEncoder[E]): WriteResult =
+        underlying.updateUpsert(query, o, UpdateOptions.upsert)
+
     /**
      * Note that updating with the [[org.beaucatcher.mongo.UpdateMulti]] flag only works if you
-     * do a "dollar sign operator," the modifier object can't just specify new field values. This is a
-     * MongoDB thing, not a library/driver thing.
+     * do a "dollar sign operator," the modifier object can't just specify new field values or a
+     * replacement object. This is a MongoDB thing, not a library/driver thing.
      *
      * $findAndModifyVsUpdate
      */
-    final def updateMulti[A <% QueryType, B <% QueryType](query: A, modifier: B): WriteResult =
-        update(query: QueryType, modifier, UpdateOptions.multi)
-    /**
-     * $findAndModifyVsUpdate
-     */
-    final def update(query: QueryType, modifier: QueryType, options: UpdateOptions): WriteResult =
-        underlying.update(query, modifier, options)
+    final def updateMulti[Q, M](query: Q, modifier: M)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[M]): WriteResult =
+        update(query, modifier, UpdateOptions.multi)
 
     /**
      * Deletes all objects matching the query.
      */
-    final def remove(query: QueryType): WriteResult =
+    final def remove[Q](query: Q)(implicit queryEncoder: QueryEncoder[Q]): WriteResult =
         underlying.remove(query)
 
     /**
-     * Deletes ALL objects.
+     * Deletes ALL objects in the collection. DANGER.
      */
-    final def removeAll(): WriteResult = {
+    final def removeAll(): WriteResult =
         underlying.remove(EmptyDocument)
-    }
-
     /**
      * Deletes the object with the given ID, if any.
      */
-    final def removeById(id: IdType): WriteResult =
+    final def removeById[I](id: I)(implicit idEncoder: IdEncoder[I]): WriteResult =
         underlying.removeById(id)
 
     /**
      * Creates the given index on the collection (if it hasn't already been created),
      * using default options.
      */
-    final def ensureIndex(keys: QueryType): WriteResult =
+    final def ensureIndex[Q](keys: Q)(implicit queryEncoder: QueryEncoder[Q]): WriteResult =
         ensureIndex(keys, IndexOptions.empty)
 
     /**
      * Creates the given index on the collection, using custom options.
      */
-    final def ensureIndex(keys: QueryType, options: IndexOptions): WriteResult =
+    final def ensureIndex[Q](keys: Q, options: IndexOptions)(implicit queryEncoder: QueryEncoder[Q]): WriteResult =
         underlying.ensureIndex(keys, options)
 
+    /**
+     * Drops ALL indexes on the collection.
+     *
+     */
     final def dropIndexes(): CommandResult = dropIndex("*")
 
     /**
@@ -322,14 +315,123 @@ trait SyncCollection[QueryType, EntityType, IdType, ValueType]
         underlying.dropIndex(name)
 }
 
+/**
+ * For more detail, please see [[org.beaucatcher.mongo.BoundAsyncCollection]],
+ * which is the same except it returns the results wrapped in `Future`.
+ */
+sealed trait BoundSyncCollection[QueryType, EntityType, IdType, ValueType]
+    extends BoundReadOnlySyncCollection[QueryType, EntityType, IdType, ValueType]
+    with BoundCollection[QueryType, EntityType, IdType, ValueType] {
+
+    protected[mongo] override def unbound: SyncCollection
+
+    // change the def to a val so we can import it
+    protected[mongo] override val codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]
+
+    import codecs._
+
+    final def findAndModify(query: QueryType, update: Option[QueryType], options: FindAndModifyOptions[QueryType]): Option[EntityType] =
+        unbound.findAndModify(query, update, options)
+    final def findAndReplace(query: QueryType, o: EntityType): Option[EntityType] =
+        unbound.findAndReplace(query, o)
+    final def findAndReplace(query: QueryType, o: EntityType, flags: Set[FindAndModifyFlag]): Option[EntityType] =
+        unbound.findAndReplace(query, o, flags)
+    final def findAndReplace(query: QueryType, o: EntityType, sort: QueryType): Option[EntityType] =
+        unbound.findAndReplace(query, o, sort)
+    final def findAndReplace(query: QueryType, o: EntityType, sort: QueryType, flags: Set[FindAndModifyFlag]): Option[EntityType] =
+        unbound.findAndReplace(query, o, sort, flags)
+    final def findAndReplace(query: QueryType, o: EntityType, sort: QueryType, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty): Option[EntityType] =
+        unbound.findAndReplace(query, o, sort, fields, flags)
+    final def findAndModify(query: QueryType, modifier: QueryType): Option[EntityType] =
+        unbound.findAndModify(query, modifier)
+    final def findAndModify(query: QueryType, modifier: QueryType, flags: Set[FindAndModifyFlag]): Option[EntityType] =
+        unbound.findAndModify(query, modifier, flags)
+    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType): Option[EntityType] =
+        unbound.findAndModify(query, modifier, sort)
+    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType, flags: Set[FindAndModifyFlag]): Option[EntityType] =
+        unbound.findAndModify(query, modifier, sort, flags)
+    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty): Option[EntityType] =
+        unbound.findAndModify(query, modifier, sort, fields, flags)
+    final def findAndRemove(query: QueryType): Option[EntityType] =
+        unbound.findAndRemove(query)
+    final def findAndRemove(query: QueryType, sort: QueryType): Option[EntityType] =
+        unbound.findAndRemove(query, sort)
+    final def insert(o: EntityType): WriteResult =
+        unbound.insert(o)
+    final def save(o: EntityType): WriteResult =
+        unbound.save(o)
+    // in the unbound object, there's only one update(), here we split it in two
+    // based on the entity vs. query modifier
+    final def update(query: QueryType, o: EntityType): WriteResult =
+        unbound.update(query, o)
+    final def updateWithModifier(query: QueryType, modifier: QueryType): WriteResult =
+        unbound.update(query, modifier)
+    final def update(query: QueryType, o: EntityType, options: UpdateOptions): WriteResult =
+        unbound.update(query, o, options)
+    final def updateWithModifier(query: QueryType, modifier: QueryType, options: UpdateOptions): WriteResult =
+        unbound.update(query, modifier, options)
+    final def updateUpsert(query: QueryType, o: EntityType): WriteResult =
+        unbound.updateUpsert(query, o)
+    final def updateMulti(query: QueryType, modifier: QueryType): WriteResult =
+        unbound.updateMulti(query, modifier)
+
+    final def remove(query: QueryType): WriteResult =
+        unbound.remove(query)
+    final def removeAll(): WriteResult =
+        unbound.removeAll()
+    final def removeById(id: IdType): WriteResult =
+        unbound.removeById(id)
+
+    /**
+     * Creates the given index on the collection (if it hasn't already been created),
+     * using default options.
+     */
+    final def ensureIndex(keys: QueryType): WriteResult =
+        unbound.ensureIndex(keys)
+    /**
+     * Creates the given index on the collection, using custom options.
+     */
+    final def ensureIndex(keys: QueryType, options: IndexOptions): WriteResult =
+        unbound.ensureIndex(keys, options)
+
+    final def dropIndexes(): CommandResult =
+        unbound.dropIndexes()
+
+    /**
+     * Removes the given index from the collection.
+     */
+    final def dropIndex(name: String): CommandResult =
+        unbound.dropIndex(name)
+}
+
 object SyncCollection {
-    private class SyncCollectionImpl[QueryType, EntityType, IdType, ValueType](name: String, override val context: Context,
-        override val codecs: CollectionCodecSet[QueryType, EntityType, IdType, ValueType])
-        extends SyncCollection[QueryType, EntityType, IdType, ValueType] {
+
+    private final class SyncCollectionImpl(name: String, override val context: Context)
+        extends SyncCollection {
         override val underlying = context.driver.newSyncCollection(name)(context.driverContext)
     }
 
-    def apply[QueryType, EntityType, IdType, ValueType](name: String, codecs: CollectionCodecSet[QueryType, EntityType, IdType, ValueType])(implicit context: Context): SyncCollection[QueryType, EntityType, IdType, ValueType] = {
-        new SyncCollectionImpl(name, context, codecs)
+    def apply(name: String)(implicit context: Context): SyncCollection = {
+        new SyncCollectionImpl(name, context)
+    }
+}
+
+object BoundSyncCollection {
+
+    private final class BoundSyncCollectionImpl[QueryType, EntityType, IdType, ValueType](override val unbound: SyncCollection)(implicit override val codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType])
+        extends BoundSyncCollection[QueryType, EntityType, IdType, ValueType] {
+    }
+
+    def apply[QueryType, EntityType, IdType, ValueType](name: String)(implicit context: Context, codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]): BoundSyncCollection[QueryType, EntityType, IdType, ValueType] = {
+        new BoundSyncCollectionImpl(SyncCollection(name))
+    }
+
+    def apply[QueryType, EntityType, IdType, ValueType](unbound: SyncCollection)(implicit codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]): BoundSyncCollection[QueryType, EntityType, IdType, ValueType] = {
+        new BoundSyncCollectionImpl(unbound)
+    }
+
+    // implicitly convert to BoundSyncCollection from SyncCollection
+    implicit def bind[QueryType, EntityType, IdType, ValueType](unbound: SyncCollection)(implicit codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]): BoundSyncCollection[QueryType, EntityType, IdType, ValueType] = {
+        apply(unbound)
     }
 }

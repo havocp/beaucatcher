@@ -149,15 +149,20 @@ trait UpsertEncoder[-T] extends DocumentEncoder[T] {
 }
 
 /** An empty document, which can be encoded with no knowledge other than its emptiness. */
-object EmptyDocument {
-    implicit object emptyDocumentQueryEncoder
-        extends QueryEncoder[EmptyDocument.type] {
-        override def encode(buf: EncodeBuffer, doc: EmptyDocument.type): Unit = {
+sealed trait EmptyDocument
+
+object EmptyDocument extends EmptyDocument {
+    implicit def queryEncoder: QueryEncoder[EmptyDocument] =
+        _queryEncoder
+
+    object _queryEncoder
+        extends QueryEncoder[EmptyDocument] {
+        override def encode(buf: EncodeBuffer, doc: EmptyDocument): Unit = {
             // length 5 empty document is 4 bytes for length, plus a nul byte
             buf.writeInt(5)
             buf.writeByte(0)
         }
-        override def encodeIterator(doc: EmptyDocument.type): Iterator[(String, Any)] = {
+        override def encodeIterator(doc: EmptyDocument): Iterator[(String, Any)] = {
             Iterator.empty
         }
     }

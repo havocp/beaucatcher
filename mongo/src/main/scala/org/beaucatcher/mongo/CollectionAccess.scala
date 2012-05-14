@@ -71,24 +71,24 @@ trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTra
 
     private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        SyncCollection(collectionName, bobjectCodecSet)
+        BoundSyncCollection(collectionName)(context, bobjectCodecSet)
     }
 
     /**
      * Obtains the `SyncCollection` for this collection.
      */
-    def sync(implicit context: Context): SyncCollection[BObject, BObject, IdType, BValue] =
+    def sync(implicit context: Context): BoundSyncCollection[BObject, BObject, IdType, BValue] =
         bobjectSyncCache.get
 
     private lazy val bobjectAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        AsyncCollection(collectionName, bobjectCodecSet)
+        BoundAsyncCollection(collectionName)(context, bobjectCodecSet)
     }
 
     /**
      * Obtains the `AsyncCollection` for this collection.
      */
-    def async(implicit context: Context): AsyncCollection[BObject, BObject, IdType, BValue] =
+    def async(implicit context: Context): BoundAsyncCollection[BObject, BObject, IdType, BValue] =
         bobjectAsyncCache.get
 }
 
@@ -122,18 +122,18 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     private lazy val bobjectSyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        SyncCollection(collectionName, bobjectCodecSet)
+        BoundSyncCollection(collectionName)(context, bobjectCodecSet)
     }
 
     /** Synchronous Collection returning BObject values from the collection */
     private[mongo] final def bobjectSync(implicit context: Context): BObjectSyncCollection[IdType] =
         bobjectSyncCache.get
 
-    protected def entityCodecSet: CollectionCodecSet[BObject, EntityType, IdType, Any]
+    protected def entityCodecSet: CollectionCodecSet[BObject, EntityType, EntityType, IdType, Any]
 
     private lazy val entitySyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        SyncCollection(collectionName, entityCodecSet)
+        BoundSyncCollection(collectionName)(context, entityCodecSet)
     }
 
     /** Synchronous Collection returning case class entity values from the collection */
@@ -142,7 +142,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     private lazy val bobjectAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        AsyncCollection(collectionName, bobjectCodecSet)
+        BoundAsyncCollection(collectionName)(context, bobjectCodecSet)
     }
 
     /** Asynchronous Collection returning BObject values from the collection */
@@ -151,7 +151,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
 
     private lazy val entityAsyncCache = ContextCache { implicit context =>
         ensureMigrated(context)
-        AsyncCollection(collectionName, entityCodecSet)
+        BoundAsyncCollection(collectionName)(context, entityCodecSet)
     }
 
     /** Asynchronous Collection returning case class entity values from the collection */
@@ -178,7 +178,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * With methods that don't return objects, such as count(), you can use the `sync` flavor with no
      * type parameters.
      */
-    def sync[E](implicit context: Context, chooser: SyncCollectionChooser[E, _]): SyncCollection[BObject, E, IdType, _] = {
+    def sync[E](implicit context: Context, chooser: SyncCollectionChooser[E, _]): BoundSyncCollection[BObject, E, IdType, _] = {
         chooser.choose(this)
     }
 
@@ -193,7 +193,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * Otherwise, you can use the `sync[E]` version that only requires you to specify
      * the entity type, or the `sync` version with no type parameters at all.
      */
-    def sync[E, V](implicit context: Context, chooser: SyncCollectionChooser[E, V], ignored: DummyImplicit): SyncCollection[BObject, E, IdType, V] = {
+    def sync[E, V](implicit context: Context, chooser: SyncCollectionChooser[E, V], ignored: DummyImplicit): BoundSyncCollection[BObject, E, IdType, V] = {
         chooser.choose(this)
     }
 
@@ -204,7 +204,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * need to use `sync[E]` or `sync[E,V]` to specify the object type or field
      * value type.
      */
-    def sync(implicit context: Context): SyncCollection[BObject, _, IdType, _] = bobjectSync
+    def sync(implicit context: Context): BoundSyncCollection[BObject, _, IdType, _] = bobjectSync
 
     /**
      * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
@@ -226,7 +226,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * With methods that don't return objects, such as count(), you can use the `async` flavor with no
      * type parameters.
      */
-    def async[E](implicit context: Context, chooser: AsyncCollectionChooser[E, _]): AsyncCollection[BObject, E, IdType, _] = {
+    def async[E](implicit context: Context, chooser: AsyncCollectionChooser[E, _]): BoundAsyncCollection[BObject, E, IdType, _] = {
         chooser.choose(this)
     }
 
@@ -241,7 +241,7 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * Otherwise, you can use the `async[E]` version that only requires you to specify
      * the entity type, or the `async` version with no type parameters at all.
      */
-    def async[E, V](implicit context: Context, chooser: AsyncCollectionChooser[E, V], ignored: DummyImplicit): AsyncCollection[BObject, E, IdType, V] = {
+    def async[E, V](implicit context: Context, chooser: AsyncCollectionChooser[E, V], ignored: DummyImplicit): BoundAsyncCollection[BObject, E, IdType, V] = {
         chooser.choose(this)
     }
 
@@ -252,14 +252,14 @@ trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAcce
      * need to use `async[E]` or `async[E,V]` to specify the object type or field
      * value type.
      */
-    def async(implicit context: Context): AsyncCollection[BObject, _, IdType, _] = bobjectAsync
+    def async(implicit context: Context): BoundAsyncCollection[BObject, _, IdType, _] = bobjectAsync
 }
 
 object CollectionAccessTrait {
     // used as an implicit parameter to select the correct Collection based on requested query result type
     @implicitNotFound(msg = "No synchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericSyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
     trait GenericSyncCollectionChooser[E, I, V, -CO] {
-        def choose(access: CO)(implicit context: Context): SyncCollection[BObject, E, I, V]
+        def choose(access: CO)(implicit context: Context): BoundSyncCollection[BObject, E, I, V]
     }
 
     implicit def createSyncCollectionChooserForBObject[I]: GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
@@ -277,7 +277,7 @@ object CollectionAccessTrait {
     // used as an implicit parameter to select the correct Collection based on requested query result type
     @implicitNotFound(msg = "No asynchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericAsyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
     trait GenericAsyncCollectionChooser[E, I, V, -CO] {
-        def choose(access: CO)(implicit context: Context): AsyncCollection[BObject, E, I, V]
+        def choose(access: CO)(implicit context: Context): BoundAsyncCollection[BObject, E, I, V]
     }
 
     implicit def createAsyncCollectionChooserForBObject[I]: GenericAsyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {

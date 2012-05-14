@@ -64,7 +64,7 @@ final class CaseClassCodecs[E <: AnyRef with Product] private ()(implicit manife
 
     implicit def modifierEncoder: ModifierEncoder[E] = codecs.modifierEncoder
 
-    def newCodecSet[EntityType <: Product: Manifest, IdType: IdEncoder](): CollectionCodecSet[BObject, EntityType, IdType, Any] =
+    def newCodecSet[EntityType <: Product: Manifest, IdType: IdEncoder](): CollectionCodecSet[BObject, EntityType, EntityType, IdType, Any] =
         CodecSets.newCaseClassCodecSet()
 }
 
