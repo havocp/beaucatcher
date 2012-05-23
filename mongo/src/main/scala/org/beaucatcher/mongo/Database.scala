@@ -13,23 +13,19 @@ import akka.dispatch.Future
 final class SystemCollections private[mongo] () {
     import IdEncoders._
 
-    private def createCollectionAccess[EntityType <: Product: Manifest, IdType: IdEncoder](name: String) = {
-        new CollectionAccessWithEntitiesBObjectOrCaseClass[EntityType, IdType] {
-            override val collectionName = name
-        }
+    private object Indexes
+        extends CollectionAccessWithEntitiesBObjectOrCaseClass[CollectionIndex, String] {
+        override val collectionName = "system.indexes"
     }
 
-    private lazy val _indexes = {
-        createCollectionAccess[CollectionIndex, String]("system.indexes")
+    def indexes: CollectionAccessWithTwoEntityTypes[BObject, String, BObject, BValue, CollectionIndex, Any] = Indexes
+
+    private object Namespaces
+        extends CollectionAccessWithEntitiesBObjectOrCaseClass[Namespace, String] {
+        override val collectionName = "system.namespaces"
     }
 
-    def indexes: CollectionAccessWithTwoEntityTypes[BObject, String, BObject, BValue, CollectionIndex, Any] = _indexes
-
-    private lazy val _namespaces = {
-        createCollectionAccess[Namespace, String]("system.namespaces")
-    }
-
-    def namespaces: CollectionAccessWithTwoEntityTypes[BObject, String, BObject, BValue, Namespace, Any] = _namespaces
+    def namespaces: CollectionAccessWithTwoEntityTypes[BObject, String, BObject, BValue, Namespace, Any] = Namespaces
 
     // TODO system.users
 }
