@@ -80,13 +80,13 @@ sealed trait ReadOnlyAsyncCollection extends ReadOnlyCollection {
  * can create a read-write collection and then pass it around with the read-only type
  * to any code you want to be read-only.
  */
-sealed trait BoundReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType]
-    extends BoundReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
+sealed trait BoundReadOnlyAsyncCollection[-QueryType, +DecodeEntityType, -IdType, +ValueType]
+    extends BoundReadOnlyCollection[QueryType, DecodeEntityType, IdType, ValueType] {
 
     protected[mongo] override def unbound: ReadOnlyAsyncCollection
 
     // change the def to a val so we can import it
-    protected[mongo] override val codecs: ReadOnlyCollectionCodecSet[QueryType, EntityType, IdType, ValueType]
+    protected[mongo] override val codecs: ReadOnlyCollectionCodecSet[QueryType, DecodeEntityType, IdType, ValueType]
 
     import codecs._
 
@@ -104,29 +104,29 @@ sealed trait BoundReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueTy
         unbound.distinct(key, query)
     final def distinct(key: String, options: DistinctOptions[QueryType]): Future[Iterator[ValueType]] =
         unbound.distinct(key, options)
-    final def find(): Future[AsyncCursor[EntityType]] =
+    final def find(): Future[AsyncCursor[DecodeEntityType]] =
         unbound.find()
-    final def find(query: QueryType): Future[AsyncCursor[EntityType]] =
+    final def find(query: QueryType): Future[AsyncCursor[DecodeEntityType]] =
         unbound.find(query: QueryType)
-    final def find(query: QueryType, fields: Fields): Future[AsyncCursor[EntityType]] =
+    final def find(query: QueryType, fields: Fields): Future[AsyncCursor[DecodeEntityType]] =
         unbound.find(query: QueryType, fields)
-    final def find(query: QueryType, fields: Fields, skip: Long, limit: Long, batchSize: Int): Future[AsyncCursor[EntityType]] =
+    final def find(query: QueryType, fields: Fields, skip: Long, limit: Long, batchSize: Int): Future[AsyncCursor[DecodeEntityType]] =
         unbound.find(query: QueryType, fields, skip, limit, batchSize)
-    final def find(query: QueryType, options: FindOptions): Future[AsyncCursor[EntityType]] =
+    final def find(query: QueryType, options: FindOptions): Future[AsyncCursor[DecodeEntityType]] =
         unbound.find(query, options)
-    final def findOne(): Future[Option[EntityType]] =
+    final def findOne(): Future[Option[DecodeEntityType]] =
         unbound.findOne()
-    final def findOne(query: QueryType): Future[Option[EntityType]] =
+    final def findOne(query: QueryType): Future[Option[DecodeEntityType]] =
         unbound.findOne(query: QueryType)
-    final def findOne(query: QueryType, fields: Fields): Future[Option[EntityType]] =
+    final def findOne(query: QueryType, fields: Fields): Future[Option[DecodeEntityType]] =
         unbound.findOne(query: QueryType, fields)
-    final def findOne(query: QueryType, options: FindOneOptions): Future[Option[EntityType]] =
+    final def findOne(query: QueryType, options: FindOneOptions): Future[Option[DecodeEntityType]] =
         unbound.findOne(query, options)
-    final def findOneById(id: IdType): Future[Option[EntityType]] =
+    final def findOneById(id: IdType): Future[Option[DecodeEntityType]] =
         unbound.findOneById(id)
-    final def findOneById(id: IdType, fields: Fields): Future[Option[EntityType]] =
+    final def findOneById(id: IdType, fields: Fields): Future[Option[DecodeEntityType]] =
         unbound.findOneById(id, fields)
-    final def findOneById(id: IdType, options: FindOneByIdOptions): Future[Option[EntityType]] =
+    final def findOneById(id: IdType, options: FindOneByIdOptions): Future[Option[DecodeEntityType]] =
         unbound.findOneById(id, options)
     final def findIndexes(): Future[AsyncCursor[CollectionIndex]] =
         unbound.findIndexes()
@@ -193,35 +193,35 @@ sealed trait AsyncCollection
      * @param o object with new values
      * @return old object
      */
-    final def findAndReplace[Q, E](query: Q, o: E)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Future[Option[E]] =
+    final def findAndReplace[Q, E, D](query: Q, o: E)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[D]): Future[Option[D]] =
         underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions.empty)
     /**
      * $findAndReplaceDocs
      *
      * $findAndModifyVsUpdate
      */
-    final def findAndReplace[Q, E](query: Q, o: E, flags: Set[FindAndModifyFlag])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Future[Option[E]] =
+    final def findAndReplace[Q, E, D](query: Q, o: E, flags: Set[FindAndModifyFlag])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[D]): Future[Option[D]] =
         underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions[Q](flags = flags))
     /**
      * $findAndReplaceDocs
      *
      * $findAndModifyVsUpdate
      */
-    final def findAndReplace[Q, E](query: Q, o: E, sort: Q)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Future[Option[E]] =
+    final def findAndReplace[Q, E, D](query: Q, o: E, sort: Q)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[D]): Future[Option[D]] =
         underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions[Q](sort = Some(sort)))
     /**
      * $findAndReplaceDocs
      *
      * $findAndModifyVsUpdate
      */
-    final def findAndReplace[Q, E](query: Q, o: E, sort: Q, flags: Set[FindAndModifyFlag])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Future[Option[E]] =
+    final def findAndReplace[Q, E, D](query: Q, o: E, sort: Q, flags: Set[FindAndModifyFlag])(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[D]): Future[Option[D]] =
         underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions[Q](sort = Some(sort), flags = flags))
     /**
      * $findAndReplaceDocs
      *
      * $findAndModifyVsUpdate
      */
-    final def findAndReplace[Q, E](query: Q, o: E, sort: Q, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[E]): Future[Option[E]] =
+    final def findAndReplace[Q, E, D](query: Q, o: E, sort: Q, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty)(implicit queryEncoder: QueryEncoder[Q], modifierEncoder: ModifierEncoder[E], resultDecoder: QueryResultDecoder[D]): Future[Option[D]] =
         underlying.findAndModify(query: Q, Some(o), FindAndModifyOptions[Q](sort = Some(sort), fields = fields.toOption, flags = flags))
 
     /**
@@ -366,58 +366,58 @@ sealed trait AsyncCollection
  * Version of [[org.beaucatcher.mongo.AsyncCollection]] using predetermined parameter types
  * rather than any parameter types with the appropriate implicit encoders and decoders available.
  */
-sealed trait BoundAsyncCollection[QueryType, EntityType, IdType, ValueType]
-    extends BoundReadOnlyAsyncCollection[QueryType, EntityType, IdType, ValueType]
-    with BoundCollection[QueryType, EntityType, IdType, ValueType] {
+sealed trait BoundAsyncCollection[-QueryType, -EncodeEntityType, +DecodeEntityType, -IdType, +ValueType]
+    extends BoundReadOnlyAsyncCollection[QueryType, DecodeEntityType, IdType, ValueType]
+    with BoundCollection[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType] {
 
     protected[mongo] override def unbound: AsyncCollection
 
     // change the def to a val so we can import it
-    protected[mongo] override val codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]
+    protected[mongo] override val codecs: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]
 
     import codecs._
 
-    final def findAndModify(query: QueryType, update: Option[QueryType], options: FindAndModifyOptions[QueryType]): Future[Option[EntityType]] =
+    final def findAndModify(query: QueryType, update: Option[QueryType], options: FindAndModifyOptions[QueryType]): Future[Option[DecodeEntityType]] =
         unbound.findAndModify(query, update, options)
-    final def findAndReplace(query: QueryType, o: EntityType): Future[Option[EntityType]] =
+    final def findAndReplace(query: QueryType, o: EncodeEntityType): Future[Option[DecodeEntityType]] =
         unbound.findAndReplace(query, o)
-    final def findAndReplace(query: QueryType, o: EntityType, flags: Set[FindAndModifyFlag]): Future[Option[EntityType]] =
+    final def findAndReplace(query: QueryType, o: EncodeEntityType, flags: Set[FindAndModifyFlag]): Future[Option[DecodeEntityType]] =
         unbound.findAndReplace(query, o, flags)
-    final def findAndReplace(query: QueryType, o: EntityType, sort: QueryType): Future[Option[EntityType]] =
+    final def findAndReplace(query: QueryType, o: EncodeEntityType, sort: QueryType): Future[Option[DecodeEntityType]] =
         unbound.findAndReplace(query, o, sort)
-    final def findAndReplace(query: QueryType, o: EntityType, sort: QueryType, flags: Set[FindAndModifyFlag]): Future[Option[EntityType]] =
+    final def findAndReplace(query: QueryType, o: EncodeEntityType, sort: QueryType, flags: Set[FindAndModifyFlag]): Future[Option[DecodeEntityType]] =
         unbound.findAndReplace(query, o, sort, flags)
-    final def findAndReplace(query: QueryType, o: EntityType, sort: QueryType, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty): Future[Option[EntityType]] =
+    final def findAndReplace(query: QueryType, o: EncodeEntityType, sort: QueryType, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty): Future[Option[DecodeEntityType]] =
         unbound.findAndReplace(query, o, sort, fields, flags)
-    final def findAndModify(query: QueryType, modifier: QueryType): Future[Option[EntityType]] =
+    final def findAndModify(query: QueryType, modifier: QueryType): Future[Option[DecodeEntityType]] =
         unbound.findAndModify(query, modifier)
-    final def findAndModify(query: QueryType, modifier: QueryType, flags: Set[FindAndModifyFlag]): Future[Option[EntityType]] =
+    final def findAndModify(query: QueryType, modifier: QueryType, flags: Set[FindAndModifyFlag]): Future[Option[DecodeEntityType]] =
         unbound.findAndModify(query, modifier, flags)
-    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType): Future[Option[EntityType]] =
+    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType): Future[Option[DecodeEntityType]] =
         unbound.findAndModify(query, modifier, sort)
-    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType, flags: Set[FindAndModifyFlag]): Future[Option[EntityType]] =
+    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType, flags: Set[FindAndModifyFlag]): Future[Option[DecodeEntityType]] =
         unbound.findAndModify(query, modifier, sort, flags)
-    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty): Future[Option[EntityType]] =
+    final def findAndModify(query: QueryType, modifier: QueryType, sort: QueryType, fields: Fields, flags: Set[FindAndModifyFlag] = Set.empty): Future[Option[DecodeEntityType]] =
         unbound.findAndModify(query, modifier, sort, fields, flags)
-    final def findAndRemove(query: QueryType): Future[Option[EntityType]] =
+    final def findAndRemove(query: QueryType): Future[Option[DecodeEntityType]] =
         unbound.findAndRemove(query)
-    final def findAndRemove(query: QueryType, sort: QueryType): Future[Option[EntityType]] =
+    final def findAndRemove(query: QueryType, sort: QueryType): Future[Option[DecodeEntityType]] =
         unbound.findAndRemove(query, sort)
-    final def insert(o: EntityType): Future[WriteResult] =
+    final def insert(o: EncodeEntityType): Future[WriteResult] =
         unbound.insert(o)
-    final def save(o: EntityType): Future[WriteResult] =
+    final def save(o: EncodeEntityType): Future[WriteResult] =
         unbound.save(o)
     // in the unbound object, there's only one update(), here we split it in two
     // based on the entity vs. query modifier
-    final def update(query: QueryType, o: EntityType): Future[WriteResult] =
+    final def update(query: QueryType, o: EncodeEntityType): Future[WriteResult] =
         unbound.update(query, o)
     final def updateWithModifier(query: QueryType, modifier: QueryType): Future[WriteResult] =
         unbound.update(query, modifier)
-    final def update(query: QueryType, o: EntityType, options: UpdateOptions): Future[WriteResult] =
+    final def update(query: QueryType, o: EncodeEntityType, options: UpdateOptions): Future[WriteResult] =
         unbound.update(query, o, options)
     final def updateWithModifier(query: QueryType, modifier: QueryType, options: UpdateOptions): Future[WriteResult] =
         unbound.update(query, modifier, options)
-    final def updateUpsert(query: QueryType, o: EntityType): Future[WriteResult] =
+    final def updateUpsert(query: QueryType, o: EncodeEntityType): Future[WriteResult] =
         unbound.updateUpsert(query, o)
     final def updateMulti(query: QueryType, modifier: QueryType): Future[WriteResult] =
         unbound.updateMulti(query, modifier)
@@ -465,20 +465,20 @@ object AsyncCollection {
 
 object BoundAsyncCollection {
 
-    private final class BoundAsyncCollectionImpl[QueryType, EntityType, IdType, ValueType](override val unbound: AsyncCollection)(implicit override val codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType])
-        extends BoundAsyncCollection[QueryType, EntityType, IdType, ValueType] {
+    private final class BoundAsyncCollectionImpl[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType](override val unbound: AsyncCollection)(implicit override val codecs: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType])
+        extends BoundAsyncCollection[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType] {
     }
 
-    def apply[QueryType, EntityType, IdType, ValueType](name: String)(implicit context: Context, codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]): BoundAsyncCollection[QueryType, EntityType, IdType, ValueType] = {
+    def apply[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType](name: String)(implicit context: Context, codecs: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]): BoundAsyncCollection[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType] = {
         new BoundAsyncCollectionImpl(AsyncCollection(name))
     }
 
-    def apply[QueryType, EntityType, IdType, ValueType](unbound: AsyncCollection)(implicit codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]): BoundAsyncCollection[QueryType, EntityType, IdType, ValueType] = {
+    def apply[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType](unbound: AsyncCollection)(implicit codecs: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]): BoundAsyncCollection[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType] = {
         new BoundAsyncCollectionImpl(unbound)
     }
 
     // implicitly convert to BoundAsyncCollection from AsyncCollection
-    implicit def bind[QueryType, EntityType, IdType, ValueType](unbound: AsyncCollection)(implicit codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]): BoundAsyncCollection[QueryType, EntityType, IdType, ValueType] = {
+    implicit def bind[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType](unbound: AsyncCollection)(implicit codecs: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]): BoundAsyncCollection[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType] = {
         apply(unbound)
     }
 }

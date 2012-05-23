@@ -71,3 +71,31 @@ object IdEncoders extends IdEncoders {
     }
 
 }
+
+/** Mixin trait for CollectionCodecSet subclasses, providing an encoder for String ID. */
+trait CollectionCodecSetIdEncoderString extends CollectionCodecSetIdEncoder[String] {
+    self: CollectionCodecSet[_, _, _, String, _] =>
+
+    override implicit def collectionIdEncoder = IdEncoders.stringIdEncoder
+}
+
+/** Mixin trait for CollectionCodecSet subclasses, providing an encoder for ObjectId ID. */
+trait CollectionCodecSetIdEncoderObjectId extends CollectionCodecSetIdEncoder[ObjectId] {
+    self: CollectionCodecSet[_, _, _, ObjectId, _] =>
+
+    override implicit def collectionIdEncoder = IdEncoders.objectIdIdEncoder
+}
+
+/** Mixin trait for CollectionCodecSet subclasses, providing an encoder for Int ID. */
+trait CollectionCodecSetIdEncoderInt extends CollectionCodecSetIdEncoder[Int] {
+    self: CollectionCodecSet[_, _, _, Int, _] =>
+
+    override implicit def collectionIdEncoder = IdEncoders.intIdEncoder
+}
+
+/** Mixin trait for CollectionCodecSet subclasses, providing an encoder for Long ID. */
+trait CollectionCodecSetIdEncoderLong extends CollectionCodecSetIdEncoder[Long] {
+    self: CollectionCodecSet[_, _, _, Long, _] =>
+
+    override implicit def collectionIdEncoder = IdEncoders.longIdEncoder
+}

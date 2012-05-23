@@ -14,7 +14,7 @@ final class SystemCollections private[mongo] () {
     import IdEncoders._
 
     private def createCollectionAccess[EntityType <: Product: Manifest, IdType: IdEncoder](name: String) = {
-        new CollectionAccessWithCaseClass[EntityType, IdType] {
+        new CollectionAccessWithEntitiesBObjectOrCaseClass[EntityType, IdType] {
             override val collectionName = name
         }
     }
@@ -23,13 +23,13 @@ final class SystemCollections private[mongo] () {
         createCollectionAccess[CollectionIndex, String]("system.indexes")
     }
 
-    def indexes: CollectionAccessTrait[CollectionIndex, String] = _indexes
+    def indexes: CollectionAccessWithTwoEntityTypes[BObject, String, BObject, BValue, CollectionIndex, Any] = _indexes
 
     private lazy val _namespaces = {
         createCollectionAccess[Namespace, String]("system.namespaces")
     }
 
-    def namespaces: CollectionAccessTrait[Namespace, String] = _namespaces
+    def namespaces: CollectionAccessWithTwoEntityTypes[BObject, String, BObject, BValue, Namespace, Any] = _namespaces
 
     // TODO system.users
 }
@@ -162,7 +162,7 @@ object Database {
 
     private lazy val systemCollections = new SystemCollections()
 
-    def apply(implicit context: Context): Database = {
+    private[mongo] def apply(implicit context: Context): Database = {
         new DatabaseImpl(context)
     }
 }

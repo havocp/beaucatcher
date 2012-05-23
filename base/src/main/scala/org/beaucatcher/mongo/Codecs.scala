@@ -167,3 +167,43 @@ object EmptyDocument extends EmptyDocument {
         }
     }
 }
+
+/** A document which should never be decoded (it throws if it is). */
+sealed trait ErrorIfDecodedDocument
+
+object ErrorIfDecodedDocument extends ErrorIfDecodedDocument {
+    implicit def queryResultDecoder: QueryResultDecoder[ErrorIfDecodedDocument] =
+        _queryResultDecoder
+
+    private object _queryResultDecoder
+        extends QueryResultDecoder[ErrorIfDecodedDocument] {
+        private def fail[U]: U =
+            throw new BugInSomethingMongoException("ErrorIfDecodedDocument was decoded, so here is your error (this type is used to assert that it's never decoded)")
+
+        override def decode(buf: DecodeBuffer): ErrorIfDecodedDocument =
+            fail
+
+        override def decodeIterator(iterator: Iterator[(String, Any)]): ErrorIfDecodedDocument =
+            fail
+    }
+}
+
+/** A document which should never be decoded (it throws if it is). */
+sealed trait ErrorIfDecodedValue
+
+object ErrorIfDecodedValue extends ErrorIfDecodedValue {
+    implicit def valueDecoder: ValueDecoder[ErrorIfDecodedValue] =
+        _valueDecoder
+
+    private object _valueDecoder
+        extends ValueDecoder[ErrorIfDecodedValue] {
+        private def fail[U]: U =
+            throw new BugInSomethingMongoException("ErrorIfDecodedValue was decoded, so here is your error (this type is used to assert that it's never decoded)")
+
+        override def decode(code: Byte, buf: DecodeBuffer): ErrorIfDecodedValue =
+            fail
+
+        override def decodeAny(v: Any): ErrorIfDecodedValue =
+            fail
+    }
+}

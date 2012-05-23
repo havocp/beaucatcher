@@ -3,14 +3,19 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 import scala.annotation.implicitNotFound
 
-/**
- * This is a base trait, not used directly. There are three subclasses;
- * one when you want operations on the collection to just use `BObject`,
- * another when you want to use a choice of `BObject` or any "entity" class,
- * and a third when your entity class is a case class (which means it can
- * be automatically converted from BSON).
- */
-trait CollectionAccessBaseTrait[IdType] {
+/** This is provided as an implicit, its purpose is to provide a codec set suitable for a given CollectionAccess. */
+@implicitNotFound("Unable to find a CodecSetProvider for result type ${DecodeEntityType}, value type ${ValueType}, access object ${CollectionAccessType}")
+trait CodecSetProvider[+DecodeEntityType, ValueType, -CollectionAccessType, -CAQueryType, -CAEncodeEntityType, -CAIdType] {
+    def codecSet(access: CollectionAccessType): CollectionCodecSet[CAQueryType, CAEncodeEntityType, DecodeEntityType, CAIdType, ValueType]
+}
+
+object CodecSetProvider {
+
+}
+
+trait CollectionAccessLike[QueryType, IdType, +Repr] {
+    self: Repr =>
+
     /**
      * The name of the collection. Defaults to the unqualified (no package) name of the object,
      * with the first character made lowercase. So "object FooBar" gets collection name "fooBar" for
@@ -40,307 +45,206 @@ trait CollectionAccessBaseTrait[IdType] {
      */
     def migrate(implicit context: Context): Unit = {}
 
-    private[this] val migrator = new Migrator()
-    private[this] val migratorFunction: (Context) => Unit = migrate(_)
+    private[mongo] val migrator = new Migrator()
+    private[mongo] val migratorFunction: (Context) => Unit = migrate(_)
 
     // this needs to be called before returning any collection
-    protected[beaucatcher] def ensureMigrated(context: Context): Unit = {
+    private[mongo] def ensureMigrated(context: Context): Unit = {
         migrator.ensureMigrated(context, collectionName, migratorFunction)
     }
+
+    private lazy val unboundSyncCache = ContextCache { implicit context =>
+        ensureMigrated(context)
+        SyncCollection(collectionName)
+    }
+
+    private lazy val unboundAsyncCache = ContextCache { implicit context =>
+        ensureMigrated(context)
+        AsyncCollection(collectionName)
+    }
+
+    def syncUnbound(implicit context: Context): SyncCollection = {
+        unboundSyncCache.get
+    }
+
+    def sync[E](implicit context: Context, provider: CodecSetProvider[E, ErrorIfDecodedValue, Repr, QueryType, E, IdType]): BoundSyncCollection[QueryType, E, E, IdType, ErrorIfDecodedValue] = {
+        implicit val codecs = provider.codecSet(this)
+        BoundSyncCollection(syncUnbound)
+    }
+
+    def sync[E, V](implicit context: Context, provider: CodecSetProvider[E, V, Repr, QueryType, E, IdType], ignored: DummyImplicit): BoundSyncCollection[QueryType, E, E, IdType, V] = {
+        implicit val codecs = provider.codecSet(this)
+        BoundSyncCollection(syncUnbound)
+    }
+
+    def asyncUnbound(implicit context: Context): AsyncCollection = {
+        unboundAsyncCache.get
+    }
+
+    def async[E](implicit context: Context, provider: CodecSetProvider[E, ErrorIfDecodedValue, Repr, QueryType, E, IdType]): BoundAsyncCollection[QueryType, E, E, IdType, ErrorIfDecodedValue] = {
+        implicit val codecs = provider.codecSet(this)
+        BoundAsyncCollection(asyncUnbound)
+    }
+
+    def async[E, V](implicit context: Context, provider: CodecSetProvider[E, V, Repr, QueryType, E, IdType], ignored: DummyImplicit): BoundAsyncCollection[QueryType, E, E, IdType, V] = {
+        implicit val codecs = provider.codecSet(this)
+        BoundAsyncCollection(asyncUnbound)
+    }
 }
 
-/**
- * Collection operations in terms of `BObject` only, with no mapping to another entity class.
- *
- * You generally want [[org.beaucatcher.mongo.CollectionAccessWithoutEntity]] class rather than
- * this trait; the trait exists only for the rare case where you need to extend another
- * class.
- *
- * This trait would be added to an object you want to use to access a collection.
- * This trait's interface supports operations on the collection itself.
- * The trait doesn't have knowledge of a specific MongoDB implementation
- * (Hammersmith, Casbah, etc.)
- *
- * A subclass of this trait has to provide a [[org.beaucatcher.mongo.MongoBackend]] which has
- * a concrete connection to a specific MongoDB implementation.
- */
-trait CollectionAccessWithoutEntityTrait[IdType] extends CollectionAccessBaseTrait[IdType] {
-    protected implicit def idEncoder: IdEncoder[IdType]
+trait CollectionAccess[QueryType, IdType]
+    extends CollectionAccessLike[QueryType, IdType, CollectionAccess[QueryType, IdType]] {
 
-    private lazy val bobjectCodecSet = BObjectCodecs.newCodecSet[IdType]()
-
-    private lazy val bobjectSyncCache = ContextCache { implicit context =>
-        ensureMigrated(context)
-        BoundSyncCollection(collectionName)(context, bobjectCodecSet)
-    }
-
-    /**
-     * Obtains the `SyncCollection` for this collection.
-     */
-    def sync(implicit context: Context): BoundSyncCollection[BObject, BObject, IdType, BValue] =
-        bobjectSyncCache.get
-
-    private lazy val bobjectAsyncCache = ContextCache { implicit context =>
-        ensureMigrated(context)
-        BoundAsyncCollection(collectionName)(context, bobjectCodecSet)
-    }
-
-    /**
-     * Obtains the `AsyncCollection` for this collection.
-     */
-    def async(implicit context: Context): BoundAsyncCollection[BObject, BObject, IdType, BValue] =
-        bobjectAsyncCache.get
 }
 
-/**
- * Collection operations offered in terms of both `BObject` and some entity class,
- * which may or may not be a case class. You have to implement the conversion to and
- * from `BObject`. See also [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]] which
- * is fully automated.
- *
- * You generally want [[org.beaucatcher.mongo.CollectionAccess]] class rather than
- * this trait; the trait exists only for the rare case where you need to extend another
- * class.
- *
- * This trait would be added to the companion object for an entity class.
- * This trait's interface supports operations on the collection itself.
- * The trait doesn't have knowledge of a specific MongoDB implementation
- * (Hammersmith, Casbah, etc.)
- *
- * A subclass of this trait has to provide a [[org.beaucatcher.driver.Driver]] which has
- * a concrete connection to a specific MongoDB implementation.
- *
- * Implementation note: many values in this class are lazy, because otherwise class and object
- * initialization has a lot of trouble (due to circular dependencies, or order of initialization anyway).
- */
-trait CollectionAccessTrait[EntityType <: AnyRef, IdType] extends CollectionAccessBaseTrait[IdType] {
-    import CollectionAccessTrait._
+// TODO support Map entity
 
-    protected implicit def idEncoder: IdEncoder[IdType]
-
-    private lazy val bobjectCodecSet = BObjectCodecs.newCodecSet()
-
-    private lazy val bobjectSyncCache = ContextCache { implicit context =>
-        ensureMigrated(context)
-        BoundSyncCollection(collectionName)(context, bobjectCodecSet)
-    }
-
-    /** Synchronous Collection returning BObject values from the collection */
-    private[mongo] final def bobjectSync(implicit context: Context): BObjectSyncCollection[IdType] =
-        bobjectSyncCache.get
-
-    protected def entityCodecSet: CollectionCodecSet[BObject, EntityType, EntityType, IdType, Any]
-
-    private lazy val entitySyncCache = ContextCache { implicit context =>
-        ensureMigrated(context)
-        BoundSyncCollection(collectionName)(context, entityCodecSet)
-    }
-
-    /** Synchronous Collection returning case class entity values from the collection */
-    private[mongo] final def entitySync(implicit context: Context): EntitySyncCollection[BObject, EntityType, IdType] =
-        entitySyncCache.get
-
-    private lazy val bobjectAsyncCache = ContextCache { implicit context =>
-        ensureMigrated(context)
-        BoundAsyncCollection(collectionName)(context, bobjectCodecSet)
-    }
-
-    /** Asynchronous Collection returning BObject values from the collection */
-    private[mongo] final def bobjectAsync(implicit context: Context): BObjectAsyncCollection[IdType] =
-        bobjectAsyncCache.get
-
-    private lazy val entityAsyncCache = ContextCache { implicit context =>
-        ensureMigrated(context)
-        BoundAsyncCollection(collectionName)(context, entityCodecSet)
-    }
-
-    /** Asynchronous Collection returning case class entity values from the collection */
-    private[mongo] final def entityAsync(implicit context: Context): EntityAsyncCollection[BObject, EntityType, IdType] =
-        entityAsyncCache.get
-
-    /**
-     * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
-     * CollectionAccess object. Used as implicit argument to sync method.
-     */
-    type SyncCollectionChooser[E, V] = GenericSyncCollectionChooser[E, IdType, V, CollectionAccessTrait[EntityType, IdType]]
-
-    /**
-     * This lets you write a function that generically works for either the entity (often case class) or
-     * BObject results. So for example you can implement query logic that supports
-     * both kinds of result.
-     * {{{
-     *    sync[BObject].find() // returns BObject results
-     *    sync[MyCaseClass].find() // returns MyCaseClass results
-     *    def myQuery[E] = sync[E].find(... query ...) // generic query
-     * }}}
-     * With methods such as distinct(), you probably need the `sync[E,V]` flavor that lets you specify
-     * the type of field values.
-     * With methods that don't return objects, such as count(), you can use the `sync` flavor with no
-     * type parameters.
-     */
-    def sync[E](implicit context: Context, chooser: SyncCollectionChooser[E, _]): BoundSyncCollection[BObject, E, IdType, _] = {
-        chooser.choose(this)
-    }
-
-    /**
-     * This lets you specify the field value type of the synchronous Collection you are asking for;
-     * the only time this matters right now is if you're using the distinct() method
-     * on the Collection since it returns field values. You would use it like
-     * {{{
-     *    sync[BObject,BValue].distinct("foo") // returns Seq[BValue]
-     *    sync[MyCaseClass,Any].distinct("foo") // returns Seq[Any]
-     * }}}
-     * Otherwise, you can use the `sync[E]` version that only requires you to specify
-     * the entity type, or the `sync` version with no type parameters at all.
-     */
-    def sync[E, V](implicit context: Context, chooser: SyncCollectionChooser[E, V], ignored: DummyImplicit): BoundSyncCollection[BObject, E, IdType, V] = {
-        chooser.choose(this)
-    }
-
-    /**
-     * If the type of entity returned doesn't matter, then you can use this overload
-     * of sync which does not require you to specify an entity type.
-     * If you're calling a method that does return objects or field values, then you
-     * need to use `sync[E]` or `sync[E,V]` to specify the object type or field
-     * value type.
-     */
-    def sync(implicit context: Context): BoundSyncCollection[BObject, _, IdType, _] = bobjectSync
-
-    /**
-     * The type of a Collection chooser that will select the proper Collection for result type E and value type V on this
-     * CollectionAccess object. Used as implicit argument to async method.
-     */
-    type AsyncCollectionChooser[E, V] = GenericAsyncCollectionChooser[E, IdType, V, CollectionAccessTrait[EntityType, IdType]]
-
-    /**
-     * This lets you write a function that generically works for either the entity (often case class) or
-     * BObject results. So for example you can implement query logic that supports
-     * both kinds of result.
-     * {{{
-     *    async[BObject].find() // returns BObject results
-     *    async[MyCaseClass].find() // returns MyCaseClass results
-     *    def myQuery[E] = async[E].find(... query ...) // generic query
-     * }}}
-     * With methods such as distinct(), you probably need the `async[E,V]` flavor that lets you specify
-     * the type of field values.
-     * With methods that don't return objects, such as count(), you can use the `async` flavor with no
-     * type parameters.
-     */
-    def async[E](implicit context: Context, chooser: AsyncCollectionChooser[E, _]): BoundAsyncCollection[BObject, E, IdType, _] = {
-        chooser.choose(this)
-    }
-
-    /**
-     * This lets you specify the field value type of the asynchronous Collection you are asking for;
-     * the only time this matters right now is if you're using the distinct() method
-     * on the Collection since it returns field values. You would use it like
-     * {{{
-     *    async[BObject,BValue].distinct("foo") // returns Seq[BValue]
-     *    async[MyCaseClass,Any].distinct("foo") // returns Seq[Any]
-     * }}}
-     * Otherwise, you can use the `async[E]` version that only requires you to specify
-     * the entity type, or the `async` version with no type parameters at all.
-     */
-    def async[E, V](implicit context: Context, chooser: AsyncCollectionChooser[E, V], ignored: DummyImplicit): BoundAsyncCollection[BObject, E, IdType, V] = {
-        chooser.choose(this)
-    }
-
-    /**
-     * If the type of entity returned doesn't matter, then you can use this overload
-     * of async which does not require you to specify an entity type.
-     * If you're calling a method that does return objects or field values, then you
-     * need to use `async[E]` or `async[E,V]` to specify the object type or field
-     * value type.
-     */
-    def async(implicit context: Context): BoundAsyncCollection[BObject, _, IdType, _] = bobjectAsync
+trait CollectionAccessWithFirstCodecSet[-QueryType, -EncodeEntityType, +DecodeEntityType, -IdType, +ValueType] {
+    def firstCodecSet: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]
 }
 
-object CollectionAccessTrait {
-    // used as an implicit parameter to select the correct Collection based on requested query result type
-    @implicitNotFound(msg = "No synchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericSyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
-    trait GenericSyncCollectionChooser[E, I, V, -CO] {
-        def choose(access: CO)(implicit context: Context): BoundSyncCollection[BObject, E, I, V]
+trait CollectionAccessWithSecondCodecSet[-QueryType, -EncodeEntityType, +DecodeEntityType, -IdType, +ValueType] {
+    def secondCodecSet: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]
+}
+
+trait CollectionAccessWithOneEntityType[QueryType, EntityType, IdType, +ValueType]
+    extends CollectionAccess[QueryType, IdType]
+    with CollectionAccessWithFirstCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]
+    with CollectionAccessLike[QueryType, IdType, CollectionAccessWithOneEntityType[QueryType, EntityType, IdType, ValueType]] {
+
+    override def firstCodecSet: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]
+
+    def sync(implicit context: Context): BoundSyncCollection[QueryType, EntityType, EntityType, IdType, ValueType] = {
+        BoundSyncCollection(syncUnbound)(firstCodecSet)
     }
 
-    implicit def createSyncCollectionChooserForBObject[I]: GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
-        new GenericSyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] {
-            def choose(access: CollectionAccessTrait[_, I])(implicit context: Context) = access.bobjectSync
+    def async(implicit context: Context): BoundAsyncCollection[QueryType, EntityType, EntityType, IdType, ValueType] = {
+        BoundAsyncCollection(asyncUnbound)(firstCodecSet)
+    }
+
+}
+
+object CollectionAccessWithOneEntityType {
+    def apply[QueryType, EntityType, IdType, ValueType](name: String,
+        migrateCallback: (CollectionAccessWithOneEntityType[QueryType, EntityType, IdType, ValueType], Context) => Unit)(implicit codecSet: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]) = {
+        new CollectionAccessWithOneEntityType[QueryType, EntityType, IdType, ValueType]() {
+            override val collectionName = name
+
+            override val firstCodecSet = codecSet
+
+            override def migrate(implicit context: Context) = migrateCallback(this, context)
         }
     }
 
-    implicit def createSyncCollectionChooserForEntity[E <: AnyRef, I]: GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
-        new GenericSyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] {
-            def choose(access: CollectionAccessTrait[E, I])(implicit context: Context) = access.entitySync
+    implicit def firstCodecSetProviderE[CAQueryType, DecodeEntityType, CAIdType, CAValueType, CA <: CollectionAccessWithOneEntityType[CAQueryType, DecodeEntityType, CAIdType, CAValueType]]: CodecSetProvider[DecodeEntityType, ErrorIfDecodedValue, CollectionAccessWithOneEntityType[CAQueryType, DecodeEntityType, CAIdType, CAValueType], CAQueryType, DecodeEntityType, CAIdType] = {
+        new CodecSetProvider[DecodeEntityType, ErrorIfDecodedValue, CollectionAccessWithOneEntityType[CAQueryType, DecodeEntityType, CAIdType, CAValueType], CAQueryType, DecodeEntityType, CAIdType]() {
+            override def codecSet(access: CollectionAccessWithOneEntityType[CAQueryType, DecodeEntityType, CAIdType, CAValueType]) =
+                access.firstCodecSet.toErrorIfValueDecoded
         }
     }
 
-    // used as an implicit parameter to select the correct Collection based on requested query result type
-    @implicitNotFound(msg = "No asynchronous Collection that returns entity type '${E}' (with ID type '${I}', value type '${V}', CollectionAccess '${CO}') (implicit GenericAsyncCollectionChooser not resolved) (note: scala 2.9.0 seems to confuse the id type with value type in this message)")
-    trait GenericAsyncCollectionChooser[E, I, V, -CO] {
-        def choose(access: CO)(implicit context: Context): BoundAsyncCollection[BObject, E, I, V]
-    }
-
-    implicit def createAsyncCollectionChooserForBObject[I]: GenericAsyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] = {
-        new GenericAsyncCollectionChooser[BObject, I, BValue, CollectionAccessTrait[_, I]] {
-            def choose(access: CollectionAccessTrait[_, I])(implicit context: Context) = access.bobjectAsync
-        }
-    }
-
-    implicit def createAsyncCollectionChooserForEntity[E <: AnyRef, I]: GenericAsyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] = {
-        new GenericAsyncCollectionChooser[E, I, Any, CollectionAccessTrait[E, I]] {
-            def choose(access: CollectionAccessTrait[E, I])(implicit context: Context) = access.entityAsync
+    implicit def firstCodecSetProviderEV[CAQueryType, DecodeEntityType, CAIdType, ValueType, CA <: CollectionAccessWithOneEntityType[CAQueryType, DecodeEntityType, CAIdType, ValueType]]: CodecSetProvider[DecodeEntityType, ValueType, CollectionAccessWithOneEntityType[CAQueryType, DecodeEntityType, CAIdType, ValueType], CAQueryType, DecodeEntityType, CAIdType] = {
+        new CodecSetProvider[DecodeEntityType, ValueType, CollectionAccessWithOneEntityType[CAQueryType, DecodeEntityType, CAIdType, ValueType], CAQueryType, DecodeEntityType, CAIdType]() {
+            override def codecSet(access: CollectionAccessWithOneEntityType[CAQueryType, DecodeEntityType, CAIdType, ValueType]) =
+                access.firstCodecSet
         }
     }
 }
 
-/**
- * Collection operations offered in terms of both `BObject` and some entity case class.
- * The conversion from `BObject` to and from the case class is automatic.
- * In most cases, you want the abstract class [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]]
- * instead of this trait; the trait is only provided in case you need to derive from another class
- * so can't use the abstract class version.
- */
-trait CollectionAccessWithCaseClassTrait[EntityType <: Product, IdType]
-    extends CollectionAccessTrait[EntityType, IdType] {
+trait CollectionAccessWithTwoEntityTypes[QueryType, IdType, EntityType1, +ValueType1, EntityType2, +ValueType2]
+    extends CollectionAccess[QueryType, IdType]
+    with CollectionAccessWithFirstCodecSet[QueryType, EntityType1, EntityType1, IdType, ValueType1]
+    with CollectionAccessWithSecondCodecSet[QueryType, EntityType2, EntityType2, IdType, ValueType2]
+    with CollectionAccessLike[QueryType, IdType, CollectionAccessWithTwoEntityTypes[QueryType, IdType, EntityType1, ValueType1, EntityType2, ValueType2]] {
+
+    override def firstCodecSet: CollectionCodecSet[QueryType, EntityType1, EntityType1, IdType, ValueType1]
+    override def secondCodecSet: CollectionCodecSet[QueryType, EntityType2, EntityType2, IdType, ValueType2]
+
+    def sync(implicit context: Context): BoundSyncCollection[QueryType, EntityType1, EntityType1, IdType, ValueType1] = {
+        BoundSyncCollection(syncUnbound)(firstCodecSet)
+    }
+
+    def async(implicit context: Context): BoundAsyncCollection[QueryType, EntityType1, EntityType1, IdType, ValueType1] = {
+        BoundAsyncCollection(asyncUnbound)(firstCodecSet)
+    }
+}
+
+object CollectionAccessWithTwoEntityTypes {
+    def apply[QueryType, IdType, EntityType1, ValueType1, EntityType2, ValueType2](name: String,
+        migrateCallback: (CollectionAccessWithTwoEntityTypes[QueryType, IdType, EntityType1, ValueType1, EntityType2, ValueType2], Context) => Unit)(implicit codecSetOne: CollectionCodecSet[QueryType, EntityType1, EntityType1, IdType, ValueType1],
+            codecSetTwo: CollectionCodecSet[QueryType, EntityType2, EntityType2, IdType, ValueType2]) = {
+        new CollectionAccessWithTwoEntityTypes[QueryType, IdType, EntityType1, ValueType1, EntityType2, ValueType2] {
+            override val collectionName = name
+
+            override val firstCodecSet = codecSetOne
+            override val secondCodecSet = codecSetTwo
+
+            override def migrate(implicit context: Context) = migrateCallback(this, context)
+        }
+    }
+
+    implicit def firstCodecSetProviderE[CAQueryType, CAIdType, DecodeEntityType, CAValueType1, CAEntityType, CAValueType2, CA <: CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, CAValueType1, CAEntityType, CAValueType2]]: CodecSetProvider[DecodeEntityType, ErrorIfDecodedValue, CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, CAValueType1, CAEntityType, CAValueType2], CAQueryType, DecodeEntityType, CAIdType] = {
+        new CodecSetProvider[DecodeEntityType, ErrorIfDecodedValue, CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, CAValueType1, CAEntityType, CAValueType2], CAQueryType, DecodeEntityType, CAIdType]() {
+            override def codecSet(access: CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, CAValueType1, CAEntityType, CAValueType2]) =
+                access.firstCodecSet.toErrorIfValueDecoded
+        }
+    }
+
+    implicit def firstCodecSetProviderEV[CAQueryType, CAIdType, DecodeEntityType, ValueType, CAEntityType, CAValueType, CA <: CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, ValueType, CAEntityType, CAValueType]]: CodecSetProvider[DecodeEntityType, ValueType, CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, ValueType, CAEntityType, CAValueType], CAQueryType, DecodeEntityType, CAIdType] = {
+        new CodecSetProvider[DecodeEntityType, ValueType, CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, ValueType, CAEntityType, CAValueType], CAQueryType, DecodeEntityType, CAIdType]() {
+            override def codecSet(access: CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, ValueType, CAEntityType, CAValueType]) =
+                access.firstCodecSet
+        }
+    }
+
+    implicit def secondCodecSetProviderE[CAQueryType, CAIdType, DecodeEntityType, CAValueType1, CAEntityType, CAValueType2, CA <: CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, DecodeEntityType, CAValueType1, CAEntityType, CAValueType2]]: CodecSetProvider[DecodeEntityType, ErrorIfDecodedValue, CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, CAEntityType, CAValueType1, DecodeEntityType, CAValueType2], CAQueryType, DecodeEntityType, CAIdType] = {
+        new CodecSetProvider[DecodeEntityType, ErrorIfDecodedValue, CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, CAEntityType, CAValueType1, DecodeEntityType, CAValueType2], CAQueryType, DecodeEntityType, CAIdType]() {
+            override def codecSet(access: CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, CAEntityType, CAValueType1, DecodeEntityType, CAValueType2]) =
+                access.secondCodecSet.toErrorIfValueDecoded
+        }
+    }
+
+    implicit def secondCodecSetProviderEV[CAQueryType, CAIdType, DecodeEntityType, ValueType, CAEntityType, CAValueType, CA <: CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, CAEntityType, CAValueType, DecodeEntityType, ValueType]]: CodecSetProvider[DecodeEntityType, ValueType, CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, CAEntityType, CAValueType, DecodeEntityType, ValueType], CAQueryType, DecodeEntityType, CAIdType] = {
+        new CodecSetProvider[DecodeEntityType, ValueType, CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, CAEntityType, CAValueType, DecodeEntityType, ValueType], CAQueryType, DecodeEntityType, CAIdType]() {
+            override def codecSet(access: CollectionAccessWithTwoEntityTypes[CAQueryType, CAIdType, CAEntityType, CAValueType, DecodeEntityType, ValueType]) =
+                access.secondCodecSet
+        }
+    }
+}
+
+abstract class CollectionAccessWithEntityBObject[IdType]()(implicit val idEncoder: IdEncoder[IdType])
+    extends CollectionAccessWithOneEntityType[BObject, BObject, IdType, BValue] {
+
+    override val firstCodecSet = CollectionCodecSetBObject[IdType]()(idEncoder)
+}
+
+object CollectionAccessWithEntityBObject {
+    def apply[IdType: IdEncoder](name: String,
+        migrateCallback: (CollectionAccessWithEntityBObject[IdType], Context) => Unit) = {
+        new CollectionAccessWithEntityBObject[IdType] {
+            override val collectionName = name
+
+            override def migrate(implicit context: Context) = migrateCallback(this, context)
+        }
+    }
+}
+
+abstract class CollectionAccessWithEntityBObjectIdObjectId
+    extends CollectionAccessWithEntityBObject[ObjectId]()(IdEncoders.objectIdIdEncoder) {
 
 }
 
-/**
- * Derive an object from this class and use it to access a collection,
- * treating the collection as a collection of `BObject`. Use
- * [[org.beaucatcher.mongo.CollectionAccess]] or
- * [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]]
- * if you want to sometimes treat the collection as a collection of custom objects.
- */
-abstract class CollectionAccessWithoutEntity[IdType: IdEncoder]
-    extends CollectionAccessWithoutEntityTrait[IdType] {
-    override final val idEncoder = implicitly[IdEncoder[IdType]]
+// TODO flip so that the first entity type (which is assumed if none specified)
+// is EntityType rather than BObject.
+abstract class CollectionAccessWithEntitiesBObjectOrCaseClass[EntityType <: Product, IdType]()(implicit entityManifest: Manifest[EntityType],
+    idEncoder: IdEncoder[IdType])
+    extends CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any] {
+
+    override val firstCodecSet = CollectionCodecSetBObject[IdType]()(idEncoder)
+    override val secondCodecSet = CollectionCodecSetCaseClass[BObject, EntityType, IdType]()(entityManifest, BObjectCodecs.bobjectQueryEncoder, BObjectCodecs.bobjectModifierEncoder, idEncoder)
 }
 
-/**
- * Derive an object (usually companion object to the `EntityType`) from this class
- * to treat the collection as a collection of `EntityType`. With this class,
- * you have to manually provide an [[org.beaucatcher.mongo.EntityComposer]] to convert
- * the entity to and from `BObject`. With [[org.beaucatcher.mongo.CollectionAccessWithCaseClass]] the
- * conversion is automatic but your entity must be a case class.
- */
-abstract class CollectionAccess[EntityType <: AnyRef, IdType: IdEncoder]
-    extends CollectionAccessTrait[EntityType, IdType] {
-    override final val idEncoder = implicitly[IdEncoder[IdType]]
-}
+abstract class CollectionAccessWithEntitiesBObjectOrCaseClassIdObjectId[EntityType <: Product]()(implicit entityManifest: Manifest[EntityType])
+    extends CollectionAccessWithEntitiesBObjectOrCaseClass[EntityType, ObjectId]()(entityManifest, IdEncoders.objectIdIdEncoder) {
 
-/**
- * Derive an object (usually companion object to the `EntityType`) from this class
- * to treat the collection as a collection of `EntityType`. With this class,
- * conversion to and from the `EntityType` is automatic, but the entity must be
- * a case class. With [[org.beaucatcher.mongo.CollectionAccess]] you can use
- * any class (non-case classes), but you have to write a converter.
- */
-abstract class CollectionAccessWithCaseClass[EntityType <: Product: Manifest, IdType: IdEncoder]
-    extends CollectionAccess[EntityType, IdType]
-    with CollectionAccessWithCaseClassTrait[EntityType, IdType] {
-
-    private lazy val caseClassCodecs = CaseClassCodecs[EntityType]()
-
-    override final lazy val entityCodecSet = caseClassCodecs.newCodecSet[EntityType, IdType]()
 }

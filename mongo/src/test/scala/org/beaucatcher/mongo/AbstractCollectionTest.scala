@@ -6,40 +6,49 @@ import org.beaucatcher.mongo._
 import org.junit.Assert._
 import org.junit._
 
-package abstractfoo {
-    trait AbstractFoo extends Product {
-        val _id: ObjectId
-        val intField: Int
-        val stringField: String
+package foo {
+    import BObjectCodecs._
+
+    case class Foo(_id: ObjectId, intField: Int, stringField: String)
+
+    object Foo extends CollectionAccessWithEntitiesBObjectOrCaseClassIdObjectId[Foo] {
+        def customQuery[E](implicit context: Context, provider: CodecSetProvider[E, ErrorIfDecodedValue, CollectionAccessWithTwoEntityTypes[BObject, ObjectId, BObject, BValue, Foo, Any], BObject, E, ObjectId]) = {
+            sync[E].find(BObject("intField" -> 23))
+        }
+
+        override def migrate(implicit context: Context): Unit = {
+            // we're mostly doing this just to test that migrate() gets called
+            // and works
+            sync.ensureIndex(BObject("intField" -> 1))
+        }
     }
 
-    trait AbstractFooWithIntId extends Product {
-        val _id: Int
-        val intField: Int
-        val stringField: String
+    case class FooWithIntId(_id: Int, intField: Int, stringField: String)
+
+    object FooWithIntId extends CollectionAccessWithEntitiesBObjectOrCaseClass[FooWithIntId, Int] {
+        def customQuery[E](implicit context: Context, provider: CodecSetProvider[E, ErrorIfDecodedValue, CollectionAccessWithTwoEntityTypes[BObject, Int, BObject, BValue, FooWithIntId, Any], BObject, E, Int]) = {
+            sync[E].find(BObject("intField" -> 23))
+        }
     }
 
-    trait AbstractFooWithOptionalField extends Product {
-        val _id: ObjectId
-        val intField: Int
-        val stringField: Option[String]
+    case class FooWithOptionalField(_id: ObjectId, intField: Int, stringField: Option[String])
+
+    object FooWithOptionalField extends CollectionAccessWithEntitiesBObjectOrCaseClassIdObjectId[FooWithOptionalField] {
+    }
+
+    object Bar extends CollectionAccessWithEntityBObjectIdObjectId {
+
     }
 }
 
-import abstractfoo._
-
-abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: AbstractFooWithIntId, FooWithOptionalField <: AbstractFooWithOptionalField](Foo: CollectionAccessTrait[Foo, ObjectId],
-    FooWithIntId: CollectionAccessTrait[FooWithIntId, Int],
-    FooWithOptionalField: CollectionAccessTrait[FooWithOptionalField, ObjectId],
-    Bar: CollectionAccessWithoutEntityTrait[ObjectId])
+abstract class AbstractCollectionTest()
     extends TestUtils {
 
     self: ContextProvider =>
 
+    import foo._
+
     protected implicit def context: Context = mongoContext
-    protected def newFoo(id: ObjectId, i: Int, s: String): Foo
-    protected def newFooWithIntId(id: Int, i: Int, s: String): FooWithIntId
-    protected def newFooWithOptionalField(id: ObjectId, i: Int, s: Option[String]): FooWithOptionalField
 
     @org.junit.Before
     def setup() {
@@ -51,6 +60,106 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         FooWithIntId.sync.dropIndexes()
         FooWithOptionalField.sync.dropIndexes()
         Bar.sync.dropIndexes()
+    }
+
+    @Test
+    def testOneEntityTypeCompiles(): Unit = {
+        // there's no runtime test here, just checking all this junk compiles.
+        abstract class TestOne[IdType]()(implicit idEncoder: IdEncoder[IdType])
+            extends CollectionAccessWithEntityBObject[IdType]() {
+
+            // TODO move to test suite (test all this compiles)
+            private def testSync()(implicit context: Context) = {
+                sync.count()
+                val fs = sync.find()
+                val bs = sync[BObject].find()
+                val bs2 = sync[BObject, BValue].find()
+
+                val bs3 = sync[BObject].find(BObject.empty)
+
+                val vs1 = sync[BObject, BValue].distinct("foo")
+            }
+
+            // TODO move to test suite (test all this compiles)
+            private def testAsync()(implicit context: Context) = {
+                async.count()
+                val fs = async.find()
+                val bs = async[BObject].find()
+                val bs2 = async[BObject, BValue].find()
+
+                val bs3 = async[BObject].find(BObject.empty)
+
+                val vs1 = async[BObject, BValue].distinct("foo")
+            }
+        }
+    }
+
+    @Test
+    def testTwoEntityTypesCompiles(): Unit = {
+        // there's no runtime test here, just checking all this junk compiles.
+
+        class TestTwo[EntityType <: Product, IdType](implicit entityManifest: Manifest[EntityType],
+            idEncoder: IdEncoder[IdType])
+            extends CollectionAccessWithEntitiesBObjectOrCaseClass[EntityType, IdType] {
+            val p1 = CollectionAccessWithTwoEntityTypes.firstCodecSetProviderEV[BObject, IdType, BObject, BValue, EntityType, Any, this.type]
+            val p2 = CollectionAccessWithTwoEntityTypes.secondCodecSetProviderEV[BObject, IdType, EntityType, Any, BObject, BValue, this.type]
+
+            def getProvider1()(implicit p: CodecSetProvider[BObject, BValue, CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any], BObject, BObject, IdType]) = p
+            val provider1 = getProvider1()
+
+            def getCodecSet1()(implicit p: CodecSetProvider[BObject, BValue, CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any], BObject, BObject, IdType]): CollectionCodecSet[BObject, BObject, BObject, IdType, BValue] =
+                p.codecSet(this)
+            val c1 = getCodecSet1()
+
+            def getProvider2()(implicit p: CodecSetProvider[EntityType, Any, CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any], BObject, EntityType, IdType]) = p
+            val provider2 = getProvider2()
+
+            def getCodecSet2()(implicit p: CodecSetProvider[EntityType, Any, CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any], BObject, EntityType, IdType]): CollectionCodecSet[BObject, EntityType, EntityType, IdType, Any] =
+                p.codecSet(this)
+            val c2 = getCodecSet2()
+
+            private def testSync()(implicit context: Context) = {
+                sync.count()
+                val fs = sync.find()
+                val bs = sync[BObject].find()
+                val bs2 = sync[BObject, BValue].find()
+                val es = sync[EntityType].find()
+                val es2 = sync[EntityType, Any].find()
+
+                val bs3 = sync[BObject].find(BObject.empty)
+
+                val vs1 = sync[BObject, BValue].distinct("foo")
+                val vs2 = sync[EntityType, Any].distinct("foo")
+
+                // this would just throw at runtime, but we just need a value with static type EntityType
+                val e: EntityType = secondCodecSet.collectionQueryResultDecoder.decodeIterator(Iterator.empty)
+
+                sync[EntityType].save(e)
+                // "sync" with no type param is assumed to mean the first entity type for saves
+                sync.save(BObject.empty)
+            }
+
+            private def testAsync()(implicit context: Context) = {
+                async.count()
+                val fs = async.find()
+                val bs = async[BObject].find()
+                val bs2 = async[BObject, BValue].find()
+                val es = async[EntityType].find()
+                val es2 = async[EntityType, Any].find()
+
+                val bs3 = async[BObject].find(BObject.empty)
+
+                val vs1 = async[BObject, BValue].distinct("foo")
+                val vs2 = async[EntityType, Any].distinct("foo")
+
+                // this would just throw at runtime, but we just need a value with static type EntityType
+                val e: EntityType = secondCodecSet.collectionQueryResultDecoder.decodeIterator(Iterator.empty)
+
+                async[EntityType].save(e)
+                // "sync" with no type param is assumed to mean the first entity type for saves
+                async.save(BObject.empty)
+            }
+        }
     }
 
     @Test
@@ -70,7 +179,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
     @Test
     def testSaveAndFindOneCaseClass() {
-        val foo = newFoo(ObjectId(), 23, "woohoo")
+        val foo = Foo(ObjectId(), 23, "woohoo")
         Foo.sync[Foo].save(foo)
         val maybeFound = Foo.sync[Foo].findOneById(foo._id)
         assertTrue(maybeFound.isDefined)
@@ -79,7 +188,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
     @Test
     def testSaveAndFindOneCaseClassWithIntId() {
-        val foo = newFooWithIntId(89, 23, "woohoo")
+        val foo = FooWithIntId(89, 23, "woohoo")
         FooWithIntId.sync[FooWithIntId].save(foo)
         val maybeFound = FooWithIntId.sync[FooWithIntId].findOneById(foo._id)
         assertTrue(maybeFound.isDefined)
@@ -88,7 +197,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
     @Test
     def testFindByIDAllResultTypes() {
-        val foo = newFoo(ObjectId(), 23, "woohoo")
+        val foo = Foo(ObjectId(), 23, "woohoo")
         Foo.sync[Foo].save(foo)
 
         val o = Foo.sync[BObject].findOneById(foo._id).get
@@ -105,7 +214,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
     @Test
     def testFindByIDAllResultTypesWithIntId() {
-        val foo = newFooWithIntId(101, 23, "woohoo")
+        val foo = FooWithIntId(101, 23, "woohoo")
         FooWithIntId.sync[FooWithIntId].save(foo)
 
         val o = FooWithIntId.sync[BObject].findOneById(foo._id).get
@@ -119,28 +228,28 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
     private def create1234() {
         for (i <- 1 to 4) {
-            val foo = newFoo(ObjectId(), i, i.toString)
+            val foo = Foo(ObjectId(), i, i.toString)
             Foo.sync[Foo].insert(foo)
         }
     }
 
     private def create2143() {
         for (i <- Seq(2, 1, 4, 3)) {
-            val foo = newFoo(ObjectId(), i, i.toString)
+            val foo = Foo(ObjectId(), i, i.toString)
             Foo.sync[Foo].insert(foo)
         }
     }
 
     private def create1234Optional() {
         for (i <- 1 to 4) {
-            val foo = newFooWithOptionalField(ObjectId(), i, Some(i.toString))
+            val foo = FooWithOptionalField(ObjectId(), i, Some(i.toString))
             FooWithOptionalField.sync[FooWithOptionalField].insert(foo)
         }
     }
 
     private def create1to50() {
         for (i <- 1 to 50) {
-            val foo = newFoo(ObjectId(), i, i.toString)
+            val foo = Foo(ObjectId(), i, i.toString)
             Foo.sync[Foo].insert(foo)
         }
     }
@@ -466,7 +575,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
         // check we replace and return the old one
         val stillOld = Foo.sync[Foo].findAndReplace(BObject("intField" -> 3),
-            newFoo(old.get._id, 42, "42"))
+            Foo(old.get._id, 42, "42"))
         assertTrue(stillOld.isDefined)
         assertEquals(3, stillOld.get.intField)
         assertEquals(4, Foo.sync.count())
@@ -480,7 +589,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
         // now pass in the flag to return the new one and check that works
         val nowNew = Foo.sync[Foo].findAndReplace(BObject("intField" -> 42),
-            newFoo(old.get._id, 43, "43"), Set[FindAndModifyFlag](FindAndModifyNew))
+            Foo(old.get._id, 43, "43"), Set[FindAndModifyFlag](FindAndModifyNew))
         assertTrue(nowNew.isDefined)
         assertEquals(43, nowNew.get.intField)
         assertEquals(old.get._id, nowNew.get._id)
@@ -507,7 +616,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
         // replace the last item sorting backward by intField
         val old = Foo.sync[Foo].findAndReplace(BObject(),
-            newFoo(last._id, 42, "42"),
+            Foo(last._id, 42, "42"),
             BObject("intField" -> -1))
 
         assertTrue(old.isDefined)
@@ -533,7 +642,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
         // check we replace and return the old one minus excluded field
         val stillOld = FooWithOptionalField.sync[FooWithOptionalField].findAndReplace(BObject("intField" -> 3),
-            newFooWithOptionalField(old.get._id, 42, Some("42")), BObject(), ExcludedFields("stringField"), Set())
+            FooWithOptionalField(old.get._id, 42, Some("42")), BObject(), ExcludedFields("stringField"), Set())
         assertTrue(stillOld.isDefined)
         assertEquals(3, stillOld.get.intField)
         assertTrue(stillOld.get.stringField.isEmpty)
@@ -553,7 +662,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         // check we replace and return the old one
         val stillOld = Foo.sync[Foo].findAndReplace(BObject("intField" -> 3),
             // this ObjectId() is the thing that needs to get ignored
-            newFoo(ObjectId(), 42, "42"))
+            Foo(ObjectId(), 42, "42"))
         assertTrue(stillOld.isDefined)
         assertEquals(3, stillOld.get.intField)
         assertEquals(4, Foo.sync.count())
@@ -572,7 +681,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         assertEquals(4, Foo.sync.count())
 
         val notThere = Foo.sync[Foo].findAndReplace(BObject("intField" -> 124334),
-            newFoo(ObjectId(), 42, "42"))
+            Foo(ObjectId(), 42, "42"))
         assertTrue(notThere.isEmpty)
     }
 
@@ -725,7 +834,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
     @Test
     def testInsert() {
         assertEquals(0, Foo.sync.count())
-        val f = newFoo(ObjectId(), 14, "14")
+        val f = Foo(ObjectId(), 14, "14")
         Foo.sync[Foo].insert(f)
         assertEquals(1, Foo.sync.count())
         val foundById = Foo.sync[Foo].findOneById(f._id)
@@ -743,7 +852,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
     @Test
     def testSave() {
         assertEquals(0, Foo.sync.count())
-        val f = newFoo(ObjectId(), 14, "14")
+        val f = Foo(ObjectId(), 14, "14")
         Foo.sync[Foo].save(f)
         assertEquals(1, Foo.sync.count())
         val foundById = Foo.sync[Foo].findOneById(f._id)
@@ -758,7 +867,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         assertEquals(14, foundById2.get.intField)
 
         // making a change should be possible with a save
-        val f2 = newFoo(f._id, 15, "15")
+        val f2 = Foo(f._id, 15, "15")
         Foo.sync[Foo].save(f2)
         assertEquals(1, Foo.sync.count())
         val foundById3 = Foo.sync[Foo].findOneById(f2._id)
@@ -771,7 +880,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
     def testUpdate() {
         // updating when there's nothing there should do nothing
         assertEquals(0, Foo.sync.count())
-        val f = newFoo(ObjectId(), 14, "14")
+        val f = Foo(ObjectId(), 14, "14")
         Foo.sync[Foo].update(BObject("_id" -> f._id), f)
         assertEquals(0, Foo.sync.count())
         val foundById = Foo.sync[Foo].findOneById(f._id)
@@ -790,7 +899,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         assertEquals(14, foundById2.get.intField)
 
         // making a change should be possible with an update
-        val f2 = newFoo(f._id, 15, "15")
+        val f2 = Foo(f._id, 15, "15")
         Foo.sync[Foo].update(BObject("_id" -> f2._id), f2)
         assertEquals(1, Foo.sync.count())
         val foundById3 = Foo.sync[Foo].findOneById(f2._id)
@@ -841,7 +950,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
     def testUpdateUpsert() {
         // upserting when there's nothing there should insert
         assertEquals(0, Foo.sync.count())
-        val f = newFoo(ObjectId(), 14, "14")
+        val f = Foo(ObjectId(), 14, "14")
         Foo.sync[Foo].updateUpsert(BObject("_id" -> f._id), f)
         assertEquals(1, Foo.sync.count())
         val foundById = Foo.sync[Foo].findOneById(f._id)
@@ -856,7 +965,7 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
         assertEquals(14, foundById2.get.intField)
 
         // making a change should be possible with an upsert
-        val f2 = newFoo(f._id, 15, "15")
+        val f2 = Foo(f._id, 15, "15")
         Foo.sync[Foo].updateUpsert(BObject("_id" -> f2._id), f2)
         assertEquals(1, Foo.sync.count())
         val foundById3 = Foo.sync[Foo].findOneById(f2._id)
@@ -1060,4 +1169,38 @@ abstract class AbstractCollectionTest[Foo <: AbstractFoo, FooWithIntId <: Abstra
 
     @Test
     def testRoundTripMegaArray = roundTrip(arrayManyTypes)
+
+    @Test
+    def testCustomQueryReturnsVariousEntityTypes() {
+        val foo = Foo(ObjectId(), 23, "woohoo")
+        Foo.sync[Foo].save(foo)
+
+        val objects = Foo.customQuery[BObject].toIndexedSeq
+        assertEquals(1, objects.size)
+        assertEquals(BInt32(23), objects(0).get("intField").get)
+        assertEquals(BString("woohoo"), objects(0).get("stringField").get)
+
+        val caseClasses = Foo.customQuery[Foo].toIndexedSeq
+        assertEquals(1, caseClasses.size)
+        val f = caseClasses(0)
+        assertEquals(23, f.intField)
+        assertEquals("woohoo", f.stringField)
+    }
+
+    @Test
+    def testCustomQueryReturnsVariousEntityTypesWithIntId() {
+        val foo = FooWithIntId(100, 23, "woohoo")
+        FooWithIntId.sync[FooWithIntId].save(foo)
+
+        val objects = FooWithIntId.customQuery[BObject].toIndexedSeq
+        assertEquals(1, objects.size)
+        assertEquals(BInt32(23), objects(0).get("intField").get)
+        assertEquals(BString("woohoo"), objects(0).get("stringField").get)
+
+        val caseClasses = FooWithIntId.customQuery[FooWithIntId].toIndexedSeq
+        assertEquals(1, caseClasses.size)
+        val f = caseClasses(0)
+        assertEquals(23, f.intField)
+        assertEquals("woohoo", f.stringField)
+    }
 }

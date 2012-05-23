@@ -28,11 +28,11 @@ trait ReadOnlyCollection {
  * Common base class between BoundReadOnlySyncCollection and BoundReadOnlyAsyncCollection, holding
  * only those operations that are always synchronous. Bound collections have codecs pre-associated.
  */
-trait BoundReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
+trait BoundReadOnlyCollection[-QueryType, +DecodeEntityType, -IdType, +ValueType] {
 
     protected[mongo] def unbound: ReadOnlyCollection
 
-    protected[mongo] implicit def codecs: ReadOnlyCollectionCodecSet[QueryType, EntityType, IdType, ValueType]
+    protected[mongo] implicit def codecs: ReadOnlyCollectionCodecSet[QueryType, DecodeEntityType, IdType, ValueType]
 
     /** The database containing the collection */
     final def database: Database = unbound.database
@@ -56,9 +56,9 @@ trait Collection extends ReadOnlyCollection {
  * Common base class between BoundSyncCollection and BoundAsyncCollection,
  * holding only those operations that are always synchronous.
  */
-trait BoundCollection[QueryType, EntityType, IdType, ValueType]
-    extends BoundReadOnlyCollection[QueryType, EntityType, IdType, ValueType] {
+trait BoundCollection[-QueryType, -EncodeEntityType, +DecodeEntityType, -IdType, +ValueType]
+    extends BoundReadOnlyCollection[QueryType, DecodeEntityType, IdType, ValueType] {
     protected[mongo] override def unbound: Collection
 
-    protected[mongo] override implicit def codecs: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, ValueType]
+    protected[mongo] override implicit def codecs: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]
 }

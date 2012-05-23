@@ -63,9 +63,6 @@ final class CaseClassCodecs[E <: AnyRef with Product] private ()(implicit manife
     implicit def upsertEncoder: UpsertEncoder[E] = codecs.upsertEncoder
 
     implicit def modifierEncoder: ModifierEncoder[E] = codecs.modifierEncoder
-
-    def newCodecSet[EntityType <: Product: Manifest, IdType: IdEncoder](): CollectionCodecSet[BObject, EntityType, EntityType, IdType, Any] =
-        CodecSets.newCaseClassCodecSet()
 }
 
 object CaseClassCodecs {
@@ -74,5 +71,40 @@ object CaseClassCodecs {
      */
     def apply[E <: Product: Manifest](): CaseClassCodecs[E] = {
         new CaseClassCodecs[E]
+    }
+}
+
+trait CollectionCodecSetEntityCodecsCaseClass[EntityType <: Product] extends CollectionCodecSetEntityCodecs[EntityType] {
+    self: CollectionCodecSet[_, EntityType, EntityType, _, _] =>
+
+    protected implicit def entityManifest: Manifest[EntityType]
+
+    private lazy val entityCodecs = CaseClassCodecs[EntityType]()
+
+    override implicit def collectionQueryResultDecoder: QueryResultDecoder[EntityType] =
+        entityCodecs.queryResultDecoder
+    override implicit def collectionModifierEncoderEntity: ModifierEncoder[EntityType] =
+        entityCodecs.modifierEncoder
+    override implicit def collectionUpdateQueryEncoder: UpdateQueryEncoder[EntityType] =
+        entityCodecs.updateQueryEncoder
+    override implicit def collectionUpsertEncoder: UpsertEncoder[EntityType] =
+        entityCodecs.upsertEncoder
+}
+
+trait CollectionCodecSetCaseClass[-QueryType, EntityType <: Product, -IdType]
+    extends CollectionCodecSetValueDecoderAny[EntityType]
+    with CollectionCodecSetEntityCodecsCaseClass[EntityType] {
+    self: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, Any] =>
+}
+
+object CollectionCodecSetCaseClass {
+    private class CollectionCodecSetCaseClassImpl[-QueryType, EntityType <: Product, -IdType]()(implicit override val entityManifest: Manifest[EntityType], override val collectionQueryEncoder: QueryEncoder[QueryType], override val collectionModifierEncoderQuery: ModifierEncoder[QueryType], override val collectionIdEncoder: IdEncoder[IdType])
+        extends CollectionCodecSet[QueryType, EntityType, EntityType, IdType, Any]
+        with CollectionCodecSetCaseClass[QueryType, EntityType, IdType] {
+
+    }
+
+    def apply[QueryType, EntityType <: Product, IdType]()(implicit entityManifest: Manifest[EntityType], queryEncoder: QueryEncoder[QueryType], modifierEncoderQuery: ModifierEncoder[QueryType], idEncoder: IdEncoder[IdType]): CollectionCodecSet[QueryType, EntityType, EntityType, IdType, Any] = {
+        new CollectionCodecSetCaseClassImpl[QueryType, EntityType, IdType]()
     }
 }

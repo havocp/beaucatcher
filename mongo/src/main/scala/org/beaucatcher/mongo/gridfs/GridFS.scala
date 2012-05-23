@@ -26,40 +26,35 @@ private[gridfs] class GridFSCollections(val bucket: String) {
     }
 
     private def createCollectionAccessWithEntity[EntityType <: AnyRef: Manifest, IdType: IdEncoder](name: String, entityCodecs: CollectionCodecSet[BObject, EntityType, EntityType, IdType, Any],
-        migrateCallback: (CollectionAccess[EntityType, IdType], Context) => Unit) = {
-        new CollectionAccess[EntityType, IdType] {
-            override val collectionName = name
-            override val entityCodecSet = entityCodecs
-            override def migrate(implicit context: Context) = migrateCallback(this, context)
-        }
+        migrateCallback: (CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any], Context) => Unit) = {
+        CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any](name, migrateCallback)(CollectionCodecSetBObject[IdType](), entityCodecs)
     }
 
     private def createCollectionAccessWithoutEntity[IdType: IdEncoder](name: String,
-        migrateCallback: (CollectionAccessWithoutEntity[IdType], Context) => Unit) = {
-        new CollectionAccessWithoutEntity[IdType] {
-            override val collectionName = name
-
-            override def migrate(implicit context: Context) = migrateCallback(this, context)
-        }
+        migrateCallback: (CollectionAccessWithOneEntityType[BObject, BObject, IdType, BValue], Context) => Unit) = {
+        implicit val codecs = CollectionCodecSetBObject[IdType]()
+        CollectionAccessWithOneEntityType[BObject, BObject, IdType, BValue](name, migrateCallback)
     }
 
-    lazy val files: CollectionAccessTrait[GridFSFile, ObjectId] = {
-        import BObjectCodecs._
+    lazy val files: CollectionAccessWithTwoEntityTypes[BObject, ObjectId, BObject, BValue, GridFSFile, Any] = {
+        import IdEncoders.objectIdIdEncoder
         val access = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files",
             fileCodecSet,
             { (access, context) =>
+                implicit val ctx = context
                 // this isn't in the gridfs spec but it is in the Java implementation
-                access.sync(context).ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
+                access.sync.ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
             })
 
         access
     }
 
-    lazy val chunks: CollectionAccessWithoutEntityTrait[ObjectId] = {
-        import BObjectCodecs._
+    lazy val chunks: CollectionAccessWithOneEntityType[BObject, BObject, ObjectId, BValue] = {
+        import IdEncoders.objectIdIdEncoder
         val access = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks",
             { (access, context) =>
-                access.sync(context).ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
+                implicit val ctx = context
+                access.sync.ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
             })
 
         access
@@ -74,8 +69,8 @@ object GridFSCollections {
 trait GridFS {
     def bucket: String
 
-    protected def files: CollectionAccessTrait[GridFSFile, ObjectId]
-    protected def chunks: CollectionAccessWithoutEntityTrait[ObjectId]
+    protected def files: CollectionAccessWithTwoEntityTypes[BObject, ObjectId, BObject, BValue, GridFSFile, Any]
+    protected def chunks: CollectionAccessWithOneEntityType[BObject, BObject, ObjectId, BValue]
 }
 
 object GridFS {
@@ -89,7 +84,7 @@ sealed trait SyncGridFS extends GridFS {
     private[this] implicit final def implicitContext = context
 
     private[gridfs] def filesCollection = files.sync[GridFSFile]
-    private[gridfs] def chunksCollection = chunks.sync
+    private[gridfs] def chunksCollection = chunks.sync[BObject]
 
     /**
      * Obtain a read-only data access object for the bucket.files collection.
@@ -153,8 +148,8 @@ sealed trait SyncGridFS extends GridFS {
 
 object SyncGridFS {
     private[gridfs] def newGridFSCollections(bucket: String): GridFSCollections = {
-        import BObjectCodecs._
-        val codecs = BObjectCodecs.newCodecSet[ObjectId]()
+        import IdEncoders._
+        val codecs = CollectionCodecSetBObject[ObjectId]()
         import codecs.{ collectionModifierEncoderEntity => _, collectionIdEncoder => _, _ }
         new GridFSCollections(bucket)
     }

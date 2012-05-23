@@ -3,17 +3,22 @@ package org.beaucatcher.mongo
 /** Mix this in to have some basic value decoders in scope. */
 trait ValueDecoders {
 
+    // this can't be implicit since it would always apply
+    // and has the decoder parameter anyhow
+    def anyValueDecoder[E]()(implicit documentDecoder: QueryResultDecoder[E]): ValueDecoder[Any] =
+        ValueDecoders.anyValueDecoder()
+
     // TODO add type-specific decoders for each of the specific basic types
     // we support
 }
 
 /** Factory for value decoders */
-object ValueDecoders {
+object ValueDecoders extends ValueDecoders {
     import CodecUtils._
 
     // this can't be implicit since it would always apply
     // and has the decoder parameter anyhow
-    def anyValueDecoder[E]()(implicit documentDecoder: QueryResultDecoder[E]): ValueDecoder[Any] =
+    override def anyValueDecoder[E]()(implicit documentDecoder: QueryResultDecoder[E]): ValueDecoder[Any] =
         new AnyValueDecoder[E]
 
     private class AnyValueDecoder[E](implicit val documentDecoder: QueryResultDecoder[E])
@@ -30,4 +35,11 @@ object ValueDecoders {
             }
         }
     }
+}
+
+trait CollectionCodecSetValueDecoderAny[+EntityType] extends CollectionCodecSetValueDecoder[Any] {
+    self: CollectionCodecSet[_, _, EntityType, _, Any] =>
+
+    override implicit def collectionValueDecoder: ValueDecoder[Any] =
+        ValueDecoders.anyValueDecoder[EntityType]
 }

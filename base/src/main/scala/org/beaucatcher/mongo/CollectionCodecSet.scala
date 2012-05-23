@@ -39,6 +39,32 @@ trait CollectionCodecSet[-QueryType, -EncodeEntityType, +DecodeEntityType, -IdTy
     implicit def collectionModifierEncoderEntity: ModifierEncoder[EncodeEntityType]
     implicit def collectionUpdateQueryEncoder: UpdateQueryEncoder[EncodeEntityType]
     implicit def collectionUpsertEncoder: UpsertEncoder[EncodeEntityType]
+
+    protected def copy[Q, E, D, I, V](collectionValueDecoder: ValueDecoder[V],
+        collectionQueryEncoder: QueryEncoder[Q],
+        collectionIdEncoder: IdEncoder[I],
+        collectionQueryResultDecoder: QueryResultDecoder[D],
+        collectionModifierEncoderQuery: ModifierEncoder[Q],
+        collectionModifierEncoderEntity: ModifierEncoder[E],
+        collectionUpdateQueryEncoder: UpdateQueryEncoder[E],
+        collectionUpsertEncoder: UpsertEncoder[E]): CollectionCodecSet[Q, E, D, I, V] =
+        CollectionCodecSetImpl[Q, E, D, I, V](collectionValueDecoder, collectionQueryEncoder,
+            collectionIdEncoder, collectionQueryResultDecoder, collectionModifierEncoderQuery,
+            collectionModifierEncoderEntity, collectionUpdateQueryEncoder,
+            collectionUpsertEncoder)
+
+    def toErrorIfResultDecoded: CollectionCodecSet[QueryType, EncodeEntityType, ErrorIfDecodedDocument, IdType, ValueType] =
+        copy(collectionValueDecoder, collectionQueryEncoder, collectionIdEncoder,
+            ErrorIfDecodedDocument.queryResultDecoder,
+            collectionModifierEncoderQuery, collectionModifierEncoderEntity, collectionUpdateQueryEncoder, collectionUpsertEncoder)
+    def toErrorIfValueDecoded: CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ErrorIfDecodedValue] =
+        copy(ErrorIfDecodedValue.valueDecoder, collectionQueryEncoder, collectionIdEncoder,
+            collectionQueryResultDecoder,
+            collectionModifierEncoderQuery, collectionModifierEncoderEntity, collectionUpdateQueryEncoder, collectionUpsertEncoder)
+    def toErrorIfResultOrValueDecoded: CollectionCodecSet[QueryType, EncodeEntityType, ErrorIfDecodedDocument, IdType, ErrorIfDecodedValue] =
+        copy(ErrorIfDecodedValue.valueDecoder, collectionQueryEncoder, collectionIdEncoder,
+            ErrorIfDecodedDocument.queryResultDecoder,
+            collectionModifierEncoderQuery, collectionModifierEncoderEntity, collectionUpdateQueryEncoder, collectionUpsertEncoder)
 }
 
 private case class CollectionCodecSetImpl[-QueryType, -EncodeEntityType, +DecodeEntityType, -IdType, +ValueType](
@@ -50,7 +76,9 @@ private case class CollectionCodecSetImpl[-QueryType, -EncodeEntityType, +Decode
     override val collectionModifierEncoderEntity: ModifierEncoder[EncodeEntityType],
     override val collectionUpdateQueryEncoder: UpdateQueryEncoder[EncodeEntityType],
     override val collectionUpsertEncoder: UpsertEncoder[EncodeEntityType])
-    extends CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]
+    extends CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType] {
+
+}
 
 object CollectionCodecSet {
     def apply[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]()(implicit collectionValueDecoder: ValueDecoder[ValueType],
@@ -64,4 +92,35 @@ object CollectionCodecSet {
         CollectionCodecSetImpl[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType](collectionValueDecoder,
             collectionQueryEncoder, collectionIdEncoder, collectionQueryResultDecoder, collectionModifierEncoderQuery,
             collectionModifierEncoderEntity, collectionUpdateQueryEncoder, collectionUpsertEncoder)
+}
+
+/** Abstract mixin that provides an ID encoder to a codec set. */
+trait CollectionCodecSetIdEncoder[-IdType] {
+    self: CollectionCodecSet[_, _, _, IdType, _] =>
+
+    override implicit def collectionIdEncoder: IdEncoder[IdType]
+}
+
+/** Abstract mixin that provides query encoders to a codec set. */
+trait CollectionCodecSetQueryEncoders[-QueryType] {
+    self: CollectionCodecSet[QueryType, _, _, _, _] =>
+    override implicit def collectionQueryEncoder: QueryEncoder[QueryType]
+    override implicit def collectionModifierEncoderQuery: ModifierEncoder[QueryType]
+}
+
+/** Abstract mixin that provides entity encoders and decoders to a codec set */
+trait CollectionCodecSetEntityCodecs[EntityType] {
+    self: CollectionCodecSet[_, EntityType, EntityType, _, _] =>
+
+    override implicit def collectionQueryResultDecoder: QueryResultDecoder[EntityType]
+    override implicit def collectionModifierEncoderEntity: ModifierEncoder[EntityType]
+    override implicit def collectionUpdateQueryEncoder: UpdateQueryEncoder[EntityType]
+    override implicit def collectionUpsertEncoder: UpsertEncoder[EntityType]
+}
+
+/** Abstract mixin that provides a value decoder to a codec set */
+trait CollectionCodecSetValueDecoder[+ValueType] {
+    self: CollectionCodecSet[_, _, _, _, ValueType] =>
+
+    override implicit def collectionValueDecoder: ValueDecoder[ValueType]
 }

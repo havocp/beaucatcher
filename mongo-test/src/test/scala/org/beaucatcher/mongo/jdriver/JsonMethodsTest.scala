@@ -15,7 +15,7 @@ package restdemo {
     case class Foo(_id: ObjectId, aString: String, anInt: Int)
 
     object Foo
-        extends CollectionAccessWithCaseClass[Foo, ObjectId]
+        extends CollectionAccessWithEntitiesBObjectOrCaseClassIdObjectId[Foo]
         with JsonMethods[Foo] {
         // the default collection name would conflict with the Foo
         // in CollectionTest since tests are run concurrently;
@@ -23,7 +23,7 @@ package restdemo {
         override val collectionName = "restfoo"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[Foo])
-        override def jsonSync(implicit context: Context): BoundSyncCollection[BObject, BObject, _, _] = sync[BObject]
+        override def jsonSync(implicit context: Context): BoundSyncCollection[BObject, BObject, BObject, _, _] = sync[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         // This object inherits a complete Collection for BObject and for the Foo case class,
@@ -33,7 +33,7 @@ package restdemo {
 
     case class FooWithIntId(_id: Int, aString: String, anInt: Int)
     object FooWithIntId
-        extends CollectionAccessWithCaseClass[FooWithIntId, Int]
+        extends CollectionAccessWithEntitiesBObjectOrCaseClass[FooWithIntId, Int]
         with JsonMethods[FooWithIntId] {
         // the default collection name would conflict with the FooWithIntId
         // in CollectionTest since tests are run concurrently;
@@ -41,7 +41,7 @@ package restdemo {
         override val collectionName = "restfooWithIntId"
 
         override val jsonAnalysis = new ClassAnalysis(classOf[FooWithIntId])
-        override def jsonSync(implicit context: Context): BoundSyncCollection[BObject, BObject, _, _] = sync[BObject]
+        override def jsonSync(implicit context: Context): BoundSyncCollection[BObject, BObject, BObject, _, _] = sync[BObject]
         override def createQueryForAllObjects = BObject() // this would be dangerous in a non-test
 
         override def parseJValueIdFromPath(path: String): BInt32 = {

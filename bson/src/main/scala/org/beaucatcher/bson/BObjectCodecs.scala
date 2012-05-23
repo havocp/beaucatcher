@@ -36,9 +36,6 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
     implicit def bobjectUpsertEncoder: UpsertEncoder[BObject] =
         BObjectUnmodifiedEncoder
 
-    def newCodecSet[IdType: IdEncoder](): CollectionCodecSet[BObject, BObject, BObject, IdType, BValue] =
-        CodecSets.newBObjectCodecSet()
-
     private def unwrapIterator(bobj: BOrJObject): Iterator[(String, Any)] = {
         // note: avoid bobj.unwrapped here because it creates an unordered map
         // while BObject is ordered
@@ -276,5 +273,72 @@ object BObjectCodecs extends IdEncoders with ValueDecoders {
                 Bson.MAXKEY =>
                 throw new MongoException("Encountered value of type " + Integer.toHexString(what) + " which is currently unsupported")
         }
+    }
+}
+
+trait CollectionCodecSetEntityCodecsBObject extends CollectionCodecSetEntityCodecs[BObject] {
+    self: CollectionCodecSet[_, BObject, BObject, _, _] =>
+
+    override implicit def collectionQueryResultDecoder: QueryResultDecoder[BObject] =
+        BObjectCodecs.bobjectQueryResultDecoder
+    override implicit def collectionModifierEncoderEntity: ModifierEncoder[BObject] =
+        BObjectCodecs.bobjectModifierEncoder
+    override implicit def collectionUpdateQueryEncoder: UpdateQueryEncoder[BObject] =
+        BObjectCodecs.bobjectUpdateQueryEncoder
+    override implicit def collectionUpsertEncoder: UpsertEncoder[BObject] =
+        BObjectCodecs.bobjectUpsertEncoder
+}
+
+trait CollectionCodecSetQueryEncodersBObject[QueryType <: BObject] extends CollectionCodecSetQueryEncoders[QueryType] {
+    self: CollectionCodecSet[QueryType, _, _, _, _] =>
+    override implicit def collectionQueryEncoder: QueryEncoder[QueryType] =
+        BObjectCodecs.bobjectQueryEncoder
+    override implicit def collectionModifierEncoderQuery: ModifierEncoder[QueryType] =
+        BObjectCodecs.bobjectModifierEncoder
+}
+
+trait CollectionCodecSetValueDecoderBValue extends CollectionCodecSetValueDecoder[BValue] {
+    self: CollectionCodecSet[_, _, _, _, BValue] =>
+
+    override implicit def collectionValueDecoder: ValueDecoder[BValue] =
+        BObjectCodecs.bvalueValueDecoder
+}
+
+trait CollectionCodecSetEntityBObject[-QueryType, -IdType]
+    extends CollectionCodecSetValueDecoderBValue
+    with CollectionCodecSetEntityCodecsBObject {
+    self: CollectionCodecSet[QueryType, BObject, BObject, IdType, BValue] =>
+}
+
+object CollectionCodecSetEntityBObject {
+    private class CollectionCodecSetEntityBObjectImpl[-QueryType, -IdType]()(implicit override val collectionQueryEncoder: QueryEncoder[QueryType],
+        override val collectionModifierEncoderQuery: ModifierEncoder[QueryType],
+        override val collectionIdEncoder: IdEncoder[IdType])
+        extends CollectionCodecSet[QueryType, BObject, BObject, IdType, BValue]
+        with CollectionCodecSetEntityBObject[QueryType, IdType] {
+
+    }
+
+    def apply[QueryType: QueryEncoder: ModifierEncoder, IdType: IdEncoder](): CollectionCodecSet[QueryType, BObject, BObject, IdType, BValue] = {
+        new CollectionCodecSetEntityBObjectImpl[QueryType, IdType]()
+    }
+}
+
+trait CollectionCodecSetBObject[-IdType]
+    extends CollectionCodecSetQueryEncodersBObject[BObject]
+    with CollectionCodecSetEntityBObject[BObject, IdType]
+    with CollectionCodecSetEntityCodecsBObject {
+    self: CollectionCodecSet[BObject, BObject, BObject, IdType, BValue] =>
+}
+
+object CollectionCodecSetBObject {
+    private class CollectionCodecSetBObjectImpl[-IdType]()(implicit override val collectionIdEncoder: IdEncoder[IdType])
+        extends CollectionCodecSet[BObject, BObject, BObject, IdType, BValue]
+        with CollectionCodecSetBObject[IdType] {
+
+    }
+
+    def apply[IdType]()(implicit idEncoder: IdEncoder[IdType]): CollectionCodecSet[BObject, BObject, BObject, IdType, BValue] = {
+        new CollectionCodecSetBObjectImpl[IdType]()
     }
 }
