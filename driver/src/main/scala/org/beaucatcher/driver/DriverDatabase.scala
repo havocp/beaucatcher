@@ -17,7 +17,6 @@ private[beaucatcher] trait AsyncDriverDatabase {
 
     private implicit def context = database.context
 
-    // TODO take any query not BObject
     def command[Q](cmd: Q, options: CommandOptions)(implicit encoder: QueryEncoder[Q]): Future[CommandResult]
 }
 

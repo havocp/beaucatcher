@@ -36,8 +36,8 @@ case class CreateCollectionOptions(autoIndexId: Option[Boolean] = None, capped: 
 private[beaucatcher] object CreateCollectionOptions {
     final val empty = CreateCollectionOptions(None, None, None, None, None)
 
-    private[beaucatcher] def buildCommand(name: String, options: CreateCollectionOptions): BObject = {
-        val builder = BObject.newBuilder
+    private[beaucatcher] def buildCommand(name: String, options: CreateCollectionOptions): Iterator[(String, Any)] = {
+        val builder = Seq.newBuilder[(String, Any)]
         // the Mongo docs say "createCollection" but driver uses "create"
         builder += ("create" -> name)
         // use "match" here so it will break if we modify CreateCollectionOptions fields
@@ -47,11 +47,10 @@ private[beaucatcher] object CreateCollectionOptions {
                 capped foreach { v => builder += ("capped" -> v) }
                 max foreach { v => builder += ("max" -> v) }
                 size foreach { v => builder += ("size" -> v) }
-                builder.result
+                builder.result.iterator
             case _ =>
                 throw new IllegalStateException("should not be reached")
         }
-        builder.result
     }
 }
 
@@ -66,9 +65,9 @@ trait SyncDatabase {
     // TODO addUser(), removeUser()
     // TODO eval()
 
-    final def command(cmd: BObject): CommandResult = command(cmd, CommandOptions.empty)
+    final def command[Q](cmd: Q)(implicit encoder: QueryEncoder[Q]): CommandResult = command(cmd, CommandOptions.empty)
 
-    def command(cmd: BObject, options: CommandOptions): CommandResult = {
+    def command[Q](cmd: Q, options: CommandOptions)(implicit encoder: QueryEncoder[Q]): CommandResult = {
         import BObjectCodecs._
         underlying.command(cmd, options)
     }
@@ -78,6 +77,7 @@ trait SyncDatabase {
     }
 
     final def createCollection(name: String, options: CreateCollectionOptions): CommandResult = {
+        import IteratorCodecs.iteratorQueryEncoder
         command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
     }
 
@@ -90,7 +90,8 @@ trait SyncDatabase {
     }
 
     def dropDatabase(): CommandResult = {
-        command(BObject("dropDatabase" -> 1))
+        import IteratorCodecs.iteratorQueryEncoder
+        command(Iterator("dropDatabase" -> 1))
     }
 }
 
@@ -105,10 +106,9 @@ trait AsyncDatabase {
     // TODO addUser(), removeUser()
     // TODO eval()
 
-    final def command(cmd: BObject): Future[CommandResult] = command(cmd, CommandOptions.empty)
+    final def command[Q](cmd: Q)(implicit encoder: QueryEncoder[Q]): Future[CommandResult] = command(cmd, CommandOptions.empty)
 
-    def command(cmd: BObject, options: CommandOptions): Future[CommandResult] = {
-        import BObjectCodecs._
+    def command[Q](cmd: Q, options: CommandOptions)(implicit encoder: QueryEncoder[Q]): Future[CommandResult] = {
         underlying.command(cmd, options)
     }
 
@@ -117,6 +117,7 @@ trait AsyncDatabase {
     }
 
     final def createCollection(name: String, options: CreateCollectionOptions): Future[CommandResult] = {
+        import IteratorCodecs.iteratorQueryEncoder
         command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
     }
 
@@ -129,7 +130,8 @@ trait AsyncDatabase {
     }
 
     def dropDatabase(): Future[CommandResult] = {
-        command(BObject("dropDatabase" -> 1))
+        import IteratorCodecs.iteratorQueryEncoder
+        command(Iterator("dropDatabase" -> 1))
     }
 }
 
