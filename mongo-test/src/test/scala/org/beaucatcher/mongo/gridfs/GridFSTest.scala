@@ -1,6 +1,5 @@
 package org.beaucatcher.mongo.gridfs
 
-import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.beaucatcher.mongo.gridfs._
@@ -59,7 +58,7 @@ class GridFSTest
         }
         for (c <- 'a' to 'f') {
             val name = "contains-" + c
-            val f = TestFS.sync.collection.findOne(BObject("filename" -> name)).get
+            val f = TestFS.sync.collection.findOne(Iterator("filename" -> name)).get
             val stream = TestFS.sync.openForReading(f)
             val content = IOUtils.toString(stream)
             stream.close()
@@ -114,7 +113,7 @@ class GridFSTest
     private def readAndRemoveSmallChunkFiles() {
         for (c <- 'a' to 'f') {
             val name = "contains-" + c
-            val f = TestFS.sync.collection.findOne(BObject("filename" -> name)).get
+            val f = TestFS.sync.collection.findOne(Iterator("filename" -> name)).get
             assertEquals(SMALL_CHUNK_SIZE, f.chunkSize)
             val stream = TestFS.sync.openForReading(f)
             val content = IOUtils.toString(stream)

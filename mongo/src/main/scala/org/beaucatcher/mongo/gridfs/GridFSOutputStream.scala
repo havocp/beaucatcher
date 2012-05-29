@@ -1,7 +1,6 @@
 package org.beaucatcher.mongo.gridfs
 
 import org.beaucatcher.bson._
-import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.mongo._
 import org.beaucatcher.util.toHex
 import java.io.OutputStream
@@ -32,7 +31,7 @@ private[gridfs] class GridFSOutputStream(fs: SyncGridFS, file: GridFSFile) exten
         if (buf.size > 0) {
             val bytes = buf.toByteArray()
             buf.reset()
-            val chunk = BObject("_id" -> ObjectId(),
+            val chunk = Map("_id" -> ObjectId(),
                 "files_id" -> file._id,
                 "n" -> chunkNumber,
                 "data" -> Binary(bytes))

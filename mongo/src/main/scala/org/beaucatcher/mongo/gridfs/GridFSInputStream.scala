@@ -1,7 +1,6 @@
 package org.beaucatcher.mongo.gridfs
 
 import org.beaucatcher.bson._
-import org.beaucatcher.bson.Implicits._
 import scala.collection.JavaConverters._
 import java.io.InputStream
 import java.io.SequenceInputStream
@@ -25,10 +24,10 @@ object GridFSInputStream {
         // this all needs to be lazy, which I _think_ it should be...
         // the ".iterator" allows us to later use .asJavaEnumeration which isn't allowed on a sequence.
         val chunks = for (n <- (0 until numChunks).iterator)
-            yield fs.chunksCollection.findOne(BObject("files_id" -> file._id, "n" -> n)).getOrElse(throw new IOException("Missing chunk " + n + "/" + numChunks + " of file " + file))
+            yield fs.chunksCollection.findOne(Iterator("files_id" -> file._id, "n" -> n)).getOrElse(throw new IOException("Missing chunk " + n + "/" + numChunks + " of file " + file))
         val streams = chunks map { chunk =>
             chunk.get("data") match {
-                case Some(BBinary(bin)) =>
+                case Some(bin: Binary) =>
                     new ByteArrayInputStream(bin.data): InputStream
                 case _ =>
                     throw new IOException("Chunk " + chunk + " of file " + file + " has bad data")

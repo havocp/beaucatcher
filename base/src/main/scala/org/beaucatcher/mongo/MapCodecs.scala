@@ -120,3 +120,23 @@ trait CollectionCodecSetEntityCodecsMap
     override implicit def collectionUpsertEncoder: UpsertEncoder[Map[String, Any]] =
         MapCodecs.mapUpsertEncoder
 }
+
+trait CollectionCodecSetMap[-IdType]
+    extends CollectionCodecSetQueryEncodersIterator
+    with CollectionCodecSetEntityCodecsMap
+    with CollectionCodecSetValueDecoderAny[Map[String, Any]] {
+    self: CollectionCodecSet[Iterator[(String, Any)], Map[String, Any], Map[String, Any], IdType, Any] =>
+    protected override def nestedDocumentQueryResultDecoder = MapCodecs.mapQueryResultDecoder
+}
+
+object CollectionCodecSetMap {
+    private class CollectionCodecSetMapImpl[-IdType]()(implicit override val collectionIdEncoder: IdEncoder[IdType])
+        extends CollectionCodecSet[Iterator[(String, Any)], Map[String, Any], Map[String, Any], IdType, Any]
+        with CollectionCodecSetMap[IdType] {
+
+    }
+
+    def apply[IdType]()(implicit idEncoder: IdEncoder[IdType]): CollectionCodecSet[Iterator[(String, Any)], Map[String, Any], Map[String, Any], IdType, Any] = {
+        new CollectionCodecSetMapImpl[IdType]()
+    }
+}

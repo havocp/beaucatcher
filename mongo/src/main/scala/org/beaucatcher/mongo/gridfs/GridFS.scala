@@ -19,42 +19,45 @@ private[gridfs] class GridFSCollections(val bucket: String) {
     }
 
     private lazy val fileCodecSet = {
-        import BObjectCodecs._
-        import fileCodecs._
+        import MapCodecs.mapQueryResultDecoder
+        implicit val valueDecoder = ValueDecoders.anyValueDecoder[Map[String, Any]]
 
-        CollectionCodecSet[BObject, GridFSFile, GridFSFile, ObjectId, Any]()
+        import fileCodecs._
+        import IteratorCodecs._
+
+        CollectionCodecSet[Iterator[(String, Any)], GridFSFile, GridFSFile, ObjectId, Any]()
     }
 
-    private def createCollectionAccessWithEntity[EntityType <: AnyRef: Manifest, IdType: IdEncoder](name: String, entityCodecs: CollectionCodecSet[BObject, EntityType, EntityType, IdType, Any],
-        migrateCallback: (CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any], Context) => Unit) = {
-        CollectionAccessWithTwoEntityTypes[BObject, IdType, BObject, BValue, EntityType, Any](name, migrateCallback)(CollectionCodecSetBObject[IdType](), entityCodecs)
+    private def createCollectionAccessWithEntity[EntityType <: AnyRef: Manifest, IdType: IdEncoder](name: String, entityCodecs: CollectionCodecSet[Iterator[(String, Any)], EntityType, EntityType, IdType, Any],
+        migrateCallback: (CollectionAccessWithTwoEntityTypes[Iterator[(String, Any)], IdType, Map[String, Any], Any, EntityType, Any], Context) => Unit) = {
+        CollectionAccessWithTwoEntityTypes[Iterator[(String, Any)], IdType, Map[String, Any], Any, EntityType, Any](name, migrateCallback)(CollectionCodecSetMap[IdType](), entityCodecs)
     }
 
     private def createCollectionAccessWithoutEntity[IdType: IdEncoder](name: String,
-        migrateCallback: (CollectionAccessWithOneEntityType[BObject, BObject, IdType, BValue], Context) => Unit) = {
-        implicit val codecs = CollectionCodecSetBObject[IdType]()
-        CollectionAccessWithOneEntityType[BObject, BObject, IdType, BValue](name, migrateCallback)
+        migrateCallback: (CollectionAccessWithOneEntityType[Iterator[(String, Any)], Map[String, Any], IdType, Any], Context) => Unit) = {
+        implicit val codecs = CollectionCodecSetMap[IdType]()
+        CollectionAccessWithOneEntityType[Iterator[(String, Any)], Map[String, Any], IdType, Any](name, migrateCallback)
     }
 
-    lazy val files: CollectionAccessWithTwoEntityTypes[BObject, ObjectId, BObject, BValue, GridFSFile, Any] = {
+    lazy val files: CollectionAccessWithTwoEntityTypes[Iterator[(String, Any)], ObjectId, Map[String, Any], Any, GridFSFile, Any] = {
         import IdEncoders.objectIdIdEncoder
         val access = createCollectionAccessWithEntity[GridFSFile, ObjectId](bucket + ".files",
             fileCodecSet,
             { (access, context) =>
                 implicit val ctx = context
                 // this isn't in the gridfs spec but it is in the Java implementation
-                access.sync.ensureIndex(BObject("filename" -> 1, "uploadDate" -> 1))
+                access.sync.ensureIndex(Iterator("filename" -> 1, "uploadDate" -> 1))
             })
 
         access
     }
 
-    lazy val chunks: CollectionAccessWithOneEntityType[BObject, BObject, ObjectId, BValue] = {
+    lazy val chunks: CollectionAccessWithOneEntityType[Iterator[(String, Any)], Map[String, Any], ObjectId, Any] = {
         import IdEncoders.objectIdIdEncoder
         val access = createCollectionAccessWithoutEntity[ObjectId](bucket + ".chunks",
             { (access, context) =>
                 implicit val ctx = context
-                access.sync.ensureIndex(BObject("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
+                access.sync.ensureIndex(Iterator("files_id" -> 1, "n" -> 1), IndexOptions(flags = Set(IndexUnique)))
             })
 
         access
@@ -69,8 +72,8 @@ object GridFSCollections {
 trait GridFS {
     def bucket: String
 
-    protected def files: CollectionAccessWithTwoEntityTypes[BObject, ObjectId, BObject, BValue, GridFSFile, Any]
-    protected def chunks: CollectionAccessWithOneEntityType[BObject, BObject, ObjectId, BValue]
+    protected def files: CollectionAccessWithTwoEntityTypes[Iterator[(String, Any)], ObjectId, Map[String, Any], Any, GridFSFile, Any]
+    protected def chunks: CollectionAccessWithOneEntityType[Iterator[(String, Any)], Map[String, Any], ObjectId, Any]
 }
 
 object GridFS {
@@ -78,19 +81,20 @@ object GridFS {
     private[gridfs] val DEFAULT_CHUNK_SIZE = 256 * 1024L
 }
 
+// TODO use typeclasses for the query type
 sealed trait SyncGridFS extends GridFS {
     def context: Context
 
     private[this] implicit final def implicitContext = context
 
     private[gridfs] def filesCollection = files.sync[GridFSFile]
-    private[gridfs] def chunksCollection = chunks.sync[BObject]
+    private[gridfs] def chunksCollection = chunks.sync[Map[String, Any]]
 
     /**
      * Obtain a read-only data access object for the bucket.files collection.
      * Use this to query for files.
      */
-    def collection: BoundReadOnlySyncCollection[BObject, GridFSFile, ObjectId, _] = filesCollection
+    def collection: BoundReadOnlySyncCollection[Iterator[(String, Any)], GridFSFile, ObjectId, _] = filesCollection
 
     /**
      * Delete one file by ID.
@@ -98,7 +102,7 @@ sealed trait SyncGridFS extends GridFS {
     def removeById(id: ObjectId): WriteResult = {
         val result = filesCollection.removeById(id)
         if (result.ok)
-            chunksCollection.remove(BObject("files_id" -> id))
+            chunksCollection.remove(Iterator("files_id" -> id))
         else
             result
     }
@@ -107,11 +111,11 @@ sealed trait SyncGridFS extends GridFS {
      * Deletes all files matching the query. The query is against the files collection not the chunks collection,
      * but both the file and its chunks are removed.
      */
-    def remove(query: BObject): WriteResult = {
+    def remove(query: Iterator[(String, Any)]): WriteResult = {
         // this is intended to avoid needing the entire query result in memory;
         // we should iterate the cursor lazily in chunks, theoretically.
-        val ids = files.sync[BObject].find(query, IncludedFields.idOnly)
-        val results = ids map { idObj => removeById(idObj.getUnwrappedAs[ObjectId]("_id")) }
+        val ids = files.sync.find(query, IncludedFields.idOnly)
+        val results = ids map { idObj => removeById(idObj.getOrElse("_id", throw new MongoException("no _id on files object")).asInstanceOf[ObjectId]) }
         // pick first failed result if any, otherwise an "ok"
         results.foldLeft(WriteResult(ok = true))({ (next, sofar) =>
             if (!next.ok && sofar.ok)
