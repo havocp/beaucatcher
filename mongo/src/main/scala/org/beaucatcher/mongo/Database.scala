@@ -13,19 +13,25 @@ import akka.dispatch.Future
 final class SystemCollections private[mongo] () {
     import IdEncoders._
 
+    private abstract class CollectionAccessWithEntityCaseClass[EntityType <: Product, IdType]()(implicit entityManifest: Manifest[EntityType], idEncoder: IdEncoder[IdType])
+        extends CollectionAccessWithOneEntityType[Iterator[(String, Any)], EntityType, IdType, Any] {
+
+        override val firstCodecSet = CollectionCodecSetCaseClass[Iterator[(String, Any)], EntityType, IdType]()(entityManifest, IteratorCodecs.iteratorQueryEncoder, IteratorCodecs.iteratorModifierEncoder, idEncoder)
+    }
+
     private object Indexes
-        extends CollectionAccessWithEntitiesBObjectOrCaseClass[CollectionIndex, String] {
+        extends CollectionAccessWithEntityCaseClass[CollectionIndex, String] {
         override val collectionName = "system.indexes"
     }
 
-    def indexes: CollectionAccessWithTwoEntityTypes[BObject, String, BObject, BValue, CollectionIndex, Any] = Indexes
+    def indexes: CollectionAccessWithOneEntityType[Iterator[(String, Any)], CollectionIndex, String, Any] = Indexes
 
     private object Namespaces
-        extends CollectionAccessWithEntitiesBObjectOrCaseClass[Namespace, String] {
+        extends CollectionAccessWithEntityCaseClass[Namespace, String] {
         override val collectionName = "system.namespaces"
     }
 
-    def namespaces: CollectionAccessWithTwoEntityTypes[BObject, String, BObject, BValue, Namespace, Any] = Namespaces
+    def namespaces: CollectionAccessWithOneEntityType[Iterator[(String, Any)], Namespace, String, Any] = Namespaces
 
     // TODO system.users
 }
@@ -81,12 +87,8 @@ trait SyncDatabase {
         command(CreateCollectionOptions.buildCommand(name, options), CommandOptions(options.overrideQueryFlags))
     }
 
-    // TODO should return Cursor which requires Cursor to have CanBuildFrom machinery
-    def collectionNames: Iterator[String] = {
-        database.system.namespaces.sync[BObject].find(BObject.empty, IncludedFields("name")) map {
-            obj =>
-                obj.getUnwrappedAs[String]("name")
-        }
+    def collectionNames: Cursor[String] = {
+        database.system.namespaces.sync.find(Iterator.empty, IncludedFields("name")).map(_.name)
     }
 
     def dropDatabase(): CommandResult = {
@@ -122,10 +124,8 @@ trait AsyncDatabase {
     }
 
     def collectionNames: Future[AsyncCursor[String]] = {
-        database.system.namespaces.async[BObject].find(BObject.empty, IncludedFields("name")) map { cursor =>
-            cursor.map({ obj =>
-                obj.getUnwrappedAs[String]("name")
-            })
+        database.system.namespaces.async.find(Iterator.empty, IncludedFields("name")) map { cursor =>
+            cursor.map(_.name)
         }
     }
 

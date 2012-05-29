@@ -62,7 +62,7 @@ sealed trait ReadOnlySyncCollection extends ReadOnlyCollection {
      */
     final def findIndexes(): Cursor[CollectionIndex] = {
         import Implicits._
-        database.system.indexes.sync[CollectionIndex].find(BObject("ns" -> fullName))
+        database.system.indexes.sync[CollectionIndex].find(Iterator("ns" -> fullName))
     }
 }
 

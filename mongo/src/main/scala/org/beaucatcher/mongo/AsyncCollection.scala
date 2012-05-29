@@ -68,7 +68,7 @@ sealed trait ReadOnlyAsyncCollection extends ReadOnlyCollection {
      */
     final def findIndexes(): Future[AsyncCursor[CollectionIndex]] = {
         import Implicits._
-        database.system.indexes.async[CollectionIndex].find(BObject("ns" -> fullName))
+        database.system.indexes.async[CollectionIndex].find(Iterator("ns" -> fullName))
     }
 }
 
