@@ -37,9 +37,11 @@ object ValueDecoders extends ValueDecoders {
     }
 }
 
-trait CollectionCodecSetValueDecoderAny[+EntityType] extends CollectionCodecSetValueDecoder[Any] {
-    self: CollectionCodecSet[_, _, EntityType, _, Any] =>
+trait CollectionCodecSetValueDecoderAny[+NestedDocumentType] extends CollectionCodecSetValueDecoder[Any] {
+    self: CollectionCodecSet[_, _, _, _, Any] =>
+
+    protected implicit def nestedDocumentQueryResultDecoder: QueryResultDecoder[NestedDocumentType]
 
     override implicit def collectionValueDecoder: ValueDecoder[Any] =
-        ValueDecoders.anyValueDecoder[EntityType]
+        ValueDecoders.anyValueDecoder[NestedDocumentType]
 }

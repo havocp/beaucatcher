@@ -13,22 +13,79 @@ import akka.dispatch.Future
 final class SystemCollections private[mongo] () {
     import IdEncoders._
 
-    private abstract class CollectionAccessWithEntityCaseClass[EntityType <: Product, IdType]()(implicit entityManifest: Manifest[EntityType], idEncoder: IdEncoder[IdType])
-        extends CollectionAccessWithOneEntityType[Iterator[(String, Any)], EntityType, IdType, Any] {
-
-        override val firstCodecSet = CollectionCodecSetCaseClass[Iterator[(String, Any)], EntityType, IdType]()(entityManifest, IteratorCodecs.iteratorQueryEncoder, IteratorCodecs.iteratorModifierEncoder, idEncoder)
-    }
-
     private object Indexes
-        extends CollectionAccessWithEntityCaseClass[CollectionIndex, String] {
+        extends CollectionAccessWithOneEntityType[Iterator[(String, Any)], CollectionIndex, String, Any] {
         override val collectionName = "system.indexes"
+
+        // this is done by hand to avoid the dependency on case class reflection
+        private object CodecSet
+            extends CollectionCodecSet[Iterator[(String, Any)], CollectionIndex, CollectionIndex, String, Any]
+            with CollectionCodecSetIdEncoderString
+            with CollectionCodecSetValueDecoderAny[Map[String, Any]]
+            with CollectionCodecSetQueryEncodersIterator
+            with CollectionCodecSetEntityCodecsIteratorBased[CollectionIndex] {
+            override def nestedDocumentQueryResultDecoder = MapCodecs.mapQueryResultDecoder
+
+            override def toIterator(ci: CollectionIndex): Iterator[(String, Any)] = {
+                Iterator("name" -> ci.name, "ns" -> ci.ns,
+                    "key" -> MapCodecs.mapToIterator(ci.key)) ++
+                    ci.v.map(i => "v" -> i).iterator ++
+                    ci.unique.map(u => "unique" -> u).iterator ++
+                    ci.background.map(b => "background" -> b).iterator ++
+                    ci.dropDups.map(d => "dropDups" -> d).iterator ++
+                    ci.sparse.map(s => "sparse" -> s).iterator
+            }
+
+            override def fromIterator(i: Iterator[(String, Any)]): CollectionIndex = {
+                val m = MapCodecs.iteratorToMap(i)
+                CollectionIndex(name = m.getOrElse("name", throw new MongoException("system.indexes entry has no name")).asInstanceOf[String],
+                    ns = m.getOrElse("ns", throw new MongoException("system.indexes entry has no ns")).asInstanceOf[String],
+                    key = m.getOrElse("key", throw new MongoException("system.indexes entry has no key")).asInstanceOf[Map[String, Any]],
+                    v = m.get("v").map(_.asInstanceOf[Int]),
+                    unique = m.get("unique").map(_.asInstanceOf[Boolean]),
+                    background = m.get("background").map(_.asInstanceOf[Boolean]),
+                    dropDups = m.get("dropDups").map(_.asInstanceOf[Boolean]),
+                    sparse = m.get("sparse").map(_.asInstanceOf[Boolean]))
+            }
+
+        }
+
+        override def firstCodecSet: CollectionCodecSet[Iterator[(String, Any)], CollectionIndex, CollectionIndex, String, Any] =
+            CodecSet
     }
 
     def indexes: CollectionAccessWithOneEntityType[Iterator[(String, Any)], CollectionIndex, String, Any] = Indexes
 
     private object Namespaces
-        extends CollectionAccessWithEntityCaseClass[Namespace, String] {
+        extends CollectionAccessWithOneEntityType[Iterator[(String, Any)], Namespace, String, Any] {
         override val collectionName = "system.namespaces"
+
+        // this is done by hand to avoid the dependency on case class reflection
+        private object CodecSet
+            extends CollectionCodecSet[Iterator[(String, Any)], Namespace, Namespace, String, Any]
+            with CollectionCodecSetIdEncoderString
+            with CollectionCodecSetValueDecoderAny[Map[String, Any]]
+            with CollectionCodecSetQueryEncodersIterator
+            with CollectionCodecSetEntityCodecsIteratorBased[Namespace] {
+            override def nestedDocumentQueryResultDecoder = MapCodecs.mapQueryResultDecoder
+
+            override def toIterator(ns: Namespace): Iterator[(String, Any)] = {
+                Iterator("name" -> ns.name)
+            }
+
+            override def fromIterator(i: Iterator[(String, Any)]): Namespace = {
+                val names = i.collect({
+                    case ("name", name: String) =>
+                        name
+                })
+                if (!names.hasNext)
+                    throw new MongoException("no 'name' field in system.namespaces document")
+                Namespace(names.next())
+            }
+        }
+
+        override def firstCodecSet: CollectionCodecSet[Iterator[(String, Any)], Namespace, Namespace, String, Any] =
+            CodecSet
     }
 
     def namespaces: CollectionAccessWithOneEntityType[Iterator[(String, Any)], Namespace, String, Any] = Namespaces

@@ -16,6 +16,7 @@ trait IteratorBasedCodecs[T] extends IdEncoders with ValueDecoders {
     def anyValueDecoder: ValueDecoder[Any] =
         _anyValueDecoder
 
+    // TODO rename these to be iteratorBasedQueryEncoder, etc.
     implicit def queryEncoder: QueryEncoder[T] =
         UnmodifiedEncoder
 
@@ -74,4 +75,32 @@ trait IteratorBasedCodecs[T] extends IdEncoders with ValueDecoders {
             fromIterator(iterator)
         }
     }
+}
+
+trait CollectionCodecSetEntityCodecsIteratorBased[EntityType]
+    extends CollectionCodecSetEntityCodecs[EntityType] {
+    self: CollectionCodecSet[_, EntityType, EntityType, _, _] =>
+
+    protected def toIterator(t: EntityType): Iterator[(String, Any)]
+
+    protected def fromIterator(i: Iterator[(String, Any)]): EntityType
+
+    private def outerToIterator = toIterator(_)
+    private def outerFromIterator = fromIterator(_)
+
+    private object Codecs extends IteratorBasedCodecs[EntityType] {
+        override def toIterator(t: EntityType): Iterator[(String, Any)] =
+            outerToIterator(t)
+        override def fromIterator(i: Iterator[(String, Any)]): EntityType =
+            outerFromIterator(i)
+    }
+
+    override implicit def collectionQueryResultDecoder: QueryResultDecoder[EntityType] =
+        Codecs.queryResultDecoder
+    override implicit def collectionModifierEncoderEntity: ModifierEncoder[EntityType] =
+        Codecs.modifierEncoder
+    override implicit def collectionUpdateQueryEncoder: UpdateQueryEncoder[EntityType] =
+        Codecs.updateQueryEncoder
+    override implicit def collectionUpsertEncoder: UpsertEncoder[EntityType] =
+        Codecs.upsertEncoder
 }

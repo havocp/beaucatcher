@@ -77,3 +77,12 @@ object IteratorCodecs extends IdEncoders with ValueDecoders {
         }
     }
 }
+
+trait CollectionCodecSetQueryEncodersIterator
+    extends CollectionCodecSetQueryEncoders[Iterator[(String, Any)]] {
+    self: CollectionCodecSet[Iterator[(String, Any)], _, _, _, _] =>
+    override implicit def collectionQueryEncoder: QueryEncoder[Iterator[(String, Any)]] =
+        IteratorCodecs.iteratorQueryEncoder
+    override implicit def collectionModifierEncoderQuery: ModifierEncoder[Iterator[(String, Any)]] =
+        IteratorCodecs.iteratorModifierEncoder
+}

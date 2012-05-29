@@ -106,3 +106,17 @@ object MapCodecs extends IdEncoders with ValueDecoders {
         }).iterator
     }
 }
+
+trait CollectionCodecSetEntityCodecsMap
+    extends CollectionCodecSetEntityCodecs[Map[String, Any]] {
+    self: CollectionCodecSet[_, Map[String, Any], Map[String, Any], _, _] =>
+
+    override implicit def collectionQueryResultDecoder: QueryResultDecoder[Map[String, Any]] =
+        MapCodecs.mapQueryResultDecoder
+    override implicit def collectionModifierEncoderEntity: ModifierEncoder[Map[String, Any]] =
+        MapCodecs.mapModifierEncoder
+    override implicit def collectionUpdateQueryEncoder: UpdateQueryEncoder[Map[String, Any]] =
+        MapCodecs.mapUpdateQueryEncoder
+    override implicit def collectionUpsertEncoder: UpsertEncoder[Map[String, Any]] =
+        MapCodecs.mapUpsertEncoder
+}

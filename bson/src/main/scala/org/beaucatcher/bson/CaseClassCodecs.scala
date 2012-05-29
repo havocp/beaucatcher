@@ -92,16 +92,16 @@ trait CollectionCodecSetEntityCodecsCaseClass[EntityType <: Product] extends Col
 }
 
 trait CollectionCodecSetCaseClass[-QueryType, EntityType <: Product, -IdType]
-    extends CollectionCodecSetValueDecoderAny[EntityType]
+    extends CollectionCodecSetValueDecoderAny[Map[String, Any]]
     with CollectionCodecSetEntityCodecsCaseClass[EntityType] {
     self: CollectionCodecSet[QueryType, EntityType, EntityType, IdType, Any] =>
+    override def nestedDocumentQueryResultDecoder = MapCodecs.mapQueryResultDecoder
 }
 
 object CollectionCodecSetCaseClass {
     private class CollectionCodecSetCaseClassImpl[-QueryType, EntityType <: Product, -IdType]()(implicit override val entityManifest: Manifest[EntityType], override val collectionQueryEncoder: QueryEncoder[QueryType], override val collectionModifierEncoderQuery: ModifierEncoder[QueryType], override val collectionIdEncoder: IdEncoder[IdType])
         extends CollectionCodecSet[QueryType, EntityType, EntityType, IdType, Any]
         with CollectionCodecSetCaseClass[QueryType, EntityType, IdType] {
-
     }
 
     def apply[QueryType, EntityType <: Product, IdType]()(implicit entityManifest: Manifest[EntityType], queryEncoder: QueryEncoder[QueryType], modifierEncoderQuery: ModifierEncoder[QueryType], idEncoder: IdEncoder[IdType]): CollectionCodecSet[QueryType, EntityType, EntityType, IdType, Any] = {
