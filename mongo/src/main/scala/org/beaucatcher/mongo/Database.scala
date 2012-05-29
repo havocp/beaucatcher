@@ -1,7 +1,6 @@
 package org.beaucatcher.mongo
 
 import org.beaucatcher.bson._
-import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.driver._
 import akka.dispatch.Future
 
@@ -131,7 +130,6 @@ trait SyncDatabase {
     final def command[Q](cmd: Q)(implicit encoder: QueryEncoder[Q]): CommandResult = command(cmd, CommandOptions.empty)
 
     def command[Q](cmd: Q, options: CommandOptions)(implicit encoder: QueryEncoder[Q]): CommandResult = {
-        import BObjectCodecs._
         underlying.command(cmd, options)
     }
 

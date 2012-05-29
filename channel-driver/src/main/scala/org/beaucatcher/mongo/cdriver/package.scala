@@ -54,10 +54,6 @@ package object cdriver {
     private[cdriver] def decodeCommandResultFields[E](reply: QueryReply, fields: RawField*)(implicit entitySupport: QueryResultDecoder[E]): DecodedResult = {
         import CodecUtils._
 
-        // BObject here isn't expected to be actually used because
-        // none of the fields we are fetching should have type object
-        // TODO we could add a type which throws an exception if it's
-        // ever decoded.
         implicit val decoder = newRawQueryResultDecoder[E](fields: _*)
         val doc = reply.iterator[RawDecoded]().next()
         val errOption = deNull(doc.fields.get("err")).map(_.asInstanceOf[String])

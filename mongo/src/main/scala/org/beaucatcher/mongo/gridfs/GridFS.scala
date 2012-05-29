@@ -152,9 +152,6 @@ sealed trait SyncGridFS extends GridFS {
 
 object SyncGridFS {
     private[gridfs] def newGridFSCollections(bucket: String): GridFSCollections = {
-        import IdEncoders._
-        val codecs = CollectionCodecSetBObject[ObjectId]()
-        import codecs.{ collectionModifierEncoderEntity => _, collectionIdEncoder => _, _ }
         new GridFSCollections(bucket)
     }
 
