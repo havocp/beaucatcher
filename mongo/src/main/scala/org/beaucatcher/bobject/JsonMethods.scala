@@ -1,8 +1,9 @@
-package org.beaucatcher.mongo
+package org.beaucatcher.bobject
 
-import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.bobject.Implicits._
 import org.beaucatcher.bson._
-import org.beaucatcher.bson.ClassAnalysis
+import org.beaucatcher.mongo._
+import org.beaucatcher.caseclass.ClassAnalysis
 
 /**
  * The idea of this trait is to implement a backbone.js-style set of methods

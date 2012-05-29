@@ -1,10 +1,10 @@
 package org.beaucatcher.mongo.jdriver
 
-import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.bobject._
+import org.beaucatcher.bobject.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
-import org.beaucatcher.mongo.JsonMethods
-import org.beaucatcher.bson.ClassAnalysis
+import org.beaucatcher.caseclass.ClassAnalysis
 import org.junit.Assert._
 import org.junit._
 import scala.util.Random

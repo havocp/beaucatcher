@@ -1,7 +1,8 @@
 package org.beaucatcher.mongo
 
-import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.bobject.Implicits._
 import org.beaucatcher.bson._
+import org.beaucatcher.bobject._
 import org.beaucatcher.mongo._
 import org.junit.Assert._
 import org.junit._
@@ -1091,8 +1092,8 @@ abstract class AbstractCollectionTest()
         assertEquals(1, Foo.sync.findIndexes().length)
     }
 
-    private val objectManyTypes = BsonTest.makeObjectManyTypes()
-    private val arrayManyTypes = BsonTest.makeArrayManyTypes()
+    private val objectManyTypes = BObjectTest.makeObjectManyTypes()
+    private val arrayManyTypes = BObjectTest.makeArrayManyTypes()
 
     private def roundTrip[A <% BValue](value: A) {
         val bvalue: BValue = value

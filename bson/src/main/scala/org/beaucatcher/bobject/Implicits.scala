@@ -1,6 +1,7 @@
-package org.beaucatcher.bson
+package org.beaucatcher.bobject
 
 import java.util.Date
+import org.beaucatcher.bson._
 
 /**
  * Object containing implicit conversions from primitive types into [[org.beaucatcher.bson.BValue]].

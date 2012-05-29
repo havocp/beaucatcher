@@ -1,5 +1,6 @@
-package org.beaucatcher.bson
+package org.beaucatcher.bobject
 
+import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.beaucatcher.wire._
 

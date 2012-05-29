@@ -2,7 +2,6 @@ package org.beaucatcher.mongo.jdriver
 
 import org.beaucatcher.mongo.SyncCollection
 import org.beaucatcher.bson._
-import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.mongo._
 import akka.actor.ActorSystem
 import com.typesafe.config._

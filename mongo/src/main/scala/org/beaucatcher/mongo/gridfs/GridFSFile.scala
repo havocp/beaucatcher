@@ -2,7 +2,6 @@ package org.beaucatcher.mongo.gridfs
 
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
-import org.beaucatcher.bson.Implicits._
 
 import java.util.Date
 
@@ -42,6 +41,7 @@ object CreateOptions {
  */
 class GridFSFile private[gridfs] (private[gridfs] val underlying: Map[String, Any]) {
     private def getAs[A: Manifest](key: String): A = {
+        import org.beaucatcher.bobject.BValue
         // FIXME the BValue.wrap.unwrappedAs hack is a way to use the
         // cast method from BValue, which does numeric conversions.
         // Export it properly.

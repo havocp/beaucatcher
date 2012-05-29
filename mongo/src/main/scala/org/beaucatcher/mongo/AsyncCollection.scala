@@ -67,7 +67,6 @@ sealed trait ReadOnlyAsyncCollection extends ReadOnlyCollection {
      * Queries mongod for the indexes on this collection.
      */
     final def findIndexes(): Future[AsyncCursor[CollectionIndex]] = {
-        import Implicits._
         database.system.indexes.async[CollectionIndex].find(Iterator("ns" -> fullName))
     }
 }

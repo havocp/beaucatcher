@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
-package org.beaucatcher.bson
+package org.beaucatcher.bobject
 
+import org.beaucatcher.bson._
+import org.beaucatcher.caseclass._
 import scala.math.ScalaNumber
 import scala.math.ScalaNumericConversions
 import scala.collection.LinearSeqLike
@@ -293,7 +295,7 @@ sealed abstract trait JValue extends BValue {
     override def toJValue(flavor: JsonFlavor.Value = JsonFlavor.CLEAN): JValue = this
 }
 
-private[bson] sealed abstract class BSingleValue[T](override val bsonType: BsonType.Value, val value: T) extends BValue {
+private[bobject] sealed abstract class BSingleValue[T](override val bsonType: BsonType.Value, val value: T) extends BValue {
     override type WrappedType = T
     override def unwrapped = value
 
@@ -433,8 +435,8 @@ sealed abstract trait ArrayBase[+ElementType <: BValue] extends BValue
  * Trait implementing companion object functionality for [[org.beaucatcher.bson.ArrayBase]] subtypes.
  */
 sealed trait ArrayBaseCompanion[ElementType <: BValue, Repr <: ArrayBase[ElementType]] {
-    protected[bson] def construct(seq: Seq[ElementType]): Repr
-    protected[bson] def nullValue: ElementType
+    protected[bobject] def construct(seq: Seq[ElementType]): Repr
+    protected[bobject] def nullValue: ElementType
 
     /** An empty [[org.beaucatcher.bson.BArray]] or [[org.beaucatcher.bson.JArray]] */
     val empty: Repr = construct(List())
@@ -741,8 +743,8 @@ abstract trait ObjectBase[+ValueType <: BValue, +Repr <: Map[String, ValueType]]
 }
 
 sealed trait ObjectBaseCompanion[ValueType <: BValue, Repr <: ObjectBase[ValueType, Repr] with immutable.MapLike[String, ValueType, Repr]] {
-    protected[bson] def construct(list: List[Pair[String, ValueType]]): Repr
-    protected[bson] def nullValue: ValueType
+    protected[bobject] def construct(list: List[Pair[String, ValueType]]): Repr
+    protected[bobject] def nullValue: ValueType
 
     /** An empty object with size 0. */
     val empty = construct(List())

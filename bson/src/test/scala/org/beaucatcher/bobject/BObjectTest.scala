@@ -1,19 +1,19 @@
-package org.beaucatcher.bson
+package org.beaucatcher.bobject
 
 import java.text.SimpleDateFormat
 import org.beaucatcher.bson._
-import org.beaucatcher.bson.Implicits._
+import org.beaucatcher.bobject.Implicits._
 import java.util.Date
 import org.junit.Assert._
 import org.junit._
 
-class BsonTest extends TestUtils {
+class BObjectTest extends TestUtils {
 
     @org.junit.Before
     def setup() {
     }
 
-    import BsonTest._
+    import BObjectTest._
 
     @Test
     def numericValuesBasicallyBehave(): Unit = {
@@ -711,7 +711,7 @@ class BsonTest extends TestUtils {
     }
 }
 
-object BsonTest {
+object BObjectTest {
 
     val someJavaDate = new Date(837017400000L)
 

@@ -61,7 +61,6 @@ sealed trait ReadOnlySyncCollection extends ReadOnlyCollection {
      * Queries mongod for the indexes on this collection.
      */
     final def findIndexes(): Cursor[CollectionIndex] = {
-        import Implicits._
         database.system.indexes.sync[CollectionIndex].find(Iterator("ns" -> fullName))
     }
 }

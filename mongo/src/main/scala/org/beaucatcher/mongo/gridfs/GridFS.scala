@@ -3,7 +3,6 @@ package org.beaucatcher.mongo.gridfs
 import org.beaucatcher.mongo._
 import org.beaucatcher.bson._
 import org.beaucatcher.driver._
-import org.beaucatcher.bson.Implicits._
 import java.io._
 
 // access to implementation collections, can be shared among GridFS objects for same bucket

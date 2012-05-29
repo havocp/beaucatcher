@@ -1,4 +1,4 @@
-package org.beaucatcher.bson
+package org.beaucatcher.caseclass
 
 import org.beaucatcher.mongo._
 

@@ -3,8 +3,8 @@ package org.beaucatcher
 import scala.collection.mutable.Builder
 import scala.collection.mutable.ListBuffer
 
-package object bson {
-    private[bson] def newArrayBuilder[V <: BValue, A <: ArrayBase[V]: Manifest](fromList: List[V] => A): Builder[V, A] = {
+package object bobject {
+    private[bobject] def newArrayBuilder[V <: BValue, A <: ArrayBase[V]: Manifest](fromList: List[V] => A): Builder[V, A] = {
         new Builder[V, A] {
             val buffer = new ListBuffer[V]
             override def clear: Unit = buffer.clear
@@ -21,7 +21,7 @@ package object bson {
      * (or BSON) a field is not a value. For example you can't
      * have an array of fields. So we don't derive BField from BValue.
      */
-    private[bson]type Field[ValueType <: BValue] = Pair[String, ValueType]
-    private[bson]type BField = Field[BValue]
-    private[bson]type JField = Field[JValue]
+    private[bobject]type Field[ValueType <: BValue] = Pair[String, ValueType]
+    private[bobject]type BField = Field[BValue]
+    private[bobject]type JField = Field[JValue]
 }

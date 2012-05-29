@@ -1,9 +1,11 @@
-package org.beaucatcher.bson
+package org.beaucatcher.bobject
 
+import org.beaucatcher.bson._
+import org.beaucatcher.caseclass._
 import org.apache.commons.codec.binary.Base64
 import scala.tools.scalap.scalax.rules.scalasig.{ Type, TypeRefType, Symbol }
 
-private[bson] object BsonValidation {
+private[bobject] object BsonValidation {
     private class FieldValidationException(val fieldName: String, message: String)
         extends JsonValidationException(message)
     private class BadValueException(fieldName: String, val expectedType: String, val foundValue: JValue)

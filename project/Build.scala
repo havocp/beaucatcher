@@ -104,7 +104,7 @@ object BeaucatcherBuild extends Build {
     lazy val base = Project("beaucatcher-base",
         file("base"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(Test.junitInterface, Test.slf4j, akkaActor)))
+            Seq(libraryDependencies := Seq(Test.junitInterface, Test.slf4j, Test.mongoJavaDriver, akkaActor)))
 
     // abstract API for a mongo channel
     lazy val channel = Project("beaucatcher-channel",

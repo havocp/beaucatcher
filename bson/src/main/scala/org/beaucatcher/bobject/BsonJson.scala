@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.beaucatcher.bson
+package org.beaucatcher.bobject
 
 import scala.collection.mutable
 import scala.collection.mutable.Builder
@@ -28,7 +28,7 @@ class JsonParseException(message: String, cause: Throwable = null) extends JsonE
 /** An exception indicating that a JSON string was invalid (didn't conform to a schema, for example). */
 class JsonValidationException(message: String, cause: Throwable = null) extends JsonException(message, cause)
 
-private[bson] object BsonJson {
+private[bobject] object BsonJson {
     import JsonToken._
 
     object JsonFormatting extends Enumeration {
@@ -264,7 +264,7 @@ private[bson] object BsonJson {
      * @param formatting Pretty to use extra whitespace and newlines, Compact to be small
      * @return JSON document as a series of strings that should be concatenated
      */
-    private[bson] def render(value: JValue, indentLevel: Int, formatting: JsonFormatting.Value): Iterator[String] = {
+    private[bobject] def render(value: JValue, indentLevel: Int, formatting: JsonFormatting.Value): Iterator[String] = {
         val rendered = value match {
             case o: JObject => renderObject(o, indentLevel, formatting)
             case a: JArray => renderArray(a, indentLevel, formatting)

@@ -1,4 +1,4 @@
-package org.beaucatcher.bson
+package org.beaucatcher.caseclass
 
 import scala.tools.scalap.scalax.rules.scalasig.TypeRefType
 import org.junit.Assert._

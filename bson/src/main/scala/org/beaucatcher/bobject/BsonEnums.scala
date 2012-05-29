@@ -1,4 +1,4 @@
-package org.beaucatcher.bson
+package org.beaucatcher.bobject
 
 import org.beaucatcher.wire._
 

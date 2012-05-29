@@ -1,7 +1,8 @@
-package org.beaucatcher.bson
+package org.beaucatcher.bobject
 
-import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
+import org.beaucatcher.bobject.Implicits._
+import org.beaucatcher.caseclass._
 import org.junit.Assert._
 import org.junit._
 import java.util.Date
