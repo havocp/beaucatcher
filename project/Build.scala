@@ -71,7 +71,7 @@ object Dependencies {
     val netty34 = "io.netty" % "netty" % "3.4.4.Final"
 
     // Dependencies in "test" configuration
-    object Test {
+    object TestDep {
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test"
         val liftJson = "net.liftweb" %% "lift-json" % "2.4" % "test"
         val slf4j = "org.slf4j" % "slf4j-api" % "1.6.4"
@@ -90,9 +90,10 @@ object BeaucatcherBuild extends Build {
     // this is a weird syntax because the usual apply()
     // is limited to 9 items in sbt 0.11
     lazy val rootMembers: Seq[ProjectReference] =
-        Seq(base, channel, channelNetty33, channelNetty34, bson,
+        Seq(base, channel, channelNetty33, channelNetty34,
             mongo, driver, jdriver,
-            channelDriver, mongoTest).map({ p: Project => LocalProject(p.id) })
+            channelDriver, bobject, caseclass,
+            mongoTest).map({ p: Project => LocalProject(p.id) })
 
     lazy val root = Project("beaucatcher",
         file("."),
@@ -104,7 +105,7 @@ object BeaucatcherBuild extends Build {
     lazy val base = Project("beaucatcher-base",
         file("base"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(Test.junitInterface, Test.slf4j, Test.mongoJavaDriver, akkaActor)))
+            Seq(libraryDependencies := Seq(TestDep.junitInterface, TestDep.slf4j, TestDep.mongoJavaDriver, akkaActor)))
 
     // abstract API for a mongo channel
     lazy val channel = Project("beaucatcher-channel",
@@ -116,11 +117,11 @@ object BeaucatcherBuild extends Build {
     val generateNettySources = TaskKey[Seq[File]]("generate-netty-sources", "Generate copy of netty sources for versioned drivers")
     val nettyABI = SettingKey[String]("netty-abi", "Netty ABI identifier, like '33' for 3.3.x or '34' for 3.4.x")
 
-    def generateNettySourcesTask(streams: TaskStreams, baseDir: File, managedTargetDir: File, nettyABI: String) = {
+    def generateNettySourcesTask(streams: TaskStreams, baseDir: File, managedTargetDir: File, sourceSubdir: String, nettyABI: String) = {
         // there is probably a better way to do this
-        val genericNettySourcesDir = (baseDir /  "../channel-netty/src/main/scala").getCanonicalFile
+        val genericNettySourcesDir = (baseDir /  ("../channel-netty/src/" + sourceSubdir + "/scala")).getCanonicalFile
         val genericNettySources = PathFinder(genericNettySourcesDir) ** new SimpleFileFilter({ f =>
-            f.getName.endsWith(".scala") || f.getName.endsWith(".conf")
+            f.getName.endsWith(".scala") || f.getName.endsWith(".conf") || f.getName.endsWith(".java")
         })
 
         val generatedBuilder = Seq.newBuilder[File]
@@ -137,7 +138,7 @@ object BeaucatcherBuild extends Build {
 
         for (src <- genericNettySources.get) {
             val srcAbsolute = src.getCanonicalPath
-            val splitString = "/src/main/scala/"
+            val splitString = "/src/" + sourceSubdir + "/scala/"
             val relativePath = srcAbsolute.substring(srcAbsolute.indexOf(splitString) + splitString.length)
             val origData = IO.read(src asFile)
             val target = targetDir / relativePath
@@ -163,11 +164,19 @@ object BeaucatcherBuild extends Build {
     def makeGenerateNettySettings(abi: String) = {
         Seq(
             nettyABI := abi,
-            generateNettySources <<= (streams, baseDirectory, sourceManaged in Compile, nettyABI) map {
+            generateNettySources in Compile <<= (streams, baseDirectory, sourceManaged in Compile, nettyABI) map {
                 (streams, baseDir, managedTarget, abi) =>
-                    generateNettySourcesTask(streams, baseDir, managedTarget, abi)
+                    generateNettySourcesTask(streams, baseDir, managedTarget, "main", abi)
             },
-            sources in Compile <<= (generateNettySources, sources in Compile) map {
+            sources in Compile <<= (generateNettySources in Compile, sources in Compile) map {
+                (generated, sources) =>
+                    (sources ++ generated).distinct
+            },
+            generateNettySources in Test <<= (streams, baseDirectory, sourceManaged in Test, nettyABI) map {
+                (streams, baseDir, managedTarget, abi) =>
+                    generateNettySourcesTask(streams, baseDir, managedTarget, "test", abi)
+            },
+            sources in Test <<= (generateNettySources in Test, sources in Test) map {
                 (generated, sources) =>
                     (sources ++ generated).distinct
             })
@@ -178,20 +187,27 @@ object BeaucatcherBuild extends Build {
         file("channel-netty33"),
         settings = projectSettings ++
             makeGenerateNettySettings("33") ++
-            Seq(libraryDependencies := Seq(netty33))) dependsOn(channel % "compile->compile;test->test", bson % "test->test")
+            Seq(libraryDependencies := Seq(netty33))) dependsOn(channel % "compile->compile;test->test", bobject % "test->test")
 
     lazy val channelNetty34 = Project("beaucatcher-channel-netty34",
         file("channel-netty34"),
         settings = projectSettings ++
             makeGenerateNettySettings("34") ++
-            Seq(libraryDependencies := Seq(netty34))) dependsOn(channel % "compile->compile;test->test", bson % "test->test")
+            Seq(libraryDependencies := Seq(netty34))) dependsOn(channel % "compile->compile;test->test", bobject % "test->test")
+
+    // caseclass reflection and conversion to/from bson
+    lazy val caseclass = Project("beaucatcher-caseclass",
+        file("caseclass"),
+        settings = projectSettings ++
+            Seq(libraryDependencies := Seq(scalap, TestDep.junitInterface))) dependsOn(base % "compile->compile;test->test", mongo % "compile->compile;test->test")
 
     // bson/json parsing and syntax tree
-    lazy val bson = Project("beaucatcher-bson",
-        file("bson"),
+    lazy val bobject = Project("beaucatcher-bobject",
+        file("bobject"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(scalap, commonsCodec,
-                    Test.junitInterface, Test.liftJson, Test.slf4j, Test.mongoJavaDriver))) dependsOn(base % "compile->compile;test->test")
+            Seq(libraryDependencies := Seq(commonsCodec,
+                    TestDep.junitInterface, TestDep.liftJson,
+                    TestDep.mongoJavaDriver))) dependsOn(caseclass % "compile->compile;test->test")
 
     // interface to driver
     lazy val driver = Project("beaucatcher-driver",
@@ -203,13 +219,13 @@ object BeaucatcherBuild extends Build {
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
         settings = projectSettings ++
-              Seq(libraryDependencies := Seq())) dependsOn (bson % "compile->compile;test->test", driver % "compile->compile;test->test")
+              Seq(libraryDependencies := Seq())) dependsOn (base % "compile->compile;test->test", driver % "compile->compile;test->test")
 
     // backend for beaucatcher-mongo based on mongo-java-driver
     lazy val jdriver = Project("beaucatcher-java-driver",
         file("jdriver"),
         settings = projectSettings ++
-              Seq(libraryDependencies ++= Seq(mongoJavaDriver, Test.commonsIO))) dependsOn (driver % "compile->compile;test->test")
+              Seq(libraryDependencies ++= Seq(mongoJavaDriver, TestDep.commonsIO))) dependsOn (driver % "compile->compile;test->test")
 
     // backend for beaucatcher-mongo based on channels
     lazy val channelDriver = Project("beaucatcher-channel-driver",
@@ -221,8 +237,9 @@ object BeaucatcherBuild extends Build {
     lazy val mongoTest = Project("beaucatcher-mongo-test",
         file("mongo-test"),
         settings = projectSettings ++
-              Seq(libraryDependencies := Seq(Test.mongoJavaDriver, Test.commonsIO))) dependsOn (mongo % "compile->compile;test->test",
-                                                                                                bson % "compile->compile;test->test",
+              Seq(libraryDependencies := Seq(TestDep.mongoJavaDriver, TestDep.commonsIO))) dependsOn (mongo % "compile->compile;test->test",
+                                                                                                bobject % "compile->compile;test->test",
+                                                                                                caseclass % "compile->compile;test->test",
                                                                                                 jdriver % "runtime->runtime",
                                                                                                 channelDriver % "runtime->runtime",
                                                                                                 channelNetty34 % "runtime->runtime")

@@ -1,9 +1,9 @@
 package org.beaucatcher.channel.netty
 
-import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
-import org.beaucatcher.mongo._
 import org.beaucatcher.wire._
+import org.beaucatcher.mongo._
+import org.beaucatcher.bobject._
 import org.junit.Assert._
 import org.junit._
 import java.nio.ByteOrder
@@ -17,7 +17,8 @@ class SerializerTest extends TestUtils {
     @Test
     def roundTripBObject(): Unit = {
         import BObjectCodecs._
-        val many = BsonTest.makeObjectManyTypes()
+
+        val many = BObjectTest.makeObjectManyTypes()
         // first test each field separately
         for (field <- many.value) {
             testRoundTrip(BObject(List(field)))
@@ -60,7 +61,7 @@ class SerializerTest extends TestUtils {
     def growBufferWhenNeededBObject(): Unit = {
         import BObjectCodecs._
 
-        val many = BsonTest.makeObjectManyTypes()
+        val many = BObjectTest.makeObjectManyTypes()
         for (field <- many.value) {
             growBufferWhenNeeded(BObject(List(field)))
         }
@@ -71,7 +72,7 @@ class SerializerTest extends TestUtils {
     def growBufferWhenNeededMap(): Unit = {
         import MapCodecs._
 
-        val many: Map[String, Any] = BsonTest.makeObjectManyTypes().unwrapped
+        val many: Map[String, Any] = BObjectTest.makeObjectManyTypes().unwrapped
         for (field <- many) {
             growBufferWhenNeeded(Map(field._1 -> field._2))
         }
@@ -82,7 +83,7 @@ class SerializerTest extends TestUtils {
     def growBufferWhenNeededIterator(): Unit = {
         import IteratorCodecs._
 
-        val many: Map[String, Any] = BsonTest.makeObjectManyTypes().unwrapped
+        val many: Map[String, Any] = BObjectTest.makeObjectManyTypes().unwrapped
         for (field <- mapValuesToIterators(many)) {
             growBufferWhenNeeded(Iterator(field._1 -> field._2))
         }
@@ -120,5 +121,4 @@ object SerializerTest {
 
         assertEquals(obj, decoded)
     }
-
 }

@@ -2,7 +2,9 @@ package org.beaucatcher.channel.netty
 
 import java.util.Date
 import org.beaucatcher.bson._
-import org.junit._
+import org.beaucatcher.caseclass._
+import org.beaucatcher.bobject._
+import org.junit.Test
 
 case class JustAnInt(i: Int)
 
@@ -46,7 +48,7 @@ class CaseClassCodecsTest extends TestUtils {
     @Test
     def roundTripCaseClass(): Unit = {
         val example = ManyTypes(null, 1, 2, 3.14, true, "quick brown fox",
-            BsonTest.someJavaDate, Timestamp((BsonTest.someJavaDate.getTime / 1000).toInt, 1),
+            BObjectTest.someJavaDate, Timestamp((BObjectTest.someJavaDate.getTime / 1000).toInt, 1),
             ObjectId(), Binary(new Array[Byte](10), BsonSubtype.GENERAL),
             Seq(1, 2, 3, 4, "hello"))
         val codecs = CaseClassCodecs[ManyTypes]()

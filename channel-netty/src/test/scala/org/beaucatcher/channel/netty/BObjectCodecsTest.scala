@@ -1,16 +1,15 @@
 package org.beaucatcher.channel.netty
 
-import java.util.Date
-import org.beaucatcher.bson._
-import org.junit._
+import org.beaucatcher.bobject._
+import org.beaucatcher.bson.TestUtils
+import org.junit.Test
 
 class BObjectCodecsTest extends TestUtils {
-    import SerializerTest._
 
     @Test
     def roundTripBObject(): Unit = {
         import BObjectCodecs._
 
-        testRoundTrip(BsonTest.makeObjectManyTypes())
+        SerializerTest.testRoundTrip(BObjectTest.makeObjectManyTypes())
     }
 }

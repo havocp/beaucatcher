@@ -1,6 +1,5 @@
 package org.beaucatcher.channel.netty
 
-import org.beaucatcher.bson.Implicits._
 import org.beaucatcher.bson._
 import org.beaucatcher.mongo._
 import org.beaucatcher.wire._
@@ -21,6 +20,9 @@ import akka.util._
 
 class ConnectionTest extends TestUtils {
 
+    import IteratorCodecs.iteratorQueryEncoder
+    import MapCodecs.mapQueryResultDecoder
+
     def block[T](f: Future[T]): T = {
         Await.result(f, 1 second)
     }
@@ -37,34 +39,29 @@ class ConnectionTest extends TestUtils {
 
     @Test
     def connectAndQuery(): Unit = withFactory { factory =>
-        import BObjectCodecs._
         val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
         val futureReply = socket.sendCommand(0, /* flags */
-            "admin", BObject("ismaster" -> 1))
+            "admin", Iterator("ismaster" -> 1))
 
         val reply = block(futureReply)
         val doc = reply.iterator().next()
-        assertEquals(true, doc.getUnwrappedAs[Boolean]("ismaster"))
+        assertEquals(true, doc.getOrElse("ismaster", throw new AssertionError("no ismaster")).asInstanceOf[Boolean])
     }
 
     private def assertDocumentSmallEnough(socket: MongoSocket, b: Binary): Unit = {
-        import BObjectCodecs._
-
         val futureReply = socket.sendCommand(0, /* flags */
-            "admin", BObject("ismaster" -> 1, "ignored" -> b))
+            "admin", Iterator("ismaster" -> 1, "ignored" -> b))
 
         val reply = block(futureReply)
         val doc = reply.iterator().next()
-        assertEquals(true, doc.getUnwrappedAs[Boolean]("ismaster"))
+        assertEquals(true, doc.getOrElse("ismaster", throw new AssertionError("no ismaster")).asInstanceOf[Boolean])
     }
 
     private def assertDocumentTooLarge(socket: MongoSocket, b: Binary): Unit = {
-        import BObjectCodecs._
-
         val futureReply = socket.sendCommand(0, /* flags */
-            "admin", BObject("ismaster" -> 1, "ignored" -> b))
+            "admin", Iterator("ismaster" -> 1, "ignored" -> b))
 
         val e = intercept[DocumentTooLargeMongoException] {
             block(futureReply)
@@ -97,14 +94,13 @@ class ConnectionTest extends TestUtils {
 
     @Test
     def sendToClosedSocket(): Unit = withFactory { factory =>
-        import BObjectCodecs._
         val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
         socket.close()
 
         val futureReply = socket.sendCommand(0, /* flags */
-            "admin", BObject("ismaster" -> 1))
+            "admin", Iterator("ismaster" -> 1))
 
         val e = intercept[MongoChannelException] {
             block(futureReply)
@@ -113,14 +109,13 @@ class ConnectionTest extends TestUtils {
 
     @Test
     def sendToClosedFactory(): Unit = withFactory { factory =>
-        import BObjectCodecs._
         val futureSocket = factory.connect(new InetSocketAddress("localhost", Mongo.DEFAULT_PORT))
         val socket = block(futureSocket)
 
         factory.close()
 
         val futureReply = socket.sendCommand(0, /* flags */
-            "admin", BObject("ismaster" -> 1))
+            "admin", Iterator("ismaster" -> 1))
 
         val e = intercept[MongoChannelException] {
             block(futureReply)
