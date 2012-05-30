@@ -3,6 +3,8 @@ package org.beaucatcher.mongo
 import org.beaucatcher.bson._
 import scala.annotation.implicitNotFound
 
+// TODO it seems like there must be a better way to do this (in particular the implicit stuff)
+
 /** This is provided as an implicit, its purpose is to provide a codec set suitable for a given CollectionAccess. */
 @implicitNotFound("Unable to find a CodecSetProvider for result type ${DecodeEntityType}, value type ${ValueType}, access object ${CollectionAccessType}")
 trait CodecSetProvider[+DecodeEntityType, ValueType, -CollectionAccessType, -CAQueryType, -CAEncodeEntityType, -CAIdType] {
@@ -13,6 +15,7 @@ object CodecSetProvider {
 
 }
 
+// TODO this separate "Like" trait may be pointless now.
 trait CollectionAccessLike[QueryType, IdType, +Repr] {
     self: Repr =>
 
