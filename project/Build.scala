@@ -245,4 +245,14 @@ object BeaucatcherBuild extends Build {
                   jdriver % "runtime->runtime",
                   channelDriver % "runtime->runtime",
                   channelNetty34 % "runtime->runtime")
+
+    // this project just exists to support dependency-graph
+    lazy val all = Project("beaucatcher-all",
+        file("all"),
+        settings = projectSettings ++ Seq(publishArtifact := false)) dependsOn(
+            bobject % "compile->compile",
+            jdriver % "compile->compile",
+            channelDriver % "compile->compile",
+            channelNetty34 % "compile->compile",
+            channelNetty33 % "compile->compile")
 }
