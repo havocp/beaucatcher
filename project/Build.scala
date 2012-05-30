@@ -32,7 +32,7 @@ object BuildSettings {
     val projectSettings = Defaults.defaultSettings ++ globalSettings ++ ScalariformPlugin.scalariformSettings ++ Seq(
         ScalariformKeys.preferences in Compile := formatPrefs,
         ScalariformKeys.preferences in Test    := formatPrefs
-    )
+    ) ++ net.virtualvoid.sbt.graph.Plugin.graphSettings
 }
 
 object ShellPrompt {
@@ -74,7 +74,7 @@ object Dependencies {
     object TestDep {
         val junitInterface = "com.novocode" % "junit-interface" % "0.7" % "test"
         val liftJson = "net.liftweb" %% "lift-json" % "2.4" % "test"
-        val slf4j = "org.slf4j" % "slf4j-api" % "1.6.4"
+        val slf4j = "org.slf4j" % "slf4j-api" % "1.6.4" % "test"
         val mongoJavaDriver = Dependencies.mongoJavaDriver % "test"
         val commonsIO = "commons-io" % "commons-io" % "2.1" % "test"
     }
@@ -111,7 +111,7 @@ object BeaucatcherBuild extends Build {
     lazy val channel = Project("beaucatcher-channel",
         file("channel"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(akkaActor))) dependsOn(base)
+            Seq(libraryDependencies := Seq())) dependsOn(base)
 
     // netty implementation of a mongo channel
     val generateNettySources = TaskKey[Seq[File]]("generate-netty-sources", "Generate copy of netty sources for versioned drivers")
@@ -199,7 +199,7 @@ object BeaucatcherBuild extends Build {
     lazy val caseclass = Project("beaucatcher-caseclass",
         file("caseclass"),
         settings = projectSettings ++
-            Seq(libraryDependencies := Seq(scalap, TestDep.junitInterface))) dependsOn(base % "compile->compile;test->test", mongo % "compile->compile;test->test")
+            Seq(libraryDependencies := Seq(scalap, TestDep.junitInterface))) dependsOn(mongo % "compile->compile;test->test")
 
     // bson/json parsing and syntax tree
     lazy val bobject = Project("beaucatcher-bobject",
@@ -213,13 +213,15 @@ object BeaucatcherBuild extends Build {
     lazy val driver = Project("beaucatcher-driver",
         file("driver"),
         settings = projectSettings ++
-              Seq(libraryDependencies ++= Seq())) dependsOn (base % "compile->compile;test->test")
+              Seq(libraryDependencies ++= Seq())) dependsOn (
+                      base % "compile->compile;test->test")
 
     // mongo API
     lazy val mongo = Project("beaucatcher-mongo",
         file("mongo"),
         settings = projectSettings ++
-              Seq(libraryDependencies := Seq())) dependsOn (base % "compile->compile;test->test", driver % "compile->compile;test->test")
+              Seq(libraryDependencies := Seq())) dependsOn (
+                      driver % "compile->compile;test->test")
 
     // backend for beaucatcher-mongo based on mongo-java-driver
     lazy val jdriver = Project("beaucatcher-java-driver",
@@ -237,10 +239,10 @@ object BeaucatcherBuild extends Build {
     lazy val mongoTest = Project("beaucatcher-mongo-test",
         file("mongo-test"),
         settings = projectSettings ++
-              Seq(libraryDependencies := Seq(TestDep.mongoJavaDriver, TestDep.commonsIO))) dependsOn (mongo % "compile->compile;test->test",
-                                                                                                bobject % "compile->compile;test->test",
-                                                                                                caseclass % "compile->compile;test->test",
-                                                                                                jdriver % "runtime->runtime",
-                                                                                                channelDriver % "runtime->runtime",
-                                                                                                channelNetty34 % "runtime->runtime")
+              Seq(libraryDependencies := Seq(TestDep.mongoJavaDriver,
+                                             TestDep.commonsIO))) dependsOn (
+                  bobject % "compile->compile;test->test",
+                  jdriver % "runtime->runtime",
+                  channelDriver % "runtime->runtime",
+                  channelNetty34 % "runtime->runtime")
 }
