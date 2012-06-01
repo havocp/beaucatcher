@@ -3,7 +3,7 @@
 <head>
   <meta charset='utf-8'>
 
-  <title>Beaucatcher Scala MongoDB, BSON, JSON library</title>
+  <title>Beaucatcher Scala MongoDB library</title>
 
   <style type="text/css">
     body {
@@ -38,128 +38,27 @@
     <h1><a href="http://github.com/havocp/beaucatcher">beaucatcher</a></h1>
 
     <div class="description">
-      Scala MongoDB API with async and BSON AST -> (JSON or CaseClass) pipeline
+      Scala MongoDB API
     </div>
 
     <p>
 
    </p>
-   <p>Beaucatcher is a Scala library for JSON <em>and</em> for
-    using MongoDB collections.
+   <p>Beaucatcher is a Scala library for accessing MongoDB.
    </p>
    <p>("Beaucatcher" is also the name of the mountain in the middle of
        Asheville, NC, if you're wondering where the word comes from.)
    </p>
-   <p>
-     The idea is to approach a JSON parser/renderer,
-     a JSON/BSON data type, and a MongoDB API as a single
-     system. Beaucatcher lets you choose, on a per-query basis,
-     whether to make a synchronous or async call, and whether to
-     retrieve a typesafe case class or *SON data.
-   </p>
-    <p>MongoDB maps directly to JSON, and you probably ship JSON over HTTP;
-     why not recognize that in the library design?
-    </p>
-    <p>
-     Beaucatcher wraps and builds on a "driver library"
-     (<a href="https://github.com/mongodb/mongo-java-driver">Java Driver</a> or
-     in the
-     future <a href="https://github.com/bwmcadams/hammersmith">Hammersmith</a>);
-     it does not implement the MongoDB wire protocol natively.
-    </p>
-    <p>
-     The JSON/BSON library is in a separate jar that doesn't depend
-     on MongoDB, so it can be used just as a JSON library if you want
-     a simple one.
-    </p>
 
 <p>
-Goals for Beaucatcher include:
-<ul>
-<li>Take advantage of the "Scala way" including immutable data, <a href="http://akka.io/">Akka</a>, and <a href="http://www.scala-lang.org/api/current/scala/collection/package.html">scala.collection</a>.</li>
-<li>Directly support both sync and async, and both case class and *SON data types; saving you writing conversion/wrapper code, and saving the overhead of data type conversions.</li>
-<li>Not tied to a specific web framework.</li>
-<li>Make it super easy to support JSON APIs that map to MongoDB, for example it should be trivial to connect something like <a href="http://documentcloud.github.com/backbone/">backbone.js</a> to a MongoDB collection.</li>
-</ul>
-</p>
-
-
-<p>
-For examples and to learn more, please see
+To learn more, please see
 the <a href="https://github.com/havocp/beaucatcher#readme">README</a>.
-</p>
-
-<h2>Status</h2>
-
-<p>
-This project isn't quite ready to use, unless you're the kind that's happy
-to hack on the library itself (which should be simple!).
-</p>
-
-<p>
-The thorny bits are in the driver code (mongo-java-driver or Hammersmith), and
-you can always drop down and use the underlying library directly if you have
-trouble, so you can think of Beaucatcher as the convenience wrapper you don't
-have to write yourself.
-</p>
-
-<p>Here's some stuff that seems to be in good shape:
-<ul>
-<li>BSON/JSON AST and parser are comprehensive and have solid test coverage.</li>
-<li>Complete set of synchronous collection operations (all the MongoDB query and update types, with the options they support).</li>
-<li>Solid test coverage of synchronous collection operations.</li>
-<li>CollectionAccess class; derive your case class companion object from it, then you'll have sync and async collection fields.</li>
-<li>Validation of JSON against a case class.</li>
-<li>Automatic creation and closing of connections, automatic on-demand setup of collections (e.g. creating indexes).</li>
-</ul>
-</p>
-
-<p>In short I think it's pretty good as a JSON-friendly case-class-friendly
-convenience wrapper for mongo-java-driver's synchronous API, and the same API
-could support Hammersmith or whatever else too.</p>
-
-<p>Here's some stuff that needs doing, much of it simple, if you need a
-particular thing then let me know:
-<ul>
-<li>There's no control over flags such as Tailable, AwaitData.</li>
-<li>There's no support for setting a WriteConcern (Safe mode is hardcoded). Put a default in the config file and then allow overriding.</li>
-<li>There's no way to explicitly close a cursor.</li>
-<li>Optimization: clean up intermediate representations. This includes a custom serializer in Hammersmith, or perhaps two (one to go to BObject, one to go straight to case class).</li>
-<li>Optimization: chill out thread handoffs. Right now library boundaries are creating threads in the async case, i.e. there are threads in Hammersmith and then Akka threads in Beaucatcher itself and then probably web threads. In principle we only need one thread per request.</li>
-<li>Optimization: profile and see what actually needs optimizing.</li>
-<li>Could have some kind of query DSL for BObject. This seems hard to make too fancy without a Lift-style ActiveRecord setup. See latest Rogue?</li>
-<li>A Play 2 plugin?</li>
-<li>It's software, this list has no end ;-)</li>
-</ul>
-</p>
-
-<p>
-Anyway, you're welcome to send comments or play around with it. If you have any
-trouble let me know. If you like one aspect of the lib but not another, let me
-know about both.
-</p>
-
-<p>
-Please don't expect a stable API for now (though if you snapshot the code, which
-you are welcome to do, the API won't change on your copy!). That said, there's
-enough code written that I don't expect big gratuitous changes.
 </p>
 
 <h2>Documentation</h2>
 <p>
 <ul>
 <li><a href="https://github.com/havocp/beaucatcher#readme">README</a></li>
-</ul>
-</p>
-<p>
-API references:
-<ul>
-<li><a href="http://beaucatcher.org/api/beaucatcher-bson/latest/">beaucatcher-bson - BSON manipulation</a></li>
-<li><a href="http://beaucatcher.org/api/beaucatcher-mongo/latest/">beaucatcher-mongo - MongoDB API</a></li>
-<li><a href="http://beaucatcher.org/api/beaucatcher-async/latest/">beaucatcher-async - Async MongoDB API</a></li>
-<li><a href="http://beaucatcher.org/api/beaucatcher-casbah/latest/">beaucatcher-casbah - With Casbah backend</a></li>
-<li><a href="http://beaucatcher.org/api/beaucatcher-hammersmith/latest/">beaucatcher-hammersmith - With Hammersmith backend</a></li>
-<li><a href="http://beaucatcher.org/api/beaucatcher-bson-java/latest/">beaucatcher-bson-java - Some conversions to Java driver types</a> (probably not useful to use directly)</li>
 </ul>
 </p>
 
@@ -179,43 +78,7 @@ There are ideas and some code
 from <a href="https://github.com/novus/salat">Salat</a>, <a href="https://github.com/jdegoes/blueeyes/tree/master/src/main/scala/blueeyes/persistence/mongo">BlueEyes
 persistence</a>,
 and <a href="https://github.com/lift/framework/tree/master/core/json">lift-json</a>
-included here. You could think of this library as taking the
-MongoDB-object-to-case-class stuff from Salat, the MongoDB-to-syntax-tree stuff
-from BlueEyes persistence, and pulling them together in a stripped-down form. I
-never claimed to be original.
-</p>
-
-<p>
-"Stripped-down form" means for example:
-<ul>
-
-<li>doesn't have the JSON transformation stuff from list-json, or extras such as
-XML conversion, it just has a parser and AST.</li>
-
-<li>doesn't have a lot of the more advanced ORM type functionality of Salat.
-Beaucatcher just does a dead-stupid mapping from BSON to case class, where your
-case class fields have to match the types in the BSON exactly. You can override
-a method to massage the BSON as it goes to/from the case class, so you can code
-whatever, but there's no declarative approach to it.
-</li>
-
-<li>doesn't have quite a few things found in BlueEyes, such as the query
-builder.
-</li>
-
-<li>
-doesn't have the fancy query safety
-of <a href="https://github.com/foursquare/rogue">Rogue</a> because there isn't a
-Lift Record to get the schema from at compile time.
-</li>
-
-</ul>
-</p>
-
-<p>
-I'm not necessarily against any of these features (the point of Beaucatcher
-isn't necessarily to be "stripped down") but I just haven't thought about them
-or it seems like they should be part of a higher layer like a web framework.
+included here, in addition to <a href="https://github.com/mongodb/casbah">Casbah</a> and <a href="https://github.com/bwmcadams/hammersmith">Hammersmith</a>.
 </p>
 
     <h2>Download</h2>

@@ -1,0 +1,1 @@
+Index.PACKAGES = {"org" : [], "org.beaucatcher" : [], "org.beaucatcher.channel" : [{"trait" : "org\/beaucatcher\/channel\/ChannelBackend.html", "name" : "org.beaucatcher.channel.ChannelBackend"}, {"trait" : "org\/beaucatcher\/channel\/SocketFactory.html", "name" : "org.beaucatcher.channel.SocketFactory"}]};

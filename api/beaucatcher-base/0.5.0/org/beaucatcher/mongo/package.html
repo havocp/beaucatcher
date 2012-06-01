@@ -1,0 +1,1264 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+        <head>
+          <title>org.beaucatcher.mongo</title>
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link type="text/css" media="screen" rel="stylesheet" href="../../../lib/template.css" />
+      <script type="text/javascript" src="../../../lib/jquery.js"></script>
+      <script type="text/javascript" src="../../../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../../../lib/template.js"></script>
+      <script type="text/javascript" src="../../../lib/tools.tooltip.js"></script>
+    
+        </head>
+        <body class="value">
+      <div id="definition">
+        <img src="../../../lib/package_big.png" />
+        <p id="owner"><a name="org" class="extype" href="../../package.html">org</a>.<a name="org.beaucatcher" class="extype" href="../package.html">beaucatcher</a></p>
+        <h1>mongo</h1>
+      </div>
+
+      <h4 class="signature" id="signature">
+      <span class="kind">package</span>
+      <span class="symbol"> 
+        <span class="name">mongo</span>
+        
+        
+      </span>
+      </h4>
+      
+          <div class="fullcommenttop" id="comment"></div>
+        
+
+      <div id="template">
+
+        <div id="mbrsel">
+          <div id="textfilter"><span class="pre"></span><span class="input"><input accesskey="/" type="text" /></span><span class="post"></span></div>
+          
+          
+          <div id="visbl">
+              <span class="filtertype">Visibility</span>
+              <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+            </div>
+        </div>
+
+        
+
+        <div class="types members" id="types">
+              <h3>Type Members</h3>
+              <ol><li visbl="pub" name="org.beaucatcher.mongo.AsyncCursor" data-isabs="true">
+      <a id="AsyncCursor:AsyncCursor[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="AsyncCursor.html"><span class="name">AsyncCursor</span></a>
+        <span class="tparams">[<span name="T">+T</span>]</span>
+        <span class="result"> extends Closeable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.Batch" data-isabs="true">
+      <a id="Batch:Batch[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="Batch.html"><span class="name">Batch</span></a>
+        <span class="tparams">[<span name="T">+T</span>]</span>
+        <span class="result"> extends Traversable[T]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.BugInSomethingMongoException" data-isabs="false">
+      <a id="BugInSomethingMongoException:BugInSomethingMongoException"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="BugInSomethingMongoException.html"><span class="name">BugInSomethingMongoException</span></a>
+        
+        <span class="result"> extends MongoException</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Exception that indicates a bug in something (mongod itself or the library).</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSet" data-isabs="true">
+      <a id="CollectionCodecSet:CollectionCodecSet[QueryType, EncodeEntityType, DecodeEntityType, IdType, ValueType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSet.html"><span class="name">CollectionCodecSet</span></a>
+        <span class="tparams">[<span name="QueryType">-QueryType</span>, <span name="EncodeEntityType">-EncodeEntityType</span>, <span name="DecodeEntityType">+DecodeEntityType</span>, <span name="IdType">-IdType</span>, <span name="ValueType">+ValueType</span>]</span>
+        <span class="result"> extends ReadOnlyCollectionCodecSet[QueryType, DecodeEntityType, IdType, ValueType]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">The set of encoders and decoders required to read and write a collection.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetEntityCodecs" data-isabs="true">
+      <a id="CollectionCodecSetEntityCodecs:CollectionCodecSetEntityCodecs[EntityType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetEntityCodecs.html"><span class="name">CollectionCodecSetEntityCodecs</span></a>
+        <span class="tparams">[<span name="EntityType">EntityType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Abstract mixin that provides entity encoders and decoders to a codec set</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetEntityCodecsIteratorBased" data-isabs="true">
+      <a id="CollectionCodecSetEntityCodecsIteratorBased:CollectionCodecSetEntityCodecsIteratorBased[EntityType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetEntityCodecsIteratorBased.html"><span class="name">CollectionCodecSetEntityCodecsIteratorBased</span></a>
+        <span class="tparams">[<span name="EntityType">EntityType</span>]</span>
+        <span class="result"> extends CollectionCodecSetEntityCodecs[EntityType]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetEntityCodecsMap" data-isabs="true">
+      <a id="CollectionCodecSetEntityCodecsMap:CollectionCodecSetEntityCodecsMap"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetEntityCodecsMap.html"><span class="name">CollectionCodecSetEntityCodecsMap</span></a>
+        
+        <span class="result"> extends CollectionCodecSetEntityCodecs[Map[String, Any]]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetEntityCodecsMapBased" data-isabs="true">
+      <a id="CollectionCodecSetEntityCodecsMapBased:CollectionCodecSetEntityCodecsMapBased[EntityType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetEntityCodecsMapBased.html"><span class="name">CollectionCodecSetEntityCodecsMapBased</span></a>
+        <span class="tparams">[<span name="EntityType">EntityType</span>]</span>
+        <span class="result"> extends CollectionCodecSetEntityCodecs[EntityType]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetIdEncoder" data-isabs="true">
+      <a id="CollectionCodecSetIdEncoder:CollectionCodecSetIdEncoder[IdType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetIdEncoder.html"><span class="name">CollectionCodecSetIdEncoder</span></a>
+        <span class="tparams">[<span name="IdType">-IdType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Abstract mixin that provides an ID encoder to a codec set.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetIdEncoderInt" data-isabs="true">
+      <a id="CollectionCodecSetIdEncoderInt:CollectionCodecSetIdEncoderInt"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetIdEncoderInt.html"><span class="name">CollectionCodecSetIdEncoderInt</span></a>
+        
+        <span class="result"> extends CollectionCodecSetIdEncoder[Int]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Mixin trait for CollectionCodecSet subclasses, providing an encoder for Int ID.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetIdEncoderLong" data-isabs="true">
+      <a id="CollectionCodecSetIdEncoderLong:CollectionCodecSetIdEncoderLong"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetIdEncoderLong.html"><span class="name">CollectionCodecSetIdEncoderLong</span></a>
+        
+        <span class="result"> extends CollectionCodecSetIdEncoder[Long]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Mixin trait for CollectionCodecSet subclasses, providing an encoder for Long ID.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetIdEncoderObjectId" data-isabs="true">
+      <a id="CollectionCodecSetIdEncoderObjectId:CollectionCodecSetIdEncoderObjectId"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetIdEncoderObjectId.html"><span class="name">CollectionCodecSetIdEncoderObjectId</span></a>
+        
+        <span class="result"> extends CollectionCodecSetIdEncoder[ObjectId]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Mixin trait for CollectionCodecSet subclasses, providing an encoder for ObjectId ID.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetIdEncoderString" data-isabs="true">
+      <a id="CollectionCodecSetIdEncoderString:CollectionCodecSetIdEncoderString"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetIdEncoderString.html"><span class="name">CollectionCodecSetIdEncoderString</span></a>
+        
+        <span class="result"> extends CollectionCodecSetIdEncoder[String]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Mixin trait for CollectionCodecSet subclasses, providing an encoder for String ID.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetMap" data-isabs="true">
+      <a id="CollectionCodecSetMap:CollectionCodecSetMap[IdType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetMap.html"><span class="name">CollectionCodecSetMap</span></a>
+        <span class="tparams">[<span name="IdType">-IdType</span>]</span>
+        <span class="result"> extends CollectionCodecSetQueryEncodersIterator with CollectionCodecSetEntityCodecsMap with CollectionCodecSetValueDecoderAny[Map[String, Any]]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetQueryEncoders" data-isabs="true">
+      <a id="CollectionCodecSetQueryEncoders:CollectionCodecSetQueryEncoders[QueryType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetQueryEncoders.html"><span class="name">CollectionCodecSetQueryEncoders</span></a>
+        <span class="tparams">[<span name="QueryType">-QueryType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Abstract mixin that provides query encoders to a codec set.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetQueryEncodersIterator" data-isabs="true">
+      <a id="CollectionCodecSetQueryEncodersIterator:CollectionCodecSetQueryEncodersIterator"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetQueryEncodersIterator.html"><span class="name">CollectionCodecSetQueryEncodersIterator</span></a>
+        
+        <span class="result"> extends CollectionCodecSetQueryEncoders[Iterator[(String, Any)]]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetValueDecoder" data-isabs="true">
+      <a id="CollectionCodecSetValueDecoder:CollectionCodecSetValueDecoder[ValueType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetValueDecoder.html"><span class="name">CollectionCodecSetValueDecoder</span></a>
+        <span class="tparams">[<span name="ValueType">+ValueType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Abstract mixin that provides a value decoder to a codec set</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetValueDecoderAny" data-isabs="true">
+      <a id="CollectionCodecSetValueDecoderAny:CollectionCodecSetValueDecoderAny[NestedDocumentType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetValueDecoderAny.html"><span class="name">CollectionCodecSetValueDecoderAny</span></a>
+        <span class="tparams">[<span name="NestedDocumentType">+NestedDocumentType</span>]</span>
+        <span class="result"> extends CollectionCodecSetValueDecoder[Any]</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionIndex" data-isabs="false">
+      <a id="CollectionIndex:CollectionIndex"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="CollectionIndex.html"><span class="name">CollectionIndex</span></a>
+        
+        <span class="params">(<span name="name">name: String</span>, <span name="ns">ns: String</span>, <span name="key">key: Map[String, Any]</span>, <span name="v">v: Option[Int]</span>, <span name="unique">unique: Option[Boolean]</span>, <span name="background">background: Option[Boolean]</span>, <span name="dropDups">dropDups: Option[Boolean]</span>, <span name="sparse">sparse: Option[Boolean]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Entity representing an object in the system.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CommandOptions" data-isabs="false">
+      <a id="CommandOptions:CommandOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="CommandOptions.html"><span class="name">CommandOptions</span></a>
+        
+        <span class="params">(<span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CommandResult" data-isabs="true">
+      <a id="CommandResult:CommandResult"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="CommandResult.html"><span class="name">CommandResult</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CommandResultMongoException" data-isabs="false">
+      <a id="CommandResultMongoException:CommandResultMongoException"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="CommandResultMongoException.html"><span class="name">CommandResultMongoException</span></a>
+        
+        <span class="result"> extends MongoException</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CountOptions" data-isabs="false">
+      <a id="CountOptions:CountOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="CountOptions.html"><span class="name">CountOptions</span></a>
+        
+        <span class="params">(<span name="fields">fields: Option[Fields]</span>, <span name="skip">skip: Option[Long]</span>, <span name="limit">limit: Option[Long]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.Cursor" data-isabs="true">
+      <a id="Cursor:Cursor[A]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="Cursor.html"><span class="name">Cursor</span></a>
+        <span class="tparams">[<span name="A">+A</span>]</span>
+        <span class="result"> extends Iterator[A] with Closeable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.DecodeBuffer" data-isabs="true">
+      <a id="DecodeBuffer:DecodeBuffer"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="DecodeBuffer.html"><span class="name">DecodeBuffer</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">See EncodeBuffer for a description.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.DistinctOptions" data-isabs="false">
+      <a id="DistinctOptions:DistinctOptions[Q]"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="DistinctOptions.html"><span class="name">DistinctOptions</span></a>
+        <span class="tparams">[<span name="Q">+Q</span>]</span>
+        <span class="params">(<span name="query">query: Option[Q]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.DocumentDecoder" data-isabs="true">
+      <a id="DocumentDecoder:DocumentDecoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="DocumentDecoder.html"><span class="name">DocumentDecoder</span></a>
+        <span class="tparams">[<span name="T">+T</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Trait means we can read a BSON document from a DecodeBuffer.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.DocumentEncoder" data-isabs="true">
+      <a id="DocumentEncoder:DocumentEncoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="DocumentEncoder.html"><span class="name">DocumentEncoder</span></a>
+        <span class="tparams">[<span name="T">-T</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Trait means we can write a BSON document to an EncodeBuffer.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.DocumentTooLargeMongoException" data-isabs="false">
+      <a id="DocumentTooLargeMongoException:DocumentTooLargeMongoException"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="DocumentTooLargeMongoException.html"><span class="name">DocumentTooLargeMongoException</span></a>
+        
+        <span class="result"> extends MongoException</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.DuplicateKeyMongoException" data-isabs="false">
+      <a id="DuplicateKeyMongoException:DuplicateKeyMongoException"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="DuplicateKeyMongoException.html"><span class="name">DuplicateKeyMongoException</span></a>
+        
+        <span class="result"> extends MongoException</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.EmptyDocument" data-isabs="true">
+      <a id="EmptyDocument:EmptyDocument"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="EmptyDocument.html"><span class="name">EmptyDocument</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">An empty document, which can be encoded with no knowledge other than its emptiness.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.EncodeBuffer" data-isabs="true">
+      <a id="EncodeBuffer:EncodeBuffer"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="EncodeBuffer.html"><span class="name">EncodeBuffer</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">A buffer we can encode data to.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ErrorIfDecodedDocument" data-isabs="true">
+      <a id="ErrorIfDecodedDocument:ErrorIfDecodedDocument"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="ErrorIfDecodedDocument.html"><span class="name">ErrorIfDecodedDocument</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">A document which should never be decoded (it throws if it is).</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ErrorIfDecodedValue" data-isabs="true">
+      <a id="ErrorIfDecodedValue:ErrorIfDecodedValue"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="ErrorIfDecodedValue.html"><span class="name">ErrorIfDecodedValue</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">A document which should never be decoded (it throws if it is).</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ExcludedFields" data-isabs="false">
+      <a id="ExcludedFields:ExcludedFields"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="ExcludedFields.html"><span class="name">ExcludedFields</span></a>
+        
+        <span class="result"> extends Fields</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.Fields" data-isabs="true">
+      <a id="Fields:Fields"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="Fields.html"><span class="name">Fields</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyFlag" data-isabs="true">
+      <a id="FindAndModifyFlag:FindAndModifyFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyFlag.html"><span class="name">FindAndModifyFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyOptions" data-isabs="false">
+      <a id="FindAndModifyOptions:FindAndModifyOptions[S]"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyOptions.html"><span class="name">FindAndModifyOptions</span></a>
+        <span class="tparams">[<span name="S">+S</span>]</span>
+        <span class="params">(<span name="sort">sort: Option[S]</span>, <span name="fields">fields: Option[Fields]</span>, <span name="flags">flags: Set[FindAndModifyFlag]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOneByIdOptions" data-isabs="false">
+      <a id="FindOneByIdOptions:FindOneByIdOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="FindOneByIdOptions.html"><span class="name">FindOneByIdOptions</span></a>
+        
+        <span class="params">(<span name="fields">fields: Option[Fields]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOneOptions" data-isabs="false">
+      <a id="FindOneOptions:FindOneOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="FindOneOptions.html"><span class="name">FindOneOptions</span></a>
+        
+        <span class="params">(<span name="fields">fields: Option[Fields]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOptions" data-isabs="false">
+      <a id="FindOptions:FindOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="FindOptions.html"><span class="name">FindOptions</span></a>
+        
+        <span class="params">(<span name="fields">fields: Option[Fields]</span>, <span name="skip">skip: Option[Long]</span>, <span name="limit">limit: Option[Long]</span>, <span name="batchSize">batchSize: Option[Int]</span>, <span name="overrideQueryFlags">overrideQueryFlags: Option[Set[QueryFlag]]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IdEncoder" data-isabs="true">
+      <a id="IdEncoder:IdEncoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IdEncoder.html"><span class="name">IdEncoder</span></a>
+        <span class="tparams">[<span name="T">-T</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Trait means we can encode as an ID field</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IdEncoders" data-isabs="true">
+      <a id="IdEncoders:IdEncoders"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IdEncoders.html"><span class="name">IdEncoders</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Mix this trait in to have some basic IdEncoder in scope.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IncludedFields" data-isabs="false">
+      <a id="IncludedFields:IncludedFields"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="IncludedFields.html"><span class="name">IncludedFields</span></a>
+        
+        <span class="result"> extends Fields</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IncludedFieldsIdFlag" data-isabs="true">
+      <a id="IncludedFieldsIdFlag:IncludedFieldsIdFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IncludedFieldsIdFlag.html"><span class="name">IncludedFieldsIdFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IndexFlag" data-isabs="true">
+      <a id="IndexFlag:IndexFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IndexFlag.html"><span class="name">IndexFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IndexOptions" data-isabs="false">
+      <a id="IndexOptions:IndexOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="IndexOptions.html"><span class="name">IndexOptions</span></a>
+        
+        <span class="params">(<span name="name">name: Option[String]</span>, <span name="flags">flags: Set[IndexFlag]</span>, <span name="v">v: Option[Int]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IteratorBasedCodecs" data-isabs="true">
+      <a id="IteratorBasedCodecs:IteratorBasedCodecs[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IteratorBasedCodecs.html"><span class="name">IteratorBasedCodecs</span></a>
+        <span class="tparams">[<span name="T">T</span>]</span>
+        <span class="result"> extends IdEncoders with ValueDecoders</span>
+      </span>
+      </h4>
+      <p class="comment cmt">This trait allows you to quickly implement a set of codecs by
+providing methods to convert to/from Iterator[(String,Any)].</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IteratorBasedDocumentDecoder" data-isabs="true">
+      <a id="IteratorBasedDocumentDecoder:IteratorBasedDocumentDecoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IteratorBasedDocumentDecoder.html"><span class="name">IteratorBasedDocumentDecoder</span></a>
+        <span class="tparams">[<span name="T">+T</span>]</span>
+        <span class="result"> extends DocumentDecoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Extend this to implement decode() automatically if you implement decodeIterator()</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IteratorBasedDocumentEncoder" data-isabs="true">
+      <a id="IteratorBasedDocumentEncoder:IteratorBasedDocumentEncoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IteratorBasedDocumentEncoder.html"><span class="name">IteratorBasedDocumentEncoder</span></a>
+        <span class="tparams">[<span name="T">-T</span>]</span>
+        <span class="result"> extends DocumentEncoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Extend this to implement encode() automatically if you implement encodeIterator()</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IteratorBasedIdEncoder" data-isabs="true">
+      <a id="IteratorBasedIdEncoder:IteratorBasedIdEncoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IteratorBasedIdEncoder.html"><span class="name">IteratorBasedIdEncoder</span></a>
+        <span class="tparams">[<span name="T">-T</span>]</span>
+        <span class="result"> extends IdEncoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Extend this to automatically get encodeField() if you implement
+encodeFieldAny()
+</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IteratorBasedValueDecoder" data-isabs="true">
+      <a id="IteratorBasedValueDecoder:IteratorBasedValueDecoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="IteratorBasedValueDecoder.html"><span class="name">IteratorBasedValueDecoder</span></a>
+        <span class="tparams">[<span name="T">+T</span>]</span>
+        <span class="result"> extends ValueDecoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Implement this to get decode() free for implementing decodeAny()</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.MapBasedCodecs" data-isabs="true">
+      <a id="MapBasedCodecs:MapBasedCodecs[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="MapBasedCodecs.html"><span class="name">MapBasedCodecs</span></a>
+        <span class="tparams">[<span name="T">T</span>]</span>
+        <span class="result"> extends IdEncoders with ValueDecoders</span>
+      </span>
+      </h4>
+      <p class="comment cmt">This trait allows you to quickly implement a set of codecs by
+providing methods to convert to/from Map[String,Any].</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ModifierEncoder" data-isabs="true">
+      <a id="ModifierEncoder:ModifierEncoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="ModifierEncoder.html"><span class="name">ModifierEncoder</span></a>
+        <span class="tparams">[<span name="T">-T</span>]</span>
+        <span class="result"> extends DocumentEncoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">If an implicit ModifierEncoder exists for a type, that type can be encoded into a query that
+modifies documents.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.MongoException" data-isabs="false">
+      <a id="MongoException:MongoException"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="MongoException.html"><span class="name">MongoException</span></a>
+        
+        <span class="result"> extends Exception</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryEncoder" data-isabs="true">
+      <a id="QueryEncoder:QueryEncoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="QueryEncoder.html"><span class="name">QueryEncoder</span></a>
+        <span class="tparams">[<span name="T">-T</span>]</span>
+        <span class="result"> extends DocumentEncoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">If an implicit QueryEncoder exists for a type, that type can be encoded into a query document.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryFlag" data-isabs="true">
+      <a id="QueryFlag:QueryFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="QueryFlag.html"><span class="name">QueryFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryResultDecoder" data-isabs="true">
+      <a id="QueryResultDecoder:QueryResultDecoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="QueryResultDecoder.html"><span class="name">QueryResultDecoder</span></a>
+        <span class="tparams">[<span name="T">+T</span>]</span>
+        <span class="result"> extends DocumentDecoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">If an implicit QueryResultDecoder exists for a type, that type can be decoded into a query result document.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ReadOnlyCollectionCodecSet" data-isabs="true">
+      <a id="ReadOnlyCollectionCodecSet:ReadOnlyCollectionCodecSet[QueryType, EntityType, IdType, ValueType]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="ReadOnlyCollectionCodecSet.html"><span class="name">ReadOnlyCollectionCodecSet</span></a>
+        <span class="tparams">[<span name="QueryType">-QueryType</span>, <span name="EntityType">+EntityType</span>, <span name="IdType">-IdType</span>, <span name="ValueType">+ValueType</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">The set of encoders and decoders required to read from a collection</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateFlag" data-isabs="true">
+      <a id="UpdateFlag:UpdateFlag"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="UpdateFlag.html"><span class="name">UpdateFlag</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>sealed </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateOptions" data-isabs="false">
+      <a id="UpdateOptions:UpdateOptions"></a>
+      <h4 class="signature">
+      <span class="kind">case class</span>
+      <span class="symbol"> 
+        <a href="UpdateOptions.html"><span class="name">UpdateOptions</span></a>
+        
+        <span class="params">(<span name="flags">flags: Set[UpdateFlag]</span>)</span><span class="result"> extends Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateQueryEncoder" data-isabs="true">
+      <a id="UpdateQueryEncoder:UpdateQueryEncoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="UpdateQueryEncoder.html"><span class="name">UpdateQueryEncoder</span></a>
+        <span class="tparams">[<span name="T">-T</span>]</span>
+        <span class="result"> extends DocumentEncoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">If an implicit UpdateQueryEncoder exists for a type, that type can be encoded into a query suitable
+for an update.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpsertEncoder" data-isabs="true">
+      <a id="UpsertEncoder:UpsertEncoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="UpsertEncoder.html"><span class="name">UpsertEncoder</span></a>
+        <span class="tparams">[<span name="T">-T</span>]</span>
+        <span class="result"> extends DocumentEncoder[T]</span>
+      </span>
+      </h4>
+      <p class="comment cmt">If an implicit UpsertEncoder exists for a type, that type can be encoded as a Modifier document
+when performing an upsert.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ValueDecoder" data-isabs="true">
+      <a id="ValueDecoder:ValueDecoder[T]"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="ValueDecoder.html"><span class="name">ValueDecoder</span></a>
+        <span class="tparams">[<span name="T">+T</span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Trait means we can convert a single BSON value from a DecodeBuffer.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ValueDecoders" data-isabs="true">
+      <a id="ValueDecoders:ValueDecoders"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="ValueDecoders.html"><span class="name">ValueDecoders</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Mix this in to have some basic value decoders in scope.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.WriteResult" data-isabs="true">
+      <a id="WriteResult:WriteResult"></a>
+      <h4 class="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <a href="WriteResult.html"><span class="name">WriteResult</span></a>
+        
+        <span class="result"> extends CommandResult</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.WriteResultMongoException" data-isabs="false">
+      <a id="WriteResultMongoException:WriteResultMongoException"></a>
+      <h4 class="signature">
+      <span class="kind">class</span>
+      <span class="symbol"> 
+        <a href="WriteResultMongoException.html"><span class="name">WriteResultMongoException</span></a>
+        
+        <span class="result"> extends CommandResultMongoException</span>
+      </span>
+      </h4>
+      
+    </li></ol>
+            </div>
+        
+        
+
+        <div class="values members" id="values">
+              <h3>Value Members</h3>
+              <ol><li visbl="pub" name="org.beaucatcher.mongo.AllFields" data-isabs="false">
+      <a id="AllFields:AllFields"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="AllFields$.html"><span class="name">AllFields</span></a>
+        
+        <span class="result"> extends Fields</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.AsyncCursor" data-isabs="false">
+      <a id="AsyncCursor:AsyncCursor"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="AsyncCursor$.html"><span class="name">AsyncCursor</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSet" data-isabs="false">
+      <a id="CollectionCodecSet:CollectionCodecSet"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSet$.html"><span class="name">CollectionCodecSet</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CollectionCodecSetMap" data-isabs="false">
+      <a id="CollectionCodecSetMap:CollectionCodecSetMap"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="CollectionCodecSetMap$.html"><span class="name">CollectionCodecSetMap</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CommandResult" data-isabs="false">
+      <a id="CommandResult:CommandResult"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="CommandResult$.html"><span class="name">CommandResult</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.CountOptions" data-isabs="false">
+      <a id="CountOptions:CountOptions"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="CountOptions$.html"><span class="name">CountOptions</span></a>
+        
+        <span class="result"> extends Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.DistinctOptions" data-isabs="false">
+      <a id="DistinctOptions:DistinctOptions"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="DistinctOptions$.html"><span class="name">DistinctOptions</span></a>
+        
+        <span class="result"> extends Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.EmptyDocument" data-isabs="false">
+      <a id="EmptyDocument:EmptyDocument"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="EmptyDocument$.html"><span class="name">EmptyDocument</span></a>
+        
+        <span class="result"> extends EmptyDocument</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ErrorIfDecodedDocument" data-isabs="false">
+      <a id="ErrorIfDecodedDocument:ErrorIfDecodedDocument"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="ErrorIfDecodedDocument$.html"><span class="name">ErrorIfDecodedDocument</span></a>
+        
+        <span class="result"> extends ErrorIfDecodedDocument</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ErrorIfDecodedValue" data-isabs="false">
+      <a id="ErrorIfDecodedValue:ErrorIfDecodedValue"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="ErrorIfDecodedValue$.html"><span class="name">ErrorIfDecodedValue</span></a>
+        
+        <span class="result"> extends ErrorIfDecodedValue</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ExcludedFields" data-isabs="false">
+      <a id="ExcludedFields:ExcludedFields"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="ExcludedFields$.html"><span class="name">ExcludedFields</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FieldsWithId" data-isabs="false">
+      <a id="FieldsWithId:FieldsWithId"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FieldsWithId$.html"><span class="name">FieldsWithId</span></a>
+        
+        <span class="result"> extends IncludedFieldsIdFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FieldsWithoutId" data-isabs="false">
+      <a id="FieldsWithoutId:FieldsWithoutId"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FieldsWithoutId$.html"><span class="name">FieldsWithoutId</span></a>
+        
+        <span class="result"> extends IncludedFieldsIdFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyNew" data-isabs="false">
+      <a id="FindAndModifyNew:FindAndModifyNew"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyNew$.html"><span class="name">FindAndModifyNew</span></a>
+        
+        <span class="result"> extends FindAndModifyFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyOptions" data-isabs="false">
+      <a id="FindAndModifyOptions:FindAndModifyOptions"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyOptions$.html"><span class="name">FindAndModifyOptions</span></a>
+        
+        <span class="result"> extends Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyRemove" data-isabs="false">
+      <a id="FindAndModifyRemove:FindAndModifyRemove"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyRemove$.html"><span class="name">FindAndModifyRemove</span></a>
+        
+        <span class="result"> extends FindAndModifyFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindAndModifyUpsert" data-isabs="false">
+      <a id="FindAndModifyUpsert:FindAndModifyUpsert"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindAndModifyUpsert$.html"><span class="name">FindAndModifyUpsert</span></a>
+        
+        <span class="result"> extends FindAndModifyFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOneByIdOptions" data-isabs="false">
+      <a id="FindOneByIdOptions:FindOneByIdOptions"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindOneByIdOptions$.html"><span class="name">FindOneByIdOptions</span></a>
+        
+        <span class="result"> extends Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOneOptions" data-isabs="false">
+      <a id="FindOneOptions:FindOneOptions"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindOneOptions$.html"><span class="name">FindOneOptions</span></a>
+        
+        <span class="result"> extends Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.FindOptions" data-isabs="false">
+      <a id="FindOptions:FindOptions"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="FindOptions$.html"><span class="name">FindOptions</span></a>
+        
+        <span class="result"> extends Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IdEncoders" data-isabs="false">
+      <a id="IdEncoders:IdEncoders"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IdEncoders$.html"><span class="name">IdEncoders</span></a>
+        
+        <span class="result"> extends IdEncoders</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Import this trait to have some basic IdEncoder in scope.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IncludedFields" data-isabs="false">
+      <a id="IncludedFields:IncludedFields"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IncludedFields$.html"><span class="name">IncludedFields</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IndexBackground" data-isabs="false">
+      <a id="IndexBackground:IndexBackground"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IndexBackground$.html"><span class="name">IndexBackground</span></a>
+        
+        <span class="result"> extends IndexFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IndexDropDups" data-isabs="false">
+      <a id="IndexDropDups:IndexDropDups"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IndexDropDups$.html"><span class="name">IndexDropDups</span></a>
+        
+        <span class="result"> extends IndexFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IndexOptions" data-isabs="false">
+      <a id="IndexOptions:IndexOptions"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IndexOptions$.html"><span class="name">IndexOptions</span></a>
+        
+        <span class="result"> extends Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IndexSparse" data-isabs="false">
+      <a id="IndexSparse:IndexSparse"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IndexSparse$.html"><span class="name">IndexSparse</span></a>
+        
+        <span class="result"> extends IndexFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IndexUnique" data-isabs="false">
+      <a id="IndexUnique:IndexUnique"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IndexUnique$.html"><span class="name">IndexUnique</span></a>
+        
+        <span class="result"> extends IndexFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.IteratorCodecs" data-isabs="false">
+      <a id="IteratorCodecs:IteratorCodecs"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="IteratorCodecs$.html"><span class="name">IteratorCodecs</span></a>
+        
+        <span class="result"> extends IdEncoders with ValueDecoders</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Import IteratorCodecs.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.MapCodecs" data-isabs="false">
+      <a id="MapCodecs:MapCodecs"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="MapCodecs$.html"><span class="name">MapCodecs</span></a>
+        
+        <span class="result"> extends IdEncoders with ValueDecoders</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Import MapCodecs.</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryAwaitData" data-isabs="false">
+      <a id="QueryAwaitData:QueryAwaitData"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryAwaitData$.html"><span class="name">QueryAwaitData</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryExhaust" data-isabs="false">
+      <a id="QueryExhaust:QueryExhaust"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryExhaust$.html"><span class="name">QueryExhaust</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryNoTimeout" data-isabs="false">
+      <a id="QueryNoTimeout:QueryNoTimeout"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryNoTimeout$.html"><span class="name">QueryNoTimeout</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryOpLogReplay" data-isabs="false">
+      <a id="QueryOpLogReplay:QueryOpLogReplay"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryOpLogReplay$.html"><span class="name">QueryOpLogReplay</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QuerySlaveOk" data-isabs="false">
+      <a id="QuerySlaveOk:QuerySlaveOk"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QuerySlaveOk$.html"><span class="name">QuerySlaveOk</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.QueryTailable" data-isabs="false">
+      <a id="QueryTailable:QueryTailable"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="QueryTailable$.html"><span class="name">QueryTailable</span></a>
+        
+        <span class="result"> extends QueryFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ReadOnlyCollectionCodecSet" data-isabs="false">
+      <a id="ReadOnlyCollectionCodecSet:ReadOnlyCollectionCodecSet"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="ReadOnlyCollectionCodecSet$.html"><span class="name">ReadOnlyCollectionCodecSet</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateMulti" data-isabs="false">
+      <a id="UpdateMulti:UpdateMulti"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="UpdateMulti$.html"><span class="name">UpdateMulti</span></a>
+        
+        <span class="result"> extends UpdateFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateOptions" data-isabs="false">
+      <a id="UpdateOptions:UpdateOptions"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="UpdateOptions$.html"><span class="name">UpdateOptions</span></a>
+        
+        <span class="result"> extends Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.UpdateUpsert" data-isabs="false">
+      <a id="UpdateUpsert:UpdateUpsert"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="UpdateUpsert$.html"><span class="name">UpdateUpsert</span></a>
+        
+        <span class="result"> extends UpdateFlag with Product with Serializable</span>
+      </span>
+      </h4>
+      
+    </li><li visbl="pub" name="org.beaucatcher.mongo.ValueDecoders" data-isabs="false">
+      <a id="ValueDecoders:ValueDecoders"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="ValueDecoders$.html"><span class="name">ValueDecoders</span></a>
+        
+        <span class="result"> extends ValueDecoders</span>
+      </span>
+      </h4>
+      <p class="comment cmt">Factory for value decoders</p>
+    </li><li visbl="pub" name="org.beaucatcher.mongo.WriteResult" data-isabs="false">
+      <a id="WriteResult:WriteResult"></a>
+      <h4 class="signature">
+      <span class="kind">object</span>
+      <span class="symbol"> 
+        <a href="WriteResult$.html"><span class="name">WriteResult</span></a>
+        
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+    </li></ol>
+            </div>
+
+        
+
+        
+
+      </div>
+      
+      <div id="tooltip"></div>
+      
+    </body>
+      </html>

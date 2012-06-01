@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.beaucatcher</groupId>
+    <artifactId>beaucatcher-mongo-test_2.9.1</artifactId>
+    <packaging>jar</packaging>
+    <description>beaucatcher-mongo-test</description>
+    <version>0.5.0</version>
+    <name>beaucatcher-mongo-test</name>
+    <organization>
+        <name>org.beaucatcher</name>
+    </organization>
+    <dependencies>
+        <dependency>
+            <groupId>org.beaucatcher</groupId>
+            <artifactId>beaucatcher-bobject_2.9.1</artifactId>
+            <version>0.5.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.beaucatcher</groupId>
+            <artifactId>beaucatcher-java-driver_2.9.1</artifactId>
+            <version>0.5.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.beaucatcher</groupId>
+            <artifactId>beaucatcher-channel-driver_2.9.1</artifactId>
+            <version>0.5.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.beaucatcher</groupId>
+            <artifactId>beaucatcher-channel-netty34_2.9.1</artifactId>
+            <version>0.5.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+            <version>2.7.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <repositories>
+        <repository>
+            <id>ScalaToolsSnapshots</id>
+            <name>Scala Tools Snapshots</name>
+            <url>http://scala-tools.org/repo-snapshots/</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+            <id>TypesafeRepo</id>
+            <name>Typesafe Repo</name>
+            <url>http://repo.typesafe.com/typesafe/releases/</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+            <id>TwitterPublicRepo</id>
+            <name>Twitter Public Repo</name>
+            <url>http://maven.twttr.com/</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+            <id>ScalaToolsMaven2Repository</id>
+            <name>Scala-Tools Maven2 Repository</name>
+            <url>http://scala-tools.org/repo-releases/</url>
+            <layout>default</layout>
+        </repository>
+    </repositories>
+</project>

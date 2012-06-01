@@ -1,0 +1,604 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+        <head>
+          <title>org.beaucatcher.bobject.JsonMethods</title>
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link type="text/css" media="screen" rel="stylesheet" href="../../../lib/template.css" />
+      <script type="text/javascript" src="../../../lib/jquery.js"></script>
+      <script type="text/javascript" src="../../../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../../../lib/template.js"></script>
+      <script type="text/javascript" src="../../../lib/tools.tooltip.js"></script>
+    
+        </head>
+        <body class="type">
+      <div id="definition">
+        <img src="../../../lib/trait_big.png" />
+        <p id="owner"><a name="org" class="extype" href="../../package.html">org</a>.<a name="org.beaucatcher" class="extype" href="../package.html">beaucatcher</a>.<a name="org.beaucatcher.bobject" class="extype" href="package.html">bobject</a></p>
+        <h1>JsonMethods</h1>
+      </div>
+
+      <h4 class="signature" id="signature">
+      <span class="kind">trait</span>
+      <span class="symbol"> 
+        <span class="name">JsonMethods</span>
+        <span class="tparams">[<span name="SchemaType">SchemaType &lt;: <span name="scala.Product" class="extype">Product</span></span>]</span>
+        <span class="result"> extends AnyRef</span>
+      </span>
+      </h4>
+      
+          <div class="fullcommenttop" id="comment"><div class="comment cmt"><p>The idea of this trait is to implement a backbone.js-style set of methods
+for a MongoDB collection. backbone.js just seems like a good &quot;spec&quot; for
+a set of CRUD methods in REST format. You can pretty easily adapt this
+to map to HTTP differently, though.</p><p>See http://documentcloud.github.com/backbone/#Sync</p><p>My still-untested interpretation follows.</p><p>CRUD maps to REST like this:
+ create = POST   /collection
+ read = GET   /collection[/id]
+ update = PUT   /collection/id
+ delete = DELETE   /collection/id</p><p>Create and Update should return the modified fields (the fields different from those passed in)
+though they are allowed to return unmodified fields, with an efficiency cost.</p><p>Read should always return all fields of the object. Without the /id, it returns a JSON array of all
+objects.</p><p>Delete I guess should return an empty body, though I'm not sure what backbone.js expects.</p><p>FIXME: This class probably needs some way to pass in application-specific data (such as
+the currently-logged-in-user) to the various methods. I guess you could use thread local
+but maybe there's something cleaner.
+</p></div><div class="toggleContainer block">
+          <span class="toggle">Linear Supertypes</span>
+          <div class="superTypes hiddenContent">AnyRef, <span name="scala.Any" class="extype">Any</span></div>
+        </div></div>
+        
+
+      <div id="template">
+
+        <div id="mbrsel">
+          <div id="textfilter"><span class="pre"></span><span class="input"><input accesskey="/" type="text" /></span><span class="post"></span></div>
+          <div id="order">
+                <span class="filtertype">Ordering</span>
+                <ol><li class="alpha in"><span>Alphabetic</span></li><li class="inherit out"><span>By inheritance</span></li></ol>
+              </div>
+          <div id="ancestors">
+                <span class="filtertype">Inherited</span>
+                <ol><li class="hideall out"><span>Hide All</span></li>
+                <li class="showall in"><span>Show all</span></li></ol>
+                <ol id="linearization"><li name="org.beaucatcher.bobject.JsonMethods" class="in"><span>JsonMethods</span></li><li name="scala.AnyRef" class="in"><span>AnyRef</span></li><li name="scala.Any" class="in"><span>Any</span></li></ol>
+              </div>
+          <div id="visbl">
+              <span class="filtertype">Visibility</span>
+              <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+            </div>
+        </div>
+
+        
+
+        
+        
+        <div class="values members" id="values">
+              <h3>Abstract Value Members</h3>
+              <ol><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#createQueryForAllObjects" data-isabs="true">
+      <a id="createQueryForAllObjects():BObject"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">createQueryForAllObjects</span>
+        
+        <span class="params">()</span><span class="result">: <a name="org.beaucatcher.bobject.BObject" class="extype" href="BObject.html">BObject</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">This method creates the query that will be used to list
+all of the objects in the collection.</p><div class="fullcomment"><div class="comment cmt"><p>This method creates the query that will be used to list
+all of the objects in the collection. By default this
+isn't implemented, because it's unlikely anyone wants
+an API that returns an entire unfiltered MongoDB collection.
+More likely, you want to filter by user or something, which
+you can do by overriding this. This is abstract to be sure
+you consider the issues.
+</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected abstract </dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#jsonAnalysis" data-isabs="true">
+      <a id="jsonAnalysis:ClassAnalysis[SchemaType]"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">jsonAnalysis</span>
+        
+        <span class="result">: <span name="org.beaucatcher.caseclass.ClassAnalysis" class="extype">ClassAnalysis</span>[SchemaType]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Since we're a trait, we don't have a manifest and you have to provide this</p><div class="fullcomment"><div class="comment cmt"><p>Since we're a trait, we don't have a manifest and you have to provide this</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected abstract </dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#jsonSync" data-isabs="true">
+      <a id="jsonSync(Context):org.beaucatcher.mongo.BoundSyncCollection[org.beaucatcher.bobject.BObject, org.beaucatcher.bobject.BObject, org.beaucatcher.bobject.BObject, _, _]"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">jsonSync</span>
+        
+        <span class="params">(<span class="implicit">implicit </span><span name="context">context: <span name="org.beaucatcher.mongo.Context" class="extype">Context</span></span>)</span><span class="result">: org.beaucatcher.mongo.BoundSyncCollection[org.beaucatcher.bobject.BObject, org.beaucatcher.bobject.BObject, org.beaucatcher.bobject.BObject, _, _]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Point this to a Collection to use to store BObject</p><div class="fullcomment"><div class="comment cmt"><p>Point this to a Collection to use to store BObject</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected abstract </dd></dl></div>
+    </li></ol>
+            </div>
+
+        <div class="values members" id="values">
+              <h3>Concrete Value Members</h3>
+              <ol><li visbl="pub" name="scala.AnyRef#!=" data-isabs="false">
+      <a id="!=(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">!=</span>
+        
+        <span class="params">(<span name="arg0">arg0: AnyRef</span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.Any#!=" data-isabs="false">
+      <a id="!=(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">!=</span>
+        
+        <span class="params">(<span name="arg0">arg0: <span name="scala.Any" class="extype">Any</span></span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef###" data-isabs="false">
+      <a id="##():Int"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">##</span>
+        
+        <span class="params">()</span><span class="result">: <span name="scala.Int" class="extype">Int</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#==" data-isabs="false">
+      <a id="==(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">==</span>
+        
+        <span class="params">(<span name="arg0">arg0: AnyRef</span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.Any#==" data-isabs="false">
+      <a id="==(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">==</span>
+        
+        <span class="params">(<span name="arg0">arg0: <span name="scala.Any" class="extype">Any</span></span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.Any#asInstanceOf" data-isabs="false">
+      <a id="asInstanceOf[T0]:T0"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">asInstanceOf</span>
+        <span class="tparams">[<span name="T0">T0</span>]</span>
+        <span class="result">: T0</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li visbl="prt" name="scala.AnyRef#clone" data-isabs="false">
+      <a id="clone():AnyRef"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">clone</span>
+        
+        <span class="params">()</span><span class="result">: AnyRef</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<a name="java.lang" class="extype" href="../../../java/lang/package.html">lang</a>] </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.bobject.JsonMethods#createJson" data-isabs="false">
+      <a id="createJson(String)(Context):String"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">createJson</span>
+        
+        <span class="params">(<span name="json">json: String</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="context">context: <span name="org.beaucatcher.mongo.Context" class="extype">Context</span></span>)</span><span class="result">: String</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">This function is intended to implement HTTP POST to
+a URL like &quot;/collection&quot;, creating a new object.</p><div class="fullcomment"><div class="comment cmt"><p>This function is intended to implement HTTP POST to
+a URL like &quot;/collection&quot;, creating a new object. It returns
+a JSON string with the new object, mostly so you can see the
+newly-created ID for the object.
+See updateJson for most other details.
+</p></div></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#createQueryForObject" data-isabs="false">
+      <a id="createQueryForObject(String):BObject"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">createQueryForObject</span>
+        
+        <span class="params">(<span name="path">path: String</span>)</span><span class="result">: <a name="org.beaucatcher.bobject.BObject" class="extype" href="BObject.html">BObject</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">This method creates the query that will be used to
+find an existing object, based on the URL path segment
+used in the HTTP request.</p><div class="fullcomment"><div class="comment cmt"><p>This method creates the query that will be used to
+find an existing object, based on the URL path segment
+used in the HTTP request.</p><p>By default it assumes the path segment is an ObjectId
+stored in the &quot;_id&quot; field. (In the future, the default
+may be smart and look at the type of the _id field
+in the schema case class.)</p><p>To change that, override here.
+</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.bobject.JsonMethods#deleteJson" data-isabs="false">
+      <a id="deleteJson(String)(Context):Unit"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">deleteJson</span>
+        
+        <span class="params">(<span name="path">path: String</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="context">context: <span name="org.beaucatcher.mongo.Context" class="extype">Context</span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Intended to implement HTTP DELETE, deletes the object identified by the path.</p>
+    </li><li visbl="pub" name="scala.AnyRef#eq" data-isabs="false">
+      <a id="eq(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">eq</span>
+        
+        <span class="params">(<span name="arg0">arg0: AnyRef</span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#equals" data-isabs="false">
+      <a id="equals(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">equals</span>
+        
+        <span class="params">(<span name="arg0">arg0: <span name="scala.Any" class="extype">Any</span></span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="prt" name="scala.AnyRef#finalize" data-isabs="false">
+      <a id="finalize():Unit"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">finalize</span>
+        
+        <span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<a name="java.lang" class="extype" href="../../../java/lang/package.html">lang</a>] </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#generateJValueId" data-isabs="false">
+      <a id="generateJValueId():JValue"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">generateJValueId</span>
+        
+        <span class="params">()</span><span class="result">: <a name="org.beaucatcher.bobject.JValue" class="extype" href="JValue.html">JValue</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">When creating an object, this function generates a new ID for it.</p><div class="fullcomment"><div class="comment cmt"><p>When creating an object, this function generates a new ID for it. By default,
+it creates a new ObjectId as a BString. Override this if your ID type is
+not ObjectId.
+</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#getClass" data-isabs="false">
+      <a id="getClass():java.lang.Class[_]"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">getClass</span>
+        
+        <span class="params">()</span><span class="result">: java.lang.Class[_]</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#hashCode" data-isabs="false">
+      <a id="hashCode():Int"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">hashCode</span>
+        
+        <span class="params">()</span><span class="result">: <span name="scala.Int" class="extype">Int</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="pub" name="scala.Any#isInstanceOf" data-isabs="false">
+      <a id="isInstanceOf[T0]:Boolean"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">isInstanceOf</span>
+        <span class="tparams">[<span name="T0">T0</span>]</span>
+        <span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#jsonFlavor" data-isabs="false">
+      <a id="jsonFlavor:Value"></a>
+      <h4 class="signature">
+      <span class="kind">val</span>
+      <span class="symbol"> 
+        <span class="name">jsonFlavor</span>
+        
+        <span class="result">: <span name="scala.Enumeration.Value" class="extype">Value</span></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">If you want to override the JSON flavor, do so here</p><div class="fullcomment"><div class="comment cmt"><p>If you want to override the JSON flavor, do so here</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#modifyIncomingBson" data-isabs="false">
+      <a id="modifyIncomingBson(BObject):BObject"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">modifyIncomingBson</span>
+        
+        <span class="params">(<span name="bobject">bobject: <a name="org.beaucatcher.bobject.BObject" class="extype" href="BObject.html">BObject</a></span>)</span><span class="result">: <a name="org.beaucatcher.bobject.BObject" class="extype" href="BObject.html">BObject</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Override this if you want to modify the BSON after it's
+validated against the case class schema and converted from
+JSON.</p><div class="fullcomment"><div class="comment cmt"><p>Override this if you want to modify the BSON after it's
+validated against the case class schema and converted from
+JSON. You can also throw a JsonValidationException from here.
+So you can use this to do additional validation, or to add or remove
+or rename fields before storing in the database. This is called for
+creating and for updating.
+</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#modifyIncomingJson" data-isabs="false">
+      <a id="modifyIncomingJson(Option[String],JValue):JObject"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">modifyIncomingJson</span>
+        
+        <span class="params">(<span name="path">path: <span name="scala.Option" class="extype">Option</span>[String]</span>, <span name="jvalue">jvalue: <a name="org.beaucatcher.bobject.JValue" class="extype" href="JValue.html">JValue</a></span>)</span><span class="result">: <a name="org.beaucatcher.bobject.JObject" class="extype" href="JObject.html">JObject</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Override this if you want to modify JSON that's coming in.</p><div class="fullcomment"><div class="comment cmt"><p>Override this if you want to modify JSON that's coming in. You can
+also throw a JsonValidationException from here. This method will
+be called before validating the JSON against the case class schema.
+This method must return an object, not any other kind of JValue.</p><p>By default this method forces the JValue to be a JObject and
+adds an &quot;_id&quot; field if there wasn't one before. Also by default
+if there's a path passed in, it's used for the _id and must match
+any existing _id. This method's default implementation invokes
+parseJValueIdFromPath() and generateJValueId(); usually you would
+override those to modify your ID type.</p><p>In this method, you could also &quot;fix up&quot; JSON (for example add default values for missing fields)
+before the JSON gets validated.</p><p>This method is called for creating and for updating.
+</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#modifyOutgoingBson" data-isabs="false">
+      <a id="modifyOutgoingBson(BObject):BObject"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">modifyOutgoingBson</span>
+        
+        <span class="params">(<span name="bobject">bobject: <a name="org.beaucatcher.bobject.BObject" class="extype" href="BObject.html">BObject</a></span>)</span><span class="result">: <a name="org.beaucatcher.bobject.BObject" class="extype" href="BObject.html">BObject</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Override this to modify BSON on its way out.</p><div class="fullcomment"><div class="comment cmt"><p>Override this to modify BSON on its way out. Called when reading
+and when returning an object from create and update.
+</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#modifyOutgoingJson" data-isabs="false">
+      <a id="modifyOutgoingJson(JObject):JObject"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">modifyOutgoingJson</span>
+        
+        <span class="params">(<span name="jobject">jobject: <a name="org.beaucatcher.bobject.JObject" class="extype" href="JObject.html">JObject</a></span>)</span><span class="result">: <a name="org.beaucatcher.bobject.JObject" class="extype" href="JObject.html">JObject</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Override this to modify JSON on its way out.</p><div class="fullcomment"><div class="comment cmt"><p>Override this to modify JSON on its way out. Called when reading
+and when returning an object from create and update.
+</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#ne" data-isabs="false">
+      <a id="ne(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">ne</span>
+        
+        <span class="params">(<span name="arg0">arg0: AnyRef</span>)</span><span class="result">: <span name="scala.Boolean" class="extype">Boolean</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#notify" data-isabs="false">
+      <a id="notify():Unit"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">notify</span>
+        
+        <span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#notifyAll" data-isabs="false">
+      <a id="notifyAll():Unit"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">notifyAll</span>
+        
+        <span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="prt" name="org.beaucatcher.bobject.JsonMethods#parseJValueIdFromPath" data-isabs="false">
+      <a id="parseJValueIdFromPath(String):JValue"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">parseJValueIdFromPath</span>
+        
+        <span class="params">(<span name="path">path: String</span>)</span><span class="result">: <a name="org.beaucatcher.bobject.JValue" class="extype" href="JValue.html">JValue</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">This function should convert a trailing path component to the JValue representation
+of the object ID, or throw a JsonValidationException if the path is not a well-formed ID value.</p><div class="fullcomment"><div class="comment cmt"><p>This function should convert a trailing path component to the JValue representation
+of the object ID, or throw a JsonValidationException if the path is not a well-formed ID value.
+By default, this validates an ObjectId and converts it to a BString, but you can override
+if your object's ID is not an ObjectId.</p><p>(In the future, the default
+may be smart and look at the type of the _id field
+in the schema case class.)
+</p></div><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.bobject.JsonMethods#parseJson" data-isabs="false">
+      <a id="parseJson(String):BObject"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">parseJson</span>
+        
+        <span class="params">(<span name="json">json: String</span>)</span><span class="result">: <a name="org.beaucatcher.bobject.BObject" class="extype" href="BObject.html">BObject</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Parses JSON against the schema, calling modify hooks in the same way as createJson(), i.</p><div class="fullcomment"><div class="comment cmt"><p>Parses JSON against the schema, calling modify hooks in the same way as createJson(), i.e.
+the parsed JSON ends up as it would normally be stored in MongoDB.
+</p></div></div>
+    </li><li visbl="pub" name="org.beaucatcher.bobject.JsonMethods#parseJsonArray" data-isabs="false">
+      <a id="parseJsonArray(String):BArray"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">parseJsonArray</span>
+        
+        <span class="params">(<span name="json">json: String</span>)</span><span class="result">: <a name="org.beaucatcher.bobject.BArray" class="extype" href="BArray.html">BArray</a></span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">Parses JSON containing an array of objects, validating each one against the
+schema.</p><div class="fullcomment"><div class="comment cmt"><p>Parses JSON containing an array of objects, validating each one against the
+schema. The parsed objects end up as they would normally be stored in MongoDB
+by createJson() or updateJson()
+</p></div></div>
+    </li><li visbl="pub" name="org.beaucatcher.bobject.JsonMethods#readJson" data-isabs="false">
+      <a id="readJson(Option[String])(Context):Option[String]"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">readJson</span>
+        
+        <span class="params">(<span name="path">path: <span name="scala.Option" class="extype">Option</span>[String]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="context">context: <span name="org.beaucatcher.mongo.Context" class="extype">Context</span></span>)</span><span class="result">: <span name="scala.Option" class="extype">Option</span>[String]</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">This function is intended to implement HTTP GET, retrieving an object
+or list of objects.</p><div class="fullcomment"><div class="comment cmt"><p>This function is intended to implement HTTP GET, retrieving an object
+or list of objects.</p><p>By default the assumption is that &quot;path&quot; is an ObjectId string which corresponds
+to the _id field in the object. You can change this assumption by overriding
+the pipeline from BSON to JSON, i.e. the modifyOutgoingBson() and modifyOutgoingJson()
+hooks.</p><p>If no path is provided, then this reads all objects as defined by createQueryForAllObjects().
+</p></div></div>
+    </li><li visbl="pub" name="scala.AnyRef#synchronized" data-isabs="false">
+      <a id="synchronized[T0](⇒ T0):T0"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">synchronized</span>
+        <span class="tparams">[<span name="T0">T0</span>]</span>
+        <span class="params">(<span name="arg0">arg0: ⇒ T0</span>)</span><span class="result">: T0</span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#toString" data-isabs="false">
+      <a id="toString():String"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">toString</span>
+        
+        <span class="params">()</span><span class="result">: <span name="java.lang.String" class="extype">String</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li visbl="pub" name="org.beaucatcher.bobject.JsonMethods#updateJson" data-isabs="false">
+      <a id="updateJson(String,String)(Context):String"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">updateJson</span>
+        
+        <span class="params">(<span name="path">path: String</span>, <span name="json">json: String</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="context">context: <span name="org.beaucatcher.mongo.Context" class="extype">Context</span></span>)</span><span class="result">: String</span>
+      </span>
+      </h4>
+      <p class="shortcomment cmt">This function is intended to implement HTTP PUT (updating an object).</p><div class="fullcomment"><div class="comment cmt"><p>This function is intended to implement HTTP PUT (updating an object).
+The provided path should be the last segment of the path, or whatever part
+identifies the object. The JSON will be validated and then stored in the
+database.</p><p>By default the assumption is that &quot;path&quot; is an ObjectId string which
+corresponds to the _id field in the object.
+You can modify the pipeline from JSON to BSON, including the path-to-ID mapping,
+by overriding the modifyIncomingJson() or modifyIncomingBson() hooks.</p><p>The new object is returned back as a JSON string.
+The returned-back new object is modified by
+the same methods that affect getJson()'s returned object.
+</p></div></div>
+    </li><li visbl="pub" name="scala.AnyRef#wait" data-isabs="false">
+      <a id="wait():Unit"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">wait</span>
+        
+        <span class="params">()</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#wait" data-isabs="false">
+      <a id="wait(Long,Int):Unit"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">wait</span>
+        
+        <span class="params">(<span name="arg0">arg0: <span name="scala.Long" class="extype">Long</span></span>, <span name="arg1">arg1: <span name="scala.Int" class="extype">Int</span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li visbl="pub" name="scala.AnyRef#wait" data-isabs="false">
+      <a id="wait(Long):Unit"></a>
+      <h4 class="signature">
+      <span class="kind">def</span>
+      <span class="symbol"> 
+        <span class="name">wait</span>
+        
+        <span class="params">(<span name="arg0">arg0: <span name="scala.Long" class="extype">Long</span></span>)</span><span class="result">: <span name="scala.Unit" class="extype">Unit</span></span>
+      </span>
+      </h4>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>final </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li></ol>
+            </div>
+
+        
+
+        <div name="scala.AnyRef" class="parent">
+              <h3>Inherited from AnyRef</h3>
+            </div><div name="scala.Any" class="parent">
+              <h3>Inherited from <span name="scala.Any" class="extype">Any</span></h3>
+            </div>
+
+      </div>
+      
+      <div id="tooltip"></div>
+      
+    </body>
+      </html>
