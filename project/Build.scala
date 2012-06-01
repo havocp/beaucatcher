@@ -6,7 +6,7 @@ object BuildSettings {
     import com.typesafe.sbtscalariform.ScalariformPlugin.ScalariformKeys
 
     val buildOrganization = "org.beaucatcher"
-    val buildVersion = "0.3.1-SNAPSHOT"
+    val buildVersion = "0.5.0"
     val buildScalaVersion = "2.9.1"
 
     def formatPrefs = {
