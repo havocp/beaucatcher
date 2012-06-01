@@ -1,321 +1,181 @@
-Beaucatcher is a Scala library for JSON parsing/rendering _and_ for
-using MongoDB collections.
-
-It wraps and builds on a "driver library" (currently, always
-mongo-java-driver, but could have a Hammersmith option in the
-future).
-
-Please see http://beaucatcher.org/ for a high-level description,
-rationale, list of what works and what doesn't, and all that.
-
-The rest of this README is more about introducing the specifics of the
-library - it's the getting started guide, until there's a real getting
-started guide.
-
-You may want to get the background at http://beaucatcher.org/ before
-proceeding.
-
-## Overview
-
-The core of Beaucatcher is to make it easier to get data in a
-convenient format and massage the data a bit on its way in or out of
-MongoDB. Conceptually you can think of Beaucatcher as a pipeline from
-a BSON AST tree coming from MongoDB, which is then converted to either
-a case class (to work with in your Scala code) or to JSON (to be
-shipped to an HTTP client, typically). On a per-call basis, you can
-make the choice of desired datatype (BSON, JSON, case class) for
-results, and choose synchronous or asynchronous for the call.
-
-(You can use any custom class, not just a case class, by implementing the
-conversion to/from BSON for that class.)
-
-(In principle, though not yet, Beaucatcher could convert directly from
-the MongoDB wire protocol to your desired format and thus be extra
-fast.)
-
-A goal is to support typical web application needs (for example, a
-JSON HTTP service may need CRUD operations on a MongoDB collection,
-with some validation or filtering of the data).
-
-The Beaucatcher public API is not very large. It's split into a bunch
-of jars to let people pick-and-choose dependencies. But there are
-essentially these things:
-
- - an immutable AST tree for BSON and JSON (similar to lift-json, but
-   without a lot of API for transformations or other goodies, it's just
-   basic). BSON and JSON are handled in a uniform way, so converting
-   from one to the other is fast and there aren't two APIs to learn.
- - a JSON parser and renderer.
- - sync and async Collection traits, that have find() and all those methods
-   with their accompanying options.
- - a `CollectionAccess` trait that gives you a set of Collection,
-   in a matrix of (result-type x asyncness). The idea is that for a
-   collection, you define a case class as its schema, and have its
-   companion object extend `CollectionAccessWithCaseClass`
- - a `JsonMethods` trait that implements CRUD operations based on
-   JSON strings for the collection; you might hook this up to your
-   incoming HTTP requests. You could have a companion object extend
-   this too. JSON can be validated against your case class.
-
-You can probably get some sense of the library by looking at the unit
-tests. (Though they have an awkward abstraction to share code between
-the Casbah and Hammersmith projects, making them look a little more
-cluttered than your app will.)
-
-Beaucatcher builds on Casbah or Hammersmith, and only implements
-collection operations (find, save, remove, etc.). You still need to
-use those libraries directly to operate on the MongoDB connection, and
-Beaucatcher is not a "MongoDB driver" (i.e. it doesn't implement any
-wire protocol stuff, it's a layer on top).
-
-## BSON/JSON tree
-
- - Beaucatcher represents both BSON and JSON as a tree of immutable case class
-   nodes (as in lift-json).
- - a `BValue` is a tree of BSON nodes and a `JValue` is a tree of JSON
-   nodes. A `JValue` is-a `BValue`. `BValue` types include `BObject`,
-   `BDouble`, `BString`, `BArray`, `BObjectId` etc. The primitives
-   such as `BString` are also `JValue`, but there are `JObject` and
-   `JArray` containers separate from `BObject` and `BArray`. BSON
-   types such as `BObjectId` do not extend the `JValue` trait since
-   they don't appear in plain JSON.
-
-This is similar to JValue in lift-json (see
-https://github.com/lift/lift/blob/master/framework/lift-base/lift-json/README.md ).
-
-You can build a BSON object:
-
-    BObject("a" -> 1, "b" -> "foo")
-
-or a JSON object:
-
-    JObject("a" -> 1, "b" -> "foo")
-
-You can convert a `BValue` to a `JValue` with `toJValue()`, this
-converts all the BSON-specific types into plain JSON types.
-
-In BSON or JSON, objects implement `Map` and arrays implement
-`LinearSeq`.  So you can just use all the normal Scala APIs on
-them. (Most of the methods in lift-json are _not_ included, replaced
-by the usual Scala collection APIs.)
-
-There are some implicit conversions in `com.ometer.bson.Implicits._` if
-you'd like to use them.
-
-The numeric types implement `ScalaNumericConversions` which
-means you can call `isWhole`, `isValidInt`, `intValue`, etc. on them.
-Also it means `BInt32(42) == 42` for example.
-
-Unlike in lift-json, there's no `JField` type, because I don't think
-`JField` is really a `JValue` - you can't use it in most places a
-`JValue` is expected. So that's "fixed" (I don't know if everyone
-considers it a bug, but it seemed weird to me).
-
-You can convert a `BValue` (or `JValue`) to plain Scala values using `unwrapped`:
-
-    val scalaMap = bobject.unwrapped
-
-And you can convert to JSON:
-
-    val jsonString = bobject.toJson()
-
-or parse it:
-
-    val jobject = JValue.parseJson(jsonString)
-
-JSON methods take an optional `JsonFlavor` argument, which is best
-described here:
-http://www.mongodb.org/display/DOCS/Mongo+Extended+JSON
-
-At the moment only the `JsonFlavor.CLEAN` (no type information) flavor
-is really supported.
-
-I find immutable trees a lot nicer to work with in Scala than the
-Java-ish `DBObject` interface.
-
-There's also an XPath-inspired `select()` method for BSON and JSON:
-
-    bobject.select("foo/bar")
-    bobject.select(".//bar")
-    bobject.select("foo/*")
-    bobject.selectAs[Int](".//bar")
-
-See the API documentation for more details on the syntax.
-
-## Case class conversion
-
-There's a `ClassAnalysis` class, based on Salat's `Grater`, but
-chopped down and no longer mongodb-specific, so all it does is convert
-a case class to and from a map. You can also iterate over field names
-and values.
-
-Unlike Salat:
-
- - there's no type conversion for fields, so fields have to match the
-   types in the map. The one exception is support for `Option`; if a
-   field is an `Option`, it can be missing from the map. (I do want
-   to add safe numeric conversions, like putting Int in Long.)
- - there are no annotations, so you can't ignore fields or anything like that
- - there's no global hash lookup of graters, you would have to build
-   that yourself or use the Collection stuff described below.
- - without the global hash, case class fields inside case classes can't
-   really work, so you have to resolve "joins" by hand right now
-
-Usage looks like:
-
-    val analysis = new ClassAnalysis(classOf[IntAndString])
-    val map = analysis.asMap(IntAndString(42, "brown fox"))
-    assertEquals(Map("foo" -> 42, "bar" -> "brown fox"), map)
-
-The `ClassAnalysis` needs to be cached somehow since it's expensive.
-The Collection objects described next will do this for you.
-
-## Data access
-
- - sometimes you want a BSON or JSON tree to manipulate, sometimes you
-   want a JSON string, and sometimes you want a typesafe class instead
-   of a *SON blob.
- - the basic data access interface (see SyncCollection.scala,
-   AsyncCollection.scala) has type parameters for the query,
-   entity, and id types.
- - you typically use a `CollectionAccess` object which provides
-   both `BObject` and case class collections, both sync and async
- - you can then choose to query for either a raw BSON tree or
-   the case class, and write generic queries that support both.
- - you can override and customize the BSON-to-case-class conversion
- - it's easy to convert `BObject` to JSON, a case class, or a plain
-   Java or Scala map.
- - you could use the JSON for your web APIs, and in templates you could
-   use the plain maps or the case class. In code, the case class
-   might be most convenient.
-
-Data access starts with an abstract trait that defines an interface
-with `find()`, `insert()`, `remove()`, etc.:
-
-    abstract trait SyncCollection[QueryType, EntityType, IdType, ValueType]
-
-A `CollectionAccess` trait sets up both a `BObject` Collection and
-a custom class Collection, both sync and async. You might use it
-like this:
-
-    trait MyAppMongoProvider
-       extends MongoConfigProvider
-       with JavaDriverBackendProvider {
-       override val mongoConfig = new SimpleMongoConfig("mydbname", "localhost", 27017)
-    }
-
-    package foo {
-        case class Foo(_id : ObjectId, intField : Int, stringField : String)
-
-        object Foo
-            extends CollectionAccessWithCaseClass[Foo, ObjectId]
-            with MyAppMongoProvider {
-            def customQuery[E](implicit context : Context, chooser : SyncCollectionChooser[E, _]) = {
-                sync[E].find(BObject("intField" -> 23))
-            }
-        }
-    }
-
-Notice the `sync[E]` value, where `E` would be either the
-`Foo` case class, or `BObject`. If the call you're making doesn't
-return objects, you can omit the type parameter and just write:
-
-    Foo.sync.count()
-
-or whatever.
-
-The purpose of `sync[E]` is to let you write one query, and use it
-to get back either a `BObject` or a case class depending on what
-you're doing. You probably want a `BObject` in order to dump some JSON
-out over HTTP, but a case class if you're going to write some code in
-Scala to manipulate the object.
-
-If you wanted to change the mapping from the `BObject` layer to the
-case class layer, you can override the "composers" included in the
-`CollectionAccess`. For example, there's a field
-`entityBObjectEntityComposer : EntityComposer[EntityType, BObject]`
-that converts between the case class and the `BObject`. The idea is
-that you could do things such as rename fields in here, making it an
-alternative to annotations for that.
-
-## Custom class rather than case class
-
-If you'd rather use an arbitrary custom class instead of a case class
-with a Mongo collection, then extend `CollectionAccess` rather
-than `CollectionAccessWithCaseClass` and implement the field
-`entityBObjectEntityComposer` which must be a "composer" object that
-has two methods, `entityIn` to go from your entity object to
-`BObject`, and `entityOut` to go the other way.
-
-## Parsing JSON validated against a case class
-
-To go directly from JSON to BSON (to the `BValue` rather than `JValue`
-type), some form of schema is needed to figure out types; for example,
-to figure out that an `ObjectId`-formatted string is an `ObjectId` and not
-a string.
-
-The natural schema is the case class.
-
-    val analysis = new ClassAnalysis(classOf[ObjectIdAndString])
-    val bson = BValue.parseJson(jsonString, analysis)
-
-This will:
-
- - validate the JSON (ensuring it has all fields in the case
-class)
- - convert to BSON types to match the case class (for example,
-a string becomes an ObjectId if the field in the case class is an
-ObjectId)
- - remove any fields not found in the case class
-
-After parsing the JSON with the case class as schema, building an
-instance of the case class should work (if not, it's a bug, I would
-think):
-
-    val caseClassInstance = analysis.fromMap(bson.unwrapped)
-
-There are several improvements that would be nice here: avoiding the
-"unwrapping" overhead, adding a `BValue.toCaseClass` convenience
-method.
-
-## Auto-implementing REST-style CRUD operations with JSON
-
-There's a trait called `JsonMethods` which implements a "backend" that
-corresponds to backbone.js-style CRUD operations on a MongoDB
-collection.
-
-To be clear, Beaucatcher does not contain any HTTP code; you'd have to
-write some trivial glue between HTTP in your web stack of choice, and
-the `JsonMethods` trait.
-
-The methods in `JsonMethods` generally take the trailing part of the
-URL (which would be the object ID) and then take and/or return a JSON
-string representing the object.
-
-## Queries
-
-If you want to sort or add hints or things like that you have to
-manually build the appropriate query object, so for example if the
-query is:
-
-    collection.find(BObject("a" -> 42))
-
-if you want to sort you have to do this for now:
-
-    collection.find(BObject("query" -> BObject("a" -> 42),
-                            "orderby" -> BObject("whatever" -> 1)))
-
-Casbah does this with cursors instead (`find()` returns a cursor,
-which you can call `sort()` on, which then modifies the query
-before sending it off) but that approach seems tricky for an async
-flavor of the API, so Beaucatcher uses the native MongoDB approach
-just as MongoDB would send it on the wire.
-
-If you aren't sure how to do something, often the unit tests will have
-an example.
-
-## Final note!
-
-Beaucatcher is not mature code and if it breaks you get the pieces
-(though the test suite is pretty decent, fwiw).  I am enjoying it so I
-hope you'll at least find the ideas interesting.
+Beaucatcher is a Scala API for accessing MongoDB, exploring
+several ideas for taking better advantage of Scala.
+
+If they work out, many of the ideas in Beaucatcher could be cool
+as part of [Casbah](https://github.com/mongodb/casbah),
+[Hammersmith](https://github.com/bwmcadams/hammersmith), or
+[Salat](https://github.com/novus/salat) and I'd love to see that
+or help accomplish it.
+
+If you are interested in the ideas shown here then you are welcome
+to send suggestions, send patches, steal ideas into official
+drivers, or whatever you like. I'm friendly to all that; please
+ask me for help.
+
+Beaucatcher is not truly finished and "productized", see the file
+[TODO](https://github.com/havocp/beaucatcher/blob/master/TODO),
+but it may be close enough that you can enjoy using it if you
+approach it in a collaborative spirit and aren't afraid of source
+code.  Nothing in
+[TODO](https://github.com/havocp/beaucatcher/blob/master/TODO) is
+rocket science as far as I know but there are lots of little
+things.
+
+## What is it?
+
+Beaucatcher has two TL;DR big-picture attributes:
+
+ - it fits into the Scala/Akka world (e.g. async IO using Future,
+   immutable data structures)
+ - it's a small core with pluggable components factored out, to
+   enable customization and experimentation
+
+The core does not have a hard dependency on these factored-out
+components:
+
+ - the **network backend** (currently choice of Netty 3.3 or 3.4;
+   _but could be_ raw NIO, Finagle, whatever)
+ - the **protocol driver** (currently choice of mongo-java-driver
+   or a custom driver that lets you plug the network backend; _but
+   could be_ Hammersmith or a mock or whatever)
+ - **query representation** (currently choice of Iterator, Map, or
+   an lift-json-like abstract syntax tree called BObject; _but
+   could be_ a DSL for example)
+ - **document representation** (currently choice of Iterator, Map,
+   your case class via reflection, or BObject; _but could be_ your
+   own custom class or direct to a JSON string or whatever)
+
+Most of this git repository can be thought of as _examples_
+only. The core jars (`beaucatcher-base`, `beaucatcher-driver`,
+`beaucatcher-mongo`) do not depend on Netty or mongo-java-driver
+or scalap or any of that; those dependencies are _only if you want
+them_. You can swap in your own approach instead and you'll be on
+a level playing field with the included examples.
+
+You can use Beaucatcher as a convenience wrapper around
+[Mongo Java Driver](https://github.com/mongodb/mongo-java-driver),
+or you can use it as a testbed to experiment with network
+backends, or you can design your own query DSL or your own
+[Salat](https://github.com/novus/salat)-style document mapper.
+
+Diagram of the dependency graph: <a
+href="http://github.com/havocp/beaucatcher/raw/master/Dependencies.png"><img
+src="http://github.com/havocp/beaucatcher/raw/master/Dependencies.png"
+alt="Dependency graph"/></a>
+
+There's some example code in
+[the examples directory](https://github.com/havocp/beaucatcher/blob/master/examples/).
+
+## Ideas in Beaucatcher
+
+1. Rather than a hardcoded `DBObject` type, Beaucatcher uses
+typeclasses (as in Hammersmith). This means that **any type, such as
+a JSON string or your own JSON representation or your own custom
+domain object, can be encoded or decoded directly to MongoDB**.
+
+2. Beaucatcher goes a step further than Hammersmith and has
+**separate typeclasses for different contexts, such as queries and
+query results**. This is some extra type-safety and cleanliness
+(and if you invent your own query DSL, you don't have to implement
+_decoding_ from MongoDB, just _encoding_).
+
+3. Query and query-result **typeclasses can go to/from either the
+wire format _or an iterator_**, which means you can create a
+custom encoder or decoder without touching the wire protocol
+directly.  This makes a custom encoder or decoder much easier to
+write, and therefore more practical for app developers.  It also
+means that Beaucatcher can efficiently use mongo-java-driver or a
+mock as a backend, without going through a BSON serialization.
+
+4. It provides **immutable** versions of basic BSON types such as
+ObjectId, and **avoids mutable state throughout** (other than a
+couple optimization cheats...).
+
+5. Uses the `Future` type from Akka (which will be
+scala.concurrent.Future in Scala 2.10) to provide **asynchronous
+API**.
+
+6. **For each call** to MongoDB, it's easy to choose either **sync
+or async** API, and choose the **type of object you want to get
+back** for results (e.g. a Map or JSON or a custom domain
+object). For example, maybe in your Scala code you want to get a
+typesafe object but for your REST APIs you want to decode from
+Mongo directly into JSON. You can use the appropriate result type
+for each. The syntax is like
+`MyCollection.sync[ResultType].find()`.
+
+7. Makes it easy to create a **singleton object representing a
+collection, without keeping a reference to sockets or threads in
+the singleton**. That is, there's a type (called
+`CollectionAccess`) that knows how to set up indexes on a
+collection and make queries to the collection; and a separate type
+(called `Context`) which represents an actual database
+connection. You import an implicit Context, then use the singleton
+`CollectionAccess` to access the collection. This lets you work
+with multiple databases and helps avoid memory leak problems
+(singletons that reference threads and sockets cause GC
+trouble). `CollectionAccess` ensures that indexes are set up a
+single time for each database connection. If you're working with
+multiple database connections, this can be very helpful. You can
+also drop any global inititialization code you may have had to
+ensure indexes on your collections. `CollectionAccess` with its
+separate `Context` removes initialization boilerplate and reduces
+global state.
+
+8. **Selects the backend driver at runtime, via configuration
+file** (using the
+[config lib](https://github.com/typesafehub/config) which is also
+slated for Scala 2.10). Currently the backends are
+mongo-java-driver, or a thing called "channel driver" which has
+pluggable network backends. At the moment the pluggable backends
+include one for netty 3.3 and another for netty 3.4. But it would
+be **easy to drop in and experiment with a non-netty nio backend
+or a Finagle backend or whatever you like**. You could also drop
+in a "mock" driver here and select it via configuration, a little
+cleaner than the approach
+[Fongo](https://github.com/foursquare/fongo) has to take with
+mongo-java-driver.
+
+9. Provides a completely optional **immutable BSON/JSON
+representation** called `BObject`, which is a more Scala-native
+alternative to `DBObject` and also works as a JSON library. Thanks
+to typeclasses `BObject` is on _top_ of the dependency chain, not
+at the bottom, though -- so if you don't like it, you can still
+use all the Mongo stuff and create your own encoders/decoders for
+whatever data type or query DSL you want to use.
+
+10. Provides a very simple way to **decode BSON data into case
+classes**; again, this is on top of the dependency chain and not on
+the bottom, so it's completely optional. A more powerful solution
+such as Salat could be used instead.
+
+11. **Less shared state**; there's no concept of registering type
+conversion handlers or setting collection- or database-wide
+options. In turn there's no need to worry about initialization or
+order of object creation.
+
+12. (not yet implemented) **write concerns (get last error
+parameters) should have defaults defined in configuration
+per-collection**, so you won't have to modify your code to change
+these.
+
+So in short it's much more flexible if you want to replace or
+customize any part of the MongoDB stack: query DSL, networking
+layer, document encode/decode. And it has the Scala goodies like
+async with the standardized-in-2.10 `Future`, immutable data
+structures, and the powerful
+[config lib](https://github.com/typesafehub/config).
+Customization is always via typeclasses or configuration, not by
+setting some kind of shared mutable state.
+
+As a bonus there are a few features in here to reduce app
+boilerplate and "setup" code, mostly the `CollectionAccess`
+vs. `Context` split which gives you separate "schema" and
+"connection" objects.
+
+My hope is that the Beaucatcher design makes it easy to experiment
+with different query DSLs, document representations,
+networking/async-IO mechanisms, and so forth; you can experiment
+without having to reimplement the entire MongoDB stack. It's easy
+to do an isolated, apples-to-apples performance comparison of
+these individual elements, as well.
