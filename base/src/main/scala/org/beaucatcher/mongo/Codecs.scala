@@ -131,7 +131,7 @@ trait UpdateQueryEncoder[-T] extends DocumentEncoder[T] {
 /**
  * If an implicit ModifierEncoder exists for a type, that type can be encoded into a query that
  * modifies documents. A modifier can be a subset of the fields in the target document,
- * must not contain the "_id" field, and could also contain special operators like "$inc".
+ * must not contain the "_id" field, and could also contain special operators like "$$inc".
  */
 @implicitNotFound("Can't find an implicit ModifierEncoder to convert ${T} into a modifier query.")
 trait ModifierEncoder[-T] extends DocumentEncoder[T] {
