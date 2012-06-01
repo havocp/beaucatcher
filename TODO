@@ -1,0 +1,176 @@
+Mongo functionality
+- implement Mongo URI parsing (right now it barfs on any nontrivial URI)
+- Tailable, AwaitData flags are not supported
+- no GetLastError (aka WriteConcern) support; implement in config file
+- system.users collection access
+- database.authenticate()
+- database.addUser, removeUser
+- database.eval
+- support regex and code BSON types
+- test vs. more mongod versions
+- is a version of count() with a fields param needed?
+- support "continue on error" mode for insert()
+- support DELETE_FLAG_SINGLE_REMOVE
+- replica sets
+- go through http://www.mongodb.org/display/DOCS/Feature+Checklist+for+Mongo+Drivers
+
+General
+- API consistency audit and cleanup. Be sure all like things
+  are done the same way and named the same way, be sure
+  private/protected have the proper scope, etc.
+- Benchmarking, for the various ways to do it within
+  Beaucatcher and then also Beaucatcher vs. other stuff
+- consider renaming the driver packages (cdriver/jdriver is kinda ugly)
+  also could move these inside [driver] package and make all the
+  driver APIs private[driver]
+- AsyncCursor API isn't completely satisfactory, think about it more
+- change CollectionCodecSet and BoundCollection type params to be
+  in the order [QueryType, IdType, EntityType, ValueType]
+  so that CollectionAccessWithTwoEntityTypes doesn't have to
+  reorder its first four params vs. CollectionAccessWithOneEntityType
+- create test coverage report and add tests accordingly
+- strip the minor Actor dependency so in Scala 2.10 we'll only
+  need Future, affects API by removing some ActorSystem params
+
+Docs
+- Write lots more docs.
+
+CollectionAccess
+- there must be a better way to do the implicits and the hierarchy in general
+- sync[E] and async[E] would use the default value type instead of an error type
+- the "CollectionAccessLike" trait is pointless I think
+- provide prebuilt CollectionAccess using Iterator queries and Map results
+
+Configuration
+- "beaucatcher.mongo" is one too many namespaces in the config file,
+  just use "beaucatcher"
+- be sure everything in reference.conf gets used, right now reference.conf
+  contains aspirational rather than actual settings ...
+
+GridFS
+- async version of the GridFS API
+- test that the migrations are run for GridFSCollections (be sure the tests drop
+  the old indexes, then test that the indexes exist)
+
+JsonMethods
+- needs whitelist on object fields (avoid: https://github.com/blog/1068-public-key-security-vulnerability-and-mitigation)
+- needs async flavor of the API
+- needs app-specific data
+- test with backbone.js (should correspond to what backbone expects)
+- Play plugin that maps Play http controller to JsonMethods
+- implement direct JSON streaming in Play (no intermediate representation)
+- a way to return only changed fields
+
+Minor stuff
+- query skip can only be 32 bits on the wire so shouldn't be a Long
+- remove findIndexes() from the drivers, it's already implemented
+  outside the driver
+- be sure the Driver instance is stateless and then make it an
+  object instead of a class
+- in typeswitches, put most common types (int, string, objectid, boolean) at the top
+  (does this matter?)
+- in BsonAST change Manifest to just ClassManifest (I think?)
+- explore whether we can avoid thread handoffs when IO will not
+  block... ideally 1 web request uses one thread all the way
+  through until an fd reports itself as blocking. I'm not sure if
+  Netty does this?
+- add ValueDecoder for specific types not just Any
+- rename methods in IteratorBasedCodecs.scala to match other codec classes
+- include error message when throwing QueryReply.throwOnError
+- make the timeout configurable for sync collections and database
+
+mongo-java-driver driver
+- some options can't be set because they'd have to be set on the
+  entire collection making the collection unthreadsafe; could
+  maybe synchronize on the collection? but that's hosed.
+  could make a new thread-local collection in these cases?
+  don't know.
+
+Network channel driver
+- only ever creates one socket, no pooling
+- needs replica set support
+
+The following stack trace:
+
+WARNING: An exception was thrown by an exception handler.
+java.util.concurrent.RejectedExecutionException
+	at java.util.concurrent.ThreadPoolExecutor$AbortPolicy.rejectedExecution(ThreadPoolExecutor.java:1768)
+	at java.util.concurrent.ThreadPoolExecutor.reject(ThreadPoolExecutor.java:767)
+	at java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:658)
+	at org.jboss.netty.channel.socket.nio.AbstractNioWorker.start(AbstractNioWorker.java:168)
+	at org.jboss.netty.channel.socket.nio.AbstractNioWorker.executeInIoThread(AbstractNioWorker.java:314)
+	at org.jboss.netty.channel.socket.nio.NioWorker.executeInIoThread(NioWorker.java:38)
+	at org.jboss.netty.channel.socket.nio.AbstractNioWorker.executeInIoThread(AbstractNioWorker.java:298)
+	at org.jboss.netty.channel.socket.nio.NioWorker.executeInIoThread(NioWorker.java:38)
+	at org.jboss.netty.channel.socket.nio.AbstractNioChannelSink.execute(AbstractNioChannelSink.java:34)
+	at org.jboss.netty.channel.Channels.fireExceptionCaughtLater(Channels.java:504)
+	at org.jboss.netty.channel.AbstractChannelSink.exceptionCaught(AbstractChannelSink.java:47)
+	at org.jboss.netty.channel.Channels.write(Channels.java:712)
+	at org.jboss.netty.channel.Channels.write(Channels.java:679)
+	at org.jboss.netty.channel.AbstractChannel.write(AbstractChannel.java:245)
+	at org.beaucatcher.channel.netty.NettyMongoSocket.sendMessageWithReply(NettyMongoSocket.scala:108)
+	at org.beaucatcher.channel.netty.NettyMongoSocket.withQueryReply(NettyMongoSocket.scala:73)
+	at org.beaucatcher.channel.netty.NettyMongoSocket.sendQuery(NettyMongoSocket.scala:130)
+	at org.beaucatcher.channel.MongoSocket$class.sendCommand(MongoSocket.scala:76)
+	at org.beaucatcher.channel.netty.NettyMongoSocket.sendCommand(NettyMongoSocket.scala:19)
+	at org.beaucatcher.channel.netty.ConnectionTest$$anonfun$sendToClosedFactory$1.apply(ConnectionTest.scala:117)
+	at org.beaucatcher.channel.netty.ConnectionTest$$anonfun$sendToClosedFactory$1.apply(ConnectionTest.scala:111)
+	at org.beaucatcher.channel.netty.ConnectionTest.withFactory(ConnectionTest.scala:33)
+	at org.beaucatcher.channel.netty.ConnectionTest.sendToClosedFactory(ConnectionTest.scala:111)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:39)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:25)
+	at java.lang.reflect.Method.invoke(Method.java:597)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:44)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:15)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:41)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:20)
+	at org.junit.runners.BlockJUnit4ClassRunner.runNotIgnored(BlockJUnit4ClassRunner.java:79)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:71)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:49)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:193)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:52)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:191)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:42)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:184)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:236)
+	at org.junit.runners.Suite.runChild(Suite.java:128)
+	at org.junit.runners.Suite.runChild(Suite.java:24)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:193)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:52)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:191)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:42)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:184)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:236)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:157)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:136)
+	at com.novocode.junit.JUnitRunner.run(JUnitRunner.java:47)
+	at sbt.TestRunner.delegateRun(TestFramework.scala:62)
+	at sbt.TestRunner.run(TestFramework.scala:55)
+	at sbt.TestRunner.runTest$1(TestFramework.scala:75)
+	at sbt.TestRunner.run(TestFramework.scala:84)
+	at sbt.TestFramework$$anonfun$6$$anonfun$apply$8$$anonfun$7$$anonfun$apply$9.apply(TestFramework.scala:183)
+	at sbt.TestFramework$$anonfun$6$$anonfun$apply$8$$anonfun$7$$anonfun$apply$9.apply(TestFramework.scala:183)
+	at sbt.TestFramework$.sbt$TestFramework$$withContextLoader(TestFramework.scala:195)
+	at sbt.TestFramework$$anonfun$6$$anonfun$apply$8$$anonfun$7.apply(TestFramework.scala:183)
+	at sbt.TestFramework$$anonfun$6$$anonfun$apply$8$$anonfun$7.apply(TestFramework.scala:183)
+	at sbt.Tests$$anonfun$makeParallel$1$$anonfun$apply$7.apply(Tests.scala:113)
+	at sbt.Tests$$anonfun$makeParallel$1$$anonfun$apply$7.apply(Tests.scala:113)
+	at sbt.std.Transform$$anon$3$$anonfun$apply$2.apply(System.scala:47)
+	at sbt.std.Transform$$anon$3$$anonfun$apply$2.apply(System.scala:47)
+	at sbt.std.Transform$$anon$5.work(System.scala:67)
+	at sbt.Execute$$anonfun$submit$1$$anonfun$apply$1.apply(Execute.scala:221)
+	at sbt.Execute$$anonfun$submit$1$$anonfun$apply$1.apply(Execute.scala:221)
+	at sbt.ErrorHandling$.wideConvert(ErrorHandling.scala:18)
+	at sbt.Execute.work(Execute.scala:227)
+	at sbt.Execute$$anonfun$submit$1.apply(Execute.scala:221)
+	at sbt.Execute$$anonfun$submit$1.apply(Execute.scala:221)
+	at sbt.CompletionService$$anon$1$$anon$2.call(CompletionService.scala:26)
+	at java.util.concurrent.FutureTask$Sync.innerRun(FutureTask.java:303)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:138)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:441)
+	at java.util.concurrent.FutureTask$Sync.innerRun(FutureTask.java:303)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:138)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908)
+	at java.lang.Thread.run(Thread.java:662)
