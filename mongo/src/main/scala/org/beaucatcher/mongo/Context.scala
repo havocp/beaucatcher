@@ -66,7 +66,7 @@ trait Context {
      * Should close the connection to Mongo; will break any code currently trying to use this context,
      * or any collection or database objects that point to this context.
      */
-    def close: Unit
+    def close(): Unit
 
     def classLoader: ClassLoader
 }
