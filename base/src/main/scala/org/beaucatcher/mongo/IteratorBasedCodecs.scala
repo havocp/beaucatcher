@@ -4,17 +4,10 @@ import org.beaucatcher.bson._
 
 /**
  * This trait allows you to quickly implement a set of codecs by
- * providing methods to convert to/from Any, as with ValueDecoder.decodeAny.
+ * providing methods to convert to/from Iterator[(String,Any)].
  */
 trait IteratorBasedCodecs[T] extends IdEncoders with ValueDecoders {
     import CodecUtils._
-
-    private lazy val _anyValueDecoder =
-        ValueDecoders.anyValueDecoder[T]()
-
-    // can't be implicit since it would always apply
-    def anyValueDecoder: ValueDecoder[Any] =
-        _anyValueDecoder
 
     // TODO rename these to be iteratorBasedQueryEncoder, etc.
     implicit def queryEncoder: QueryEncoder[T] =
