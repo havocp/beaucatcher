@@ -38,8 +38,6 @@ private[cdriver] final class ChannelDriverAsyncCollection(override val name: Str
         }
     }
 
-    // TODO there is no reason this should have an Iterator[Future] because it
-    // never does batch paging like a cursor it looks like
     override def distinct[Q, V](key: String, options: DistinctOptions[Q])(implicit queryEncoder: QueryEncoder[Q], valueDecoder: ValueDecoder[V]): Future[Iterator[V]] = {
         import CodecUtils._
 
