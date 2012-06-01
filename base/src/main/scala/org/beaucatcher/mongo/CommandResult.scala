@@ -84,6 +84,10 @@ object CommandResult {
     def apply(ok: Boolean, errmsg: Option[String] = None, err: Option[String] = None, code: Option[Int] = None): CommandResult = {
         CommandResultImpl(ok = ok, errmsg = errmsg, err = err, code = code)
     }
+
+    private object OK extends CommandResultImpl(ok = true, errmsg = None, err = None, code = None)
+
+    def ok: CommandResult = OK
 }
 
 class CommandResultMongoException(val result: CommandResult, message: String) extends MongoException(message) {

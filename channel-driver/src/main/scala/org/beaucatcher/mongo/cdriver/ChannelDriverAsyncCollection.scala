@@ -232,7 +232,13 @@ private[cdriver] final class ChannelDriverAsyncCollection(override val name: Str
         raw.writeField("deleteIndexes", name)
         raw.writeField("index", indexName)
         connection.sendCommand(0 /* query flags */ , database.name, raw) map { reply =>
-            decodeCommandResult[BugIfDecoded](reply).result.throwIfNotOk()
+            val result = decodeCommandResult[BugIfDecoded](reply).result
+            // Java driver ignores if errmsg is "ns not found" and this
+            // appears to be needed with mongod 2.0.2 for example.
+            if (!result.ok && result.errmsg == Some("ns not found"))
+                CommandResult.ok
+            else
+                result.throwIfNotOk()
         }
     }
 }
