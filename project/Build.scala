@@ -20,7 +20,7 @@ object BuildSettings {
         version := buildVersion,
         scalaVersion := buildScalaVersion,
         shellPrompt := ShellPrompt.buildShellPrompt,
-        fork in test := true,
+        fork in run := true,
         checksums := Nil, // lift-json sha1 is hosed at the moment
         publishTo in Scope.GlobalScope <<= (thisProjectRef) { (ref) =>
             val baseDir = new File(ref.build)
@@ -93,7 +93,7 @@ object BeaucatcherBuild extends Build {
         Seq(base, channel, channelNetty33, channelNetty34,
             mongo, driver, jdriver,
             channelDriver, bobject, caseclass,
-            mongoTest).map({ p: Project => LocalProject(p.id) })
+            mongoTest, examplesSimple).map({ p: Project => LocalProject(p.id) })
 
     lazy val root = Project("beaucatcher",
         file("."),
@@ -255,4 +255,10 @@ object BeaucatcherBuild extends Build {
             channelDriver % "compile->compile",
             channelNetty34 % "compile->compile",
             channelNetty33 % "compile->compile")
+
+    lazy val examplesSimple = Project("beaucatcher-examples-core-only",
+        file("examples/core-only"),
+        settings = projectSettings ++ Seq(publishArtifact := false)) dependsOn(
+            mongo % "compile->compile",
+            jdriver % "runtime->runtime")
 }
