@@ -179,3 +179,55 @@ networking/async-IO mechanisms, and so forth; you can experiment
 without having to reimplement the entire MongoDB stack. It's easy
 to do an isolated, apples-to-apples performance comparison of
 these individual elements, as well.
+
+## Code overview
+
+Some pointers for understanding the module divisions and reading
+the code...
+
+ - a "channel" is responsible for handling a single TCP socket
+   connected to mongod and just pulling raw requests on and off
+   the wire; it implements
+   [MongoSocket](https://github.com/havocp/beaucatcher/blob/master/channel/src/main/scala/org/beaucatcher/channel/MongoSocket.scala). Channels
+   could be implemented with netty, Finagle, NIO, Spray, etc. (your network thingy of
+   choice). Right now there are Netty 3.3 and 3.4 channels, with
+   [identical code](https://github.com/havocp/beaucatcher/blob/master/channel-netty/src/main/scala/org/beaucatcher/channel/netty/NettyMongoSocket.scala).
+
+ - a "driver" takes care of replica sets, pooling, etc. and
+   provides Collection and Context objects that only have the
+   MongoDB "primitive" operations. See the
+   [driver-level collection interface](https://github.com/havocp/beaucatcher/blob/master/driver/src/main/scala/org/beaucatcher/driver/DriverCollection.scala)
+   for example. Then the
+   [implementation using mongo-java-driver](https://github.com/havocp/beaucatcher/blob/master/jdriver/src/main/scala/org/beaucatcher/mongo/jdriver/JavaDriverCollection.scala)
+   and one
+   [using channels](https://github.com/havocp/beaucatcher/blob/master/channel-driver/src/main/scala/org/beaucatcher/mongo/cdriver/ChannelDriverAsyncCollection.scala).
+
+ - the "core" consists of three parts:
+   - [beaucatcher-driver](https://github.com/havocp/beaucatcher/tree/master/driver) is the driver interface.
+   - [beaucatcher-base](https://github.com/havocp/beaucatcher/tree/master/base) is a bunch of data types (BSON object ID,
+     timestamp, command result, MongoException), and the codec
+     (encoder/decoder) typeclasses. Nothing related to networking.
+   - [beaucatcher-mongo](https://github.com/havocp/beaucatcher/tree/master/mongo)
+     is the application-facing API for using Mongo collections.
+
+ - beaucatcher-mongo loads a configured driver via reflection and
+   provides "high level" operations on top of the driver: a bunch
+   of convenience methods that call the driver's MongoDB
+   primitives with different options, etc.  This is the
+   application-visible API, see for example
+   [AsyncCollection](https://github.com/havocp/beaucatcher/blob/master/mongo/src/main/scala/org/beaucatcher/mongo/AsyncCollection.scala).
+
+ - The core includes encoders/decoders for Iterator[(String,Any)]
+   and Map[String,Any] since those are pretty generic and
+   agnostic ways to express queries and results.
+
+ - above the core, the "bobject" and "caseclass" packages contain
+   a couple of extra possible representations for queries and
+   results. These are totally optional.
+
+ - mandatory external dependencies are
+   akka.dispatch.Future/scala.concurrent.Future and
+   com.typesafe.config.Config. Both of these are slated to be
+   included in Scala 2.10, so for 2.10 there would be zero
+   external dependencies for the core. External dependencies would
+   be only those needed for the selected channel/driver/codecs.
